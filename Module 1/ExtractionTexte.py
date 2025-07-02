@@ -40,7 +40,7 @@ def extraire_json(fichier):
 
 # Exemple d'utilisation
 if __name__ == "__main__":
-    chemin_fichier = "C:/Users/USER/Desktop/essai json.json"
+    chemin_fichier = ""
     texte = extraire_texte(chemin_fichier)
     if texte:
         print("Contenu extrait (premiers 500 caractères) :")
