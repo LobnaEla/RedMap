@@ -64,5 +64,5 @@ if __name__ == "__main__":
     chemin_fichier = ""
     texte = extraire_texte(chemin_fichier)
     if texte:
-        print("Contenu nettoyé (premiers 500 caractères) :")
+        print("Contenu nettoyé :")
         print(texte)
