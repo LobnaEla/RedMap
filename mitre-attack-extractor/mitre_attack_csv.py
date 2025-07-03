@@ -6,7 +6,10 @@ import requests
 
 
 url = "https://github.com/mitre/cti/raw/master/enterprise-attack/enterprise-attack.json"
-outfile = "enterprise-attack.csv"
+import os
+outdir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'MITRE_ATT&CK')
+os.makedirs(outdir, exist_ok=True)
+outfile = os.path.join(outdir, "enterprise-attack.csv")
 
 print("Fetching latest enterprise-attack.json ...")
 d = requests.get(url)
