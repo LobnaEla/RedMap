@@ -1,0 +1,1 @@
+python -m cti_pipeline.scripts.run_all                                                                            

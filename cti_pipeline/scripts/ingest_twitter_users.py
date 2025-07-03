@@ -20,7 +20,7 @@ CTI_KEYWORDS = [
     "attack",
 ]
 
-DATA_DIR = "cti-pipeline/data/twitter"
+DATA_DIR = "cti_pipeline/data/twitter"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 

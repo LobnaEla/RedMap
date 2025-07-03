@@ -5,14 +5,14 @@ import requests
 from dotenv import load_dotenv
 
 # Load environment variables from config/.env
-load_dotenv(dotenv_path="cti-pipeline/config/.env")
+load_dotenv(dotenv_path="cti_pipeline/config/.env")
 
 OTX_API_KEY = os.getenv("OTX_API_KEY")
 
 if not OTX_API_KEY:
     raise Exception("❌ OTX API Key not found. Make sure it's set in config/.env")
 
-DATA_DIR = "cti-pipeline/data/"
+DATA_DIR = "cti_pipeline/data/"
 OTX_API_URL = "https://otx.alienvault.com/api/v1/pulses/subscribed"
 
 
