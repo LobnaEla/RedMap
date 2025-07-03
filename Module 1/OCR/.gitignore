@@ -1,6 +1,0 @@
-ocr_output
-doctr_output
-test_output
-.venv
-__pycache__
-*.pyc
