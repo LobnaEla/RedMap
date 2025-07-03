@@ -2,4 +2,5 @@ cti_pipeline/config/.env
 .venv
 **/data/
 __pycache__/
+/data/*
 .env
