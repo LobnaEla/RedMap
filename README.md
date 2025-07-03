@@ -6,7 +6,7 @@ The **CTI Pipeline** is a comprehensive cyber threat intelligence data collectio
 
 ### 🎯 Key Features
 
-- **Multi-source data collection**: RSS feeds, OTX pulses, PDF reports, Twitter feeds
+- **Multi-source data collection**: RSS feeds, OTX pulses, PDF reports, Twitter feeds, HTML blogs
 - **Intelligent text extraction**: Advanced OCR and PDF processing capabilities
 - **Automated data ingestion**: Configurable pipeline for continuous data collection
 - **Structured output**: All data stored in JSON Lines format for easy analysis
@@ -16,19 +16,30 @@ The **CTI Pipeline** is a comprehensive cyber threat intelligence data collectio
 
 ```
 cti_pipeline/
-├── scripts/           # Core ingestion modules
-│   ├── run_all.py            # Main orchestration script
-│   ├── ingest_rss.py         # RSS feed ingestion
-│   ├── ingest_otx.py         # OTX pulse ingestion
-│   ├── ingest_pdf.py         # PDF report processing
-│   ├── ingest_twitter.py     # Twitter search functionality
+├── __init__.py                 # Init package file
+├── scripts/                    # Core ingestion and scraping modules
+│   ├── __init__.py             # Init package file
+│   ├── run_all.py              # Main orchestration script
+│   ├── ingest_rss.py           # RSS feed ingestion
+│   ├── ingest_otx.py           # OTX pulse ingestion
+│   ├── ingest_pdf.py           # PDF report processing
+│   ├── ingest_twitter.py       # Twitter keyword search
 │   ├── ingest_twitter_users.py # Twitter user monitoring
-│   ├── ExtractionTexte.py    # Text extraction utilities
-│   └── ocr_library.py        # OCR processing with spaCy
-├── PDFs/              # PDF storage directory
-├── data/              # Output data directory
-└── config/            # Configuration files
-    └── .env           # Environment variables
+│   ├── scraper_blog.py         # HTML blog scraping
+│   ├── ExtractionTexte.py      # Text extraction tools for PDFs
+│   └── ocr_library.py          # OCR-based extraction utilities
+├── blog_sources.py             # List of blog URLs for scraping
+├── pdf_sources.py              # List of PDF source URLs (optional)
+├── config/
+│   └── .env                    # API keys and configurations
+├── data/                       # All collected data (ignored by Git)
+│   ├── blogs/
+│   ├── twitter/
+│   └── ...
+├── PDFs/                       # Local folder for PDF files
+├── mitre_attack/               # ⚠️ Legacy or unused (ignored)
+└── requirements.txt            # Dependencies
+
 ```
 
 ---
@@ -92,6 +103,7 @@ For Twitter ingestion, you need Chrome WebDriver:
    ```bash
    mkdir cti_pipeline\data
    mkdir cti_pipeline\data\twitter
+   mkdir cti_pipeline\data\blogs
    ```
 
 2. **Add PDF reports** (optional):
@@ -115,6 +127,7 @@ This will:
 - ✅ Ingest RSS feeds from CERT-FR
 - ✅ Process PDF reports in the PDFs directory
 - ✅ Monitor specified Twitter accounts for threat intelligence
+- ✅ collect blog posts (HTML scraping)
 
 ### Option B: Run Individual Modules
 
