@@ -47,19 +47,6 @@ def run_twitter_ingestion():
 
 
 if __name__ == "__main__":
-    CTI_KEYWORDS = [
-        "Advanced Persistent Threat",
-        "CVE",
-        "IOC",
-        "phishing",
-        "ransomware",
-        "malware",
-        "exploit",
-        "MITRE",
-        "threat",
-        "vulnerability",
-    ]
-
     print("[🏁] Démarrage de l'ingestion complète...")
     ingest_otx()
     ingest_rss()
