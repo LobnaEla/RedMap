@@ -1,1 +1,2 @@
 from cti_pipeline.pdf_sources import PDF_SOURCES
+from cti_pipeline.blog_sources import BLOG_SOURCES
