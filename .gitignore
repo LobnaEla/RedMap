@@ -3,3 +3,10 @@ cti_pipeline/config/.env
 **/data/
 __pycache__/
 .env
+
+airflow/logs/
+airflow/__pycache__/
+airflow/.mypy_cache/
+airflow/.pytest_cache/
+airflow/tmp/
+airflow/db.sqlite3
