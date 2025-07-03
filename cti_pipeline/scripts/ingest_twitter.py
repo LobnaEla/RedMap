@@ -6,7 +6,7 @@ import time
 import os
 
 # Load environment variables from config/.env
-load_dotenv(dotenv_path="cti-pipeline/config/.env")
+load_dotenv(dotenv_path="cti_pipeline/config/.env")
 
 BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
 
@@ -36,7 +36,7 @@ def search_tweets(query, label="keyword", max_results=20):
 
     tweets = response.json().get("data", [])
     now = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    output_dir = "cti-pipeline/data/twitter"
+    output_dir = "cti_pipeline/data/twitter"
     os.makedirs(output_dir, exist_ok=True)
     filename = os.path.join(output_dir, f"twitter_keyword_{label}_{now}.jsonl")
 

@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 import feedparser
 
-DATA_DIR = "cti-pipeline/data/"
+DATA_DIR = "cti_pipeline/data/"
 
 
 ### Ingestion des flux RSS de CERT-FR
