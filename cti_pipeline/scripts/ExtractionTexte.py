@@ -1,8 +1,24 @@
 import os
+import re
 import json
+import csv
+import requests
+import base64
+import time
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
+# --- Récupérer la clé API depuis variable d'environnement ---
+load_dotenv()
+API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
+print(API_KEY)
+
+if not API_KEY:
+    print("Erreur : la variable d'environnement VIRUSTOTAL_API_KEY n'est pas définie.")
+    exit(1)
+
+# --- Extraction du texte ---
 def extraire_texte(fichier):
     _, extension = os.path.splitext(fichier)
     try:
@@ -14,24 +30,19 @@ def extraire_texte(fichier):
             return nettoyer_texte(extraire_json(fichier))
         elif extension.lower() == ".html":
             return nettoyer_texte(extraire_html(fichier))
+        elif extension.lower() == ".csv":
+            return nettoyer_texte(extraire_csv(fichier))
         else:
-            raise ValueError(f"Format de fichier non supporté : {extension}")
+            print(f"[SKIP] Format non supporté : {extension}")
+            return ""
     except Exception as e:
-        print(f"Erreur lors de l'extraction : {e}")
-        return None
-
+        print(f"[ERREUR] Échec de l'extraction : {e}")
+        return ""
 
 def extraire_pdf(fichier):
     with open(fichier, "rb") as f:
         reader = PdfReader(f)
-        texte_complet = ""
-        for i, page in enumerate(reader.pages):
-            texte_page = page.extract_text()
-            if texte_page:
-                texte_complet += texte_page + "\n"
-            else:
-                print(f"Page {i+1} : aucun texte détecté.")
-        return texte_complet
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 def extraire_txt(fichier):
     with open(fichier, "r", encoding="utf-8") as f:
@@ -40,29 +51,73 @@ def extraire_txt(fichier):
 def extraire_json(fichier):
     with open(fichier, "r", encoding="utf-8") as f:
         contenu = json.load(f)
-        return json.dumps(contenu, ensure_ascii=False, indent=2)
+        return json.dumps(contenu, ensure_ascii=False)
 
 def extraire_html(fichier):
     with open(fichier, "r", encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
         return soup.get_text(separator="\n")
 
+def extraire_csv(fichier):
+    with open(fichier, newline='', encoding='utf-8') as f:
+        lecteur = csv.reader(f)
+        return "\n".join("; ".join(ligne) for ligne in lecteur)
+
 def nettoyer_texte(texte):
     if not texte:
-        return texte
-    # Découper le texte en lignes
-    lignes = texte.splitlines()
-    # Filtrer les lignes vides ou composées uniquement d'espaces
-    lignes_non_vides = [ligne.strip() for ligne in lignes]
-    lignes_nettoyees = [ligne for ligne in lignes_non_vides if ligne]
-    # Recoller les lignes avec un seul saut de ligne
-    return "\n".join(lignes_nettoyees)
+        return ""
+    lignes = [ligne.strip() for ligne in texte.splitlines() if ligne.strip()]
+    return "\n".join(lignes)
 
+# --- Trouver liens ---
+def trouver_liens(texte):
+    regex = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
+    return re.findall(regex, texte)
 
-# Exemple d'utilisation
+# --- Vérifier lien avec VirusTotal API v3 ---
+def verifier_lien_virustotal(lien):
+    print(f"\n🔎 Analyse du lien : {lien}")
+    url_bytes = lien.encode('utf-8')
+    url_b64 = base64.urlsafe_b64encode(url_bytes).decode().strip("=")
+
+    headers = {
+        "x-apikey": API_KEY
+    }
+
+    response = requests.get(f"https://www.virustotal.com/api/v3/urls/{url_b64}", headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        stats = data["data"]["attributes"]["last_analysis_stats"]
+        if stats["malicious"] > 0 or stats["suspicious"] > 0:
+            print(f"⚠️ Lien potentiellement malveillant : {lien}")
+            print(f"Malicious: {stats['malicious']}, Suspicious: {stats['suspicious']}")
+        else:
+            print(f"✅ Lien sûr : {lien}")
+    elif response.status_code == 404:
+        print(f"[INFO] Lien non trouvé dans VirusTotal : {lien}")
+    else:
+        print(f"[ERREUR] Code {response.status_code} pour le lien : {lien}")
+
+# --- Programme principal ---
 if __name__ == "__main__":
-    chemin_fichier = ""
-    texte = extraire_texte(chemin_fichier)
-    if texte:
-        print("Contenu nettoyé :")
-        print(texte)
+    fichier = "C:/Users/USER/Desktop/essai csv.csv"  # Change ce chemin
+
+    print(f"📂 Analyse du fichier : {fichier}\n")
+    texte_extrait = extraire_texte(fichier)
+
+    if texte_extrait:
+        print("📄 Contenu extrait:")
+        print("-" * 60)
+        print(texte_extrait)
+
+        liens = trouver_liens(texte_extrait)
+
+        if not liens:
+            print("\n✅ Aucun lien détecté dans le fichier.")
+        else:
+            print(f"\n🔗 {len(liens)} lien(s) trouvé(s). Analyse en cours...\n")
+            for lien in liens:
+                verifier_lien_virustotal(lien)
+    else:
+        print("❌ Aucun texte extrait ou fichier vide.")
