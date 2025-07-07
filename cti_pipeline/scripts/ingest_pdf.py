@@ -1,5 +1,9 @@
 import os
 import json
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
@@ -67,3 +71,22 @@ def ingest_pdf(file_path, output_file="raw_pdf.jsonl"):
         print(f"[+] PDF ingéré : {file_path}")
     except Exception as e:
         print(f"[❌] Échec d’écriture JSON pour {file_path} : {e}")
+
+
+### PDF Ingestion
+def run_pdf_ingestion():
+    # # 1. Collecter tous les PDFs depuis les sources connues
+    # for source in PDF_SOURCES:
+    #     print(f"[🌐] Collecte des PDFs depuis {source['name']}...")
+    #     collect_pdfs(source["url"])
+
+    # 2. Ingestion des PDFs téléchargés
+    PDF_DIR = "cti_pipeline/PDFs"
+    for filename in os.listdir(PDF_DIR):
+        if filename.endswith(".pdf"):
+            filepath = os.path.join(PDF_DIR, filename)
+            ingest_pdf(filepath, output_file="raw_pdf.jsonl")
+
+
+if __name__ == "__main__":
+    run_pdf_ingestion()

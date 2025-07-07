@@ -29,3 +29,8 @@ def ingest_rss(output_file="raw_rss_certfr.jsonl"):
             f.write("\n")
 
     print(f"[+] {len(feed.entries)} bulletins RSS CERT-FR collectés.")
+
+
+if __name__ == "__main__":
+    ingest_rss()
+    print("[✔] Ingestion des flux RSS terminée.")

@@ -55,3 +55,8 @@ def ingest_otx(output_file="raw_otx_pulses.jsonl"):
                 print("[DOC PROBLÉMATIQUE] :", doc)
 
     print(f"[+] {len(pulses)} pulses CTI collectés dans {output_file}.")
+
+
+if __name__ == "__main__":
+    ingest_otx()
+    print("[✔] Ingestion des pulses OTX terminée.")

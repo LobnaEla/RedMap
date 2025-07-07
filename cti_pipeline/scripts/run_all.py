@@ -1,6 +1,6 @@
 from cti_pipeline.scripts.ingest_rss import ingest_rss
 from cti_pipeline.scripts.ingest_otx import ingest_otx
-from cti_pipeline.scripts.ingest_pdf import ingest_pdf
+from cti_pipeline.scripts.ingest_pdf import run_pdf_ingestion
 from cti_pipeline.scripts.ingest_twitter_users import get_tweets_from_user, save_tweets
 from cti_pipeline.scripts.ingest_twitter import search_tweets
 from cti_pipeline.pdf_sources import PDF_SOURCES
@@ -20,21 +20,6 @@ def run_blog_scraping():
         print(f"[🌐] Scraping blog : {blog['name']} ...")
         scrape_blog(index_url=blog["url"], blog_name=blog["name"])
     print(f"[📊] Ingestion terminée pour les blogs CTI.")
-
-
-### PDF Ingestion
-def run_pdf_ingestion():
-    # # 1. Collecter tous les PDFs depuis les sources connues
-    # for source in PDF_SOURCES:
-    #     print(f"[🌐] Collecte des PDFs depuis {source['name']}...")
-    #     collect_pdfs(source["url"])
-
-    # 2. Ingestion des PDFs téléchargés
-    PDF_DIR = "cti_pipeline/PDFs"
-    for filename in os.listdir(PDF_DIR):
-        if filename.endswith(".pdf"):
-            filepath = os.path.join(PDF_DIR, filename)
-            ingest_pdf(filepath, output_file="raw_pdf.jsonl")
 
 
 ### Twitter Ingestion
