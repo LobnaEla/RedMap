@@ -42,6 +42,9 @@ class GroqClient:
             response.raise_for_status()
             result = response.json()
             content = result["choices"][0]["message"]["content"]
+            usage = result["usage"]
+            
+            print(f"[GroqClient] Usage details: {json.dumps(usage, indent=2)}")
             print("[Groq LLM raw content]:\n", content) # Debugging output
             # Try direct JSON parse first
             try:
