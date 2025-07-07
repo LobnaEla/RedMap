@@ -33,12 +33,12 @@ CTI_KEYWORDS = [
 
 
 def extract_article_links(index_url, domain_filter=None):
-    """Récupère tous les liens d'articles depuis la page d'accueil du blog."""
+    """Retrieves all article links from the blog's homepage."""
     try:
         r = requests.get(index_url)
         r.raise_for_status()
     except Exception as e:
-        print(f"[❌] Échec accès {index_url} : {e}")
+        print(f"[❌] Failed to access {index_url}: {e}")
         return []
 
     soup = BeautifulSoup(r.text, "html.parser")
@@ -50,7 +50,7 @@ def extract_article_links(index_url, domain_filter=None):
             continue
         full_url = urljoin(index_url, href)
         if any(bad in full_url for bad in IGNORED_SUBSTRINGS):
-            continue  # 🔥 lien à ignorer
+            continue  # 🔥 link to ignore
         if domain_filter and domain_filter not in full_url:
             continue
         if not any(
@@ -59,29 +59,29 @@ def extract_article_links(index_url, domain_filter=None):
             continue
         links.append(full_url)
 
-    return list(set(links))  # Suppression doublons
+    return list(set(links))  # Remove duplicates
 
 
 def extract_text_from_url(url, source_name="generic"):
-    """Extrait le texte brut d’un article, avec filtrage Medium ou par mots-clés."""
+    """Extracts raw text from an article, with Medium or keyword filtering."""
     try:
         r = requests.get(url)
         r.raise_for_status()
     except Exception as e:
-        print(f"[❌] Erreur récupération article {url} : {e}")
+        print(f"[❌] Failed to retrieve article {url}: {e}")
         return None
 
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # 📌 Filtrage par titre UNIQUEMENT pour Medium
+    # 📌 Title filtering ONLY for Medium
     if "medium.com" in url or "medium" in source_name.lower():
         title_tag = soup.find("title")
         title_text = title_tag.get_text(strip=True) if title_tag else ""
         if "cti report" not in title_text.lower():
-            print(f"[⏩] Ignoré (titre Medium non pertinent) : {title_text}")
+            print(f"[⏩] Skipped (irrelevant Medium title): {title_text}")
             return None
     else:
-        # 📌 Pour les autres : extraire texte et filtrer par mots-clés
+        # 📌 For others: extract text and filter by keywords
         article = soup.find("article") or soup.find("main") or soup.find("body")
         text = (
             article.get_text(separator="\n")
@@ -94,12 +94,12 @@ def extract_text_from_url(url, source_name="generic"):
         lowered_text = cleaned.lower()
 
         if not any(keyword in lowered_text for keyword in CTI_KEYWORDS):
-            print(f"[⏩] Ignoré (aucun mot-clé CTI trouvé dans l'article) : {url}")
+            print(f"[⏩] Skipped (no CTI keyword found in article): {url}")
             return None
 
         return cleaned
 
-    # 👇 Si c’est Medium et a passé le filtre de titre
+    # 👇 If it's Medium and title filter passed
     article = soup.find("article") or soup.find("main") or soup.find("body")
     text = (
         article.get_text(separator="\n") if article else soup.get_text(separator="\n")
@@ -109,12 +109,12 @@ def extract_text_from_url(url, source_name="generic"):
 
 
 def scrape_blog(index_url, blog_name="generic"):
-    """Scrape les articles d’un blog CTI et sauvegarde dans un fichier JSONL."""
+    """Scrapes CTI blog articles and saves them in a JSONL file."""
     now = datetime.now().strftime("%Y-%m-%d_%H-%M")
     out_file = os.path.join(DATA_DIR, f"{blog_name}_{now}.jsonl")
     links = extract_article_links(index_url)
 
-    print(f"[🔎] {len(links)} liens détectés sur {index_url}")
+    print(f"[🔎] {len(links)} links detected on {index_url}")
 
     count = 0
     with open(out_file, "w", encoding="utf-8") as f:
@@ -132,4 +132,13 @@ def scrape_blog(index_url, blog_name="generic"):
                 f.write("\n")
                 count += 1
 
-    print(f"[✅] {count} articles enregistrés dans {out_file}")
+    print(f"[✅] {count} articles saved in {out_file}")
+
+
+if __name__ == "__main__":
+    from cti_pipeline.blog_sources import BLOG_SOURCES
+
+    for source in BLOG_SOURCES:
+        print(f"[🌐] Scraping {source['name']}...")
+        scrape_blog(source["url"], blog_name=source["name"])
+    print("[✔] Blog scraping completed.")

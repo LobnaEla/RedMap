@@ -31,7 +31,7 @@ def get_tweets_from_user(username, max_scrolls=5):
     chrome_options.add_argument("--log-level=3")
 
     driver = webdriver.Chrome(options=chrome_options)
-    print(f"[🌐] Navigation vers https://twitter.com/{username}...")
+    print(f"[🌐] Navigating to https://twitter.com/{username}...")
     driver.get(f"https://twitter.com/{username}")
     time.sleep(5)
 
@@ -84,7 +84,7 @@ def save_tweets(username, tweets):
         for tweet in tweets:
             json.dump(tweet, f, ensure_ascii=False)
             f.write("\n")
-    print(f"[✔] {len(tweets)} tweets enregistrés dans {path}")
+    print(f"[✔] {len(tweets)} tweets saved in {path}")
 
 
 def is_cti_relevant(tweet_text):
@@ -95,6 +95,6 @@ def is_cti_relevant(tweet_text):
 if __name__ == "__main__":
     users = ["vxunderground", "CERT_FR", "CISACyber"]
     for user in users:
-        print(f"[🔍] Collecte depuis @{user}...")
+        print(f"[🔍] Collecting from @{user}...")
         tweets = get_tweets_from_user(user)
         save_tweets(user, tweets)

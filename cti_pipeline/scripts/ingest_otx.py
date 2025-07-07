@@ -16,14 +16,14 @@ DATA_DIR = "cti_pipeline/data/"
 OTX_API_URL = "https://otx.alienvault.com/api/v1/pulses/subscribed"
 
 
-### Ingestion des pulses OTX (Open Threat Exchange)
+### Ingestion of OTX pulses (Open Threat Exchange)
 def ingest_otx(output_file="raw_otx_pulses.jsonl"):
     headers = {"X-OTX-API-KEY": OTX_API_KEY}
     try:
         response = requests.get(OTX_API_URL, headers=headers, timeout=30)
         response.raise_for_status()
     except Exception as e:
-        print(f"[-] Erreur API : {e}")
+        print(f"[-] API Error: {e}")
         return
 
     data = response.json()
@@ -51,12 +51,12 @@ def ingest_otx(output_file="raw_otx_pulses.jsonl"):
                 json.dump(doc, f, ensure_ascii=False)
                 f.write("\n")
             except Exception as e:
-                print(f"[❌] Échec d'écriture JSON : {e}")
-                print("[DOC PROBLÉMATIQUE] :", doc)
+                print(f"[❌] JSON write failed: {e}")
+                print("[PROBLEMATIC DOC] :", doc)
 
-    print(f"[+] {len(pulses)} pulses CTI collectés dans {output_file}.")
+    print(f"[+] {len(pulses)} CTI pulses collected into {output_file}.")
 
 
 if __name__ == "__main__":
     ingest_otx()
-    print("[✔] Ingestion des pulses OTX terminée.")
+    print("[✔] OTX pulse ingestion completed.")

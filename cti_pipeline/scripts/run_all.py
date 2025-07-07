@@ -15,26 +15,26 @@ warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 ### Blog Scraping
 def run_blog_scraping():
     for blog in BLOG_SOURCES:
-        print(f"[🌐] Scraping blog : {blog['name']} ...")
+        print(f"[🌐] Scraping blog: {blog['name']} ...")
         scrape_blog(index_url=blog["url"], blog_name=blog["name"])
-    print(f"[📊] Ingestion terminée pour les blogs CTI.")
+    print(f"[📊] CTI blogs ingestion completed.")
 
 
 ### Twitter Ingestion
 def run_twitter_ingestion():
     users = ["vxunderground", "CERT_FR", "CISACyber"]
     for user in users:
-        print(f"[🔍] Collecte depuis @{user}...")
+        print(f"[🔍] Collecting from @{user}...")
         tweets = get_tweets_from_user(user)
         save_tweets(user, tweets)
 
 
 if __name__ == "__main__":
-    print("[🏁] Démarrage de l'ingestion complète...")
+    print("[🏁] Starting full ingestion...")
     ingest_otx()
     ingest_rss()
     run_pdf_ingestion()
     run_twitter_ingestion()
     run_blog_scraping()
 
-    print("[✅] Ingestion terminée.")
+    print("[✅] Ingestion completed.")

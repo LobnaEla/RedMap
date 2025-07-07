@@ -14,18 +14,18 @@ DATA_DIR = "cti_pipeline/data/"
 PDF_DIR = "cti_pipeline/PDFs"
 
 
-# ### Collecte des PDF depuis une page web
+# ### Collect PDFs from a web page
 # def collect_pdfs(page_url, pdf_dir="cti_pipeline/PDFs"):
 #     os.makedirs(pdf_dir, exist_ok=True)
 #     domain = "/".join(page_url.split("/")[:3])  # Ex: https://www.mandiant.com
-
+#
 #     try:
 #         r = requests.get(page_url)
 #         r.raise_for_status()
 #     except Exception as e:
-#         print(f"[❌] Erreur d'accès à la page {page_url}: {e}")
+#         print(f"[❌] Failed to access page {page_url}: {e}")
 #         return
-
+#
 #     soup = BeautifulSoup(r.text, "html.parser")
 #     for link in soup.find_all("a", href=True):
 #         href = link["href"]
@@ -33,24 +33,24 @@ PDF_DIR = "cti_pipeline/PDFs"
 #             pdf_url = urljoin(domain, href)
 #             filename = os.path.basename(pdf_url)
 #             dest_path = os.path.join(pdf_dir, filename)
-
+#
 #             if os.path.exists(dest_path):
-#                 print(f"[✔] Déjà téléchargé : {filename}")
+#                 print(f"[✔] Already downloaded: {filename}")
 #                 continue
-
+#
 #             try:
 #                 resp = requests.get(pdf_url)
 #                 resp.raise_for_status()
 #                 with open(dest_path, "wb") as f:
 #                     f.write(resp.content)
-#                 print(f"[⬇️] Téléchargé : {filename}")
+#                 print(f"[⬇️] Downloaded: {filename}")
 #             except Exception as e:
-#                 print(f"[❌] Échec pour {pdf_url} : {e}")
+#                 print(f"[❌] Failed to download {pdf_url}: {e}")
 
 
-### Ingestion des fichiers PDF
+### Ingestion of PDF files
 def ingest_pdf(file_path, output_file="raw_pdf.jsonl"):
-    print(f"[📄] Traitement de : {file_path}")
+    print(f"[📄] Processing: {file_path}")
     full_text = extraire_texte(file_path) or ""
 
     doc = {
@@ -68,19 +68,19 @@ def ingest_pdf(file_path, output_file="raw_pdf.jsonl"):
         with open(path, "a", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False)
             f.write("\n")
-        print(f"[+] PDF ingéré : {file_path}")
+        print(f"[+] PDF ingested: {file_path}")
     except Exception as e:
-        print(f"[❌] Échec d’écriture JSON pour {file_path} : {e}")
+        print(f"[❌] Failed to write JSON for {file_path}: {e}")
 
 
 ### PDF Ingestion
 def run_pdf_ingestion():
-    # # 1. Collecter tous les PDFs depuis les sources connues
+    # # 1. Collect all PDFs from known sources
     # for source in PDF_SOURCES:
-    #     print(f"[🌐] Collecte des PDFs depuis {source['name']}...")
+    #     print(f"[🌐] Collecting PDFs from {source['name']}...")
     #     collect_pdfs(source["url"])
 
-    # 2. Ingestion des PDFs téléchargés
+    # 2. Ingestion of downloaded PDFs
     PDF_DIR = "cti_pipeline/PDFs"
     for filename in os.listdir(PDF_DIR):
         if filename.endswith(".pdf"):

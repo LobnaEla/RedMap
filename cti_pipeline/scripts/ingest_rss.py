@@ -6,7 +6,7 @@ import feedparser
 DATA_DIR = "cti_pipeline/data/"
 
 
-### Ingestion des flux RSS de CERT-FR
+### Ingestion of CERT-FR RSS feeds
 def ingest_rss(output_file="raw_rss_certfr.jsonl"):
     url = "https://www.cert.ssi.gouv.fr/feed/"
     feed = feedparser.parse(url)
@@ -28,9 +28,9 @@ def ingest_rss(output_file="raw_rss_certfr.jsonl"):
             json.dump(doc, f, ensure_ascii=False)
             f.write("\n")
 
-    print(f"[+] {len(feed.entries)} bulletins RSS CERT-FR collectés.")
+    print(f"[+] {len(feed.entries)} CERT-FR RSS bulletins collected.")
 
 
 if __name__ == "__main__":
     ingest_rss()
-    print("[✔] Ingestion des flux RSS terminée.")
+    print("[✔] RSS feed ingestion completed.")
