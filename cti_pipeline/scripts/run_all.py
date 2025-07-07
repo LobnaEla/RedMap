@@ -3,10 +3,8 @@ from cti_pipeline.scripts.ingest_otx import ingest_otx
 from cti_pipeline.scripts.ingest_pdf import run_pdf_ingestion
 from cti_pipeline.scripts.ingest_twitter_users import get_tweets_from_user, save_tweets
 from cti_pipeline.scripts.ingest_twitter import search_tweets
-from cti_pipeline.pdf_sources import PDF_SOURCES
 from cti_pipeline.blog_sources import BLOG_SOURCES
 from cti_pipeline.scripts.scraper_blog import scrape_blog
-import time
 import os
 from bs4 import XMLParsedAsHTMLWarning
 import warnings
