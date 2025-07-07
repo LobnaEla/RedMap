@@ -1,0 +1,5 @@
+groq
+nltk
+spacy
+python-dotenv
+pyyaml

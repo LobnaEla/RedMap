@@ -1,0 +1,13 @@
+# Configuration file
+
+groq:
+  api_url: "https://api.groq.com/openai/v1/chat/completions"
+  model: "llama3-70b-8192"
+  temperature: 0.1
+
+prompts:
+  ioc_extraction: |
+    You are a cybersecurity analyst specializing in IOC extraction.
+    Analyze the provided text and extract all Indicators of Compromise (IOCs).
+    Return the results in a JSON array where each object has 'ioc' and 'type' fields.
+    Focus on IP addresses, domains, URLs, file hashes, and email addresses.
