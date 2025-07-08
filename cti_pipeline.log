@@ -1,0 +1,118 @@
+2025-07-07 22:29:51,372 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.ancs.tn:443
+2025-07-07 22:29:51,372 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.ancs.tn:443
+2025-07-07 22:29:53,998 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/liste-vulnerabilites HTTP/1.1" 200 7637
+2025-07-07 22:29:53,998 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/liste-vulnerabilites HTTP/1.1" 200 7637
+2025-07-07 22:29:54,034 - root - INFO - Nombre de tables trouvées: 1
+2025-07-07 22:29:54,034 - root - INFO - Nombre de tables trouvées: 1
+2025-07-07 22:29:54,035 - root - INFO - tbody trouvé dans la table
+2025-07-07 22:29:54,035 - root - INFO - tbody trouvé dans la table
+2025-07-07 22:29:54,036 - root - INFO - Nombre de lignes dans tbody: 10
+2025-07-07 22:29:54,036 - root - INFO - Nombre de lignes dans tbody: 10
+2025-07-07 22:29:54,038 - root - INFO - Nombre total de liens trouvés: 0
+2025-07-07 22:29:54,038 - root - INFO - Nombre total de liens trouvés: 0
+2025-07-07 22:29:54,039 - root - WARNING - Aucune vulnérabilité trouvée
+2025-07-07 22:29:54,039 - root - WARNING - Aucune vulnérabilité trouvée
+2025-07-07 22:29:54,044 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:29:54,044 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:33:02,120 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.ancs.tn:443
+2025-07-07 22:33:02,120 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.ancs.tn:443
+2025-07-07 22:33:04,605 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/liste-vulnerabilites HTTP/1.1" 200 7635
+2025-07-07 22:33:04,605 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/liste-vulnerabilites HTTP/1.1" 200 7635
+2025-07-07 22:33:04,651 - root - INFO - Nombre de tables trouvées: 1
+2025-07-07 22:33:04,651 - root - INFO - Nombre de tables trouvées: 1
+2025-07-07 22:33:04,652 - root - INFO - tbody trouvé dans la table
+2025-07-07 22:33:04,652 - root - INFO - tbody trouvé dans la table
+2025-07-07 22:33:04,654 - root - INFO - Nombre de lignes dans tbody: 10
+2025-07-07 22:33:04,654 - root - INFO - Nombre de lignes dans tbody: 10
+2025-07-07 22:33:04,655 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-migration-backup-staging-wpvivid-backup-migration
+2025-07-07 22:33:04,655 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-migration-backup-staging-wpvivid-backup-migration
+2025-07-07 22:33:04,656 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/produits-citrix-36
+2025-07-07 22:33:04,656 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/produits-citrix-36
+2025-07-07 22:33:04,657 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/php-20
+2025-07-07 22:33:04,657 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/php-20
+2025-07-07 22:33:04,658 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/cisco-unified-communications-manager-2
+2025-07-07 22:33:04,658 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/cisco-unified-communications-manager-2
+2025-07-07 22:33:04,658 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/xen-15
+2025-07-07 22:33:04,658 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/xen-15
+2025-07-07 22:33:04,659 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/mozilla-thunderbird-28
+2025-07-07 22:33:04,659 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/mozilla-thunderbird-28
+2025-07-07 22:33:04,660 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/sudo-0
+2025-07-07 22:33:04,660 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/sudo-0
+2025-07-07 22:33:04,661 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/modsecurity-1
+2025-07-07 22:33:04,661 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/modsecurity-1
+2025-07-07 22:33:04,662 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-forminator-forms
+2025-07-07 22:33:04,662 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-forminator-forms
+2025-07-07 22:33:04,663 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/google-chrome-214
+2025-07-07 22:33:04,663 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/google-chrome-214
+2025-07-07 22:33:04,663 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:33:04,663 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:33:05,615 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/produits-citrix-36 HTTP/1.1" 200 6364
+2025-07-07 22:33:05,615 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/produits-citrix-36 HTTP/1.1" 200 6364
+2025-07-07 22:33:06,564 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/cisco-unified-communications-manager-2 HTTP/1.1" 200 6548
+2025-07-07 22:33:06,564 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/cisco-unified-communications-manager-2 HTTP/1.1" 200 6548
+2025-07-07 22:33:07,418 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/mozilla-thunderbird-28 HTTP/1.1" 200 6540
+2025-07-07 22:33:07,418 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/mozilla-thunderbird-28 HTTP/1.1" 200 6540
+2025-07-07 22:33:08,283 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/sudo-0 HTTP/1.1" 200 6367
+2025-07-07 22:33:08,283 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/sudo-0 HTTP/1.1" 200 6367
+2025-07-07 22:33:09,183 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/xen-15 HTTP/1.1" 200 6300
+2025-07-07 22:33:09,183 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/xen-15 HTTP/1.1" 200 6300
+2025-07-07 22:33:10,058 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/google-chrome-214 HTTP/1.1" 200 6666
+2025-07-07 22:33:10,058 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/google-chrome-214 HTTP/1.1" 200 6666
+2025-07-07 22:33:10,962 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/php-20 HTTP/1.1" 200 6471
+2025-07-07 22:33:10,962 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/php-20 HTTP/1.1" 200 6471
+2025-07-07 22:33:11,846 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/wordpress-plugin-forminator-forms HTTP/1.1" 200 6530
+2025-07-07 22:33:11,846 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/wordpress-plugin-forminator-forms HTTP/1.1" 200 6530
+2025-07-07 22:33:12,729 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/wordpress-plugin-migration-backup-staging-wpvivid-backup-migration HTTP/1.1" 200 6609
+2025-07-07 22:33:12,729 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/wordpress-plugin-migration-backup-staging-wpvivid-backup-migration HTTP/1.1" 200 6609
+2025-07-07 22:33:13,578 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/modsecurity-1 HTTP/1.1" 200 6319
+2025-07-07 22:33:13,578 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/les-vulnerabiltes/modsecurity-1 HTTP/1.1" 200 6319
+2025-07-07 22:33:13,604 - root - INFO - Traitement terminé. 10 nouvelles vulnérabilités ingérées.
+2025-07-07 22:33:13,604 - root - INFO - Traitement terminé. 10 nouvelles vulnérabilités ingérées.
+2025-07-07 22:33:34,091 - root - INFO - Nombre de tables trouvées: 1
+2025-07-07 22:33:34,091 - root - INFO - Nombre de tables trouvées: 1
+2025-07-07 22:33:34,092 - root - INFO - tbody trouvé dans la table
+2025-07-07 22:33:34,092 - root - INFO - tbody trouvé dans la table
+2025-07-07 22:33:34,092 - root - INFO - Nombre de lignes dans tbody: 10
+2025-07-07 22:33:34,092 - root - INFO - Nombre de lignes dans tbody: 10
+2025-07-07 22:33:34,094 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:33:34,094 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:33:34,095 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:33:34,095 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:34:45,121 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:34:45,121 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:34:45,124 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:34:45,124 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:35:13,783 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.ancs.tn:443
+2025-07-07 22:35:13,783 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.ancs.tn:443
+2025-07-07 22:35:16,131 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/liste-vulnerabilites HTTP/1.1" 200 7640
+2025-07-07 22:35:16,131 - urllib3.connectionpool - DEBUG - https://www.ancs.tn:443 "GET /fr/tuncert/liste-vulnerabilites HTTP/1.1" 200 7640
+2025-07-07 22:35:16,195 - root - DEBUG - Nombre de tables trouvées: 1
+2025-07-07 22:35:16,195 - root - DEBUG - Nombre de tables trouvées: 1
+2025-07-07 22:35:16,215 - root - DEBUG - tbody trouvé dans la table
+2025-07-07 22:35:16,215 - root - DEBUG - tbody trouvé dans la table
+2025-07-07 22:35:16,224 - root - DEBUG - Nombre de lignes dans tbody: 10
+2025-07-07 22:35:16,224 - root - DEBUG - Nombre de lignes dans tbody: 10
+2025-07-07 22:35:16,225 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-migration-backup-staging-wpvivid-backup-migration
+2025-07-07 22:35:16,225 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-migration-backup-staging-wpvivid-backup-migration
+2025-07-07 22:35:16,226 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/produits-citrix-36
+2025-07-07 22:35:16,226 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/produits-citrix-36
+2025-07-07 22:35:16,248 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/php-20
+2025-07-07 22:35:16,248 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/php-20
+2025-07-07 22:35:16,258 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/cisco-unified-communications-manager-2
+2025-07-07 22:35:16,258 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/cisco-unified-communications-manager-2
+2025-07-07 22:35:16,259 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/xen-15
+2025-07-07 22:35:16,259 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/xen-15
+2025-07-07 22:35:16,260 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/mozilla-thunderbird-28
+2025-07-07 22:35:16,260 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/mozilla-thunderbird-28
+2025-07-07 22:35:16,260 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/sudo-0
+2025-07-07 22:35:16,260 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/sudo-0
+2025-07-07 22:35:16,261 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/modsecurity-1
+2025-07-07 22:35:16,261 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/modsecurity-1
+2025-07-07 22:35:16,284 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-forminator-forms
+2025-07-07 22:35:16,284 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/wordpress-plugin-forminator-forms
+2025-07-07 22:35:16,307 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/google-chrome-214
+2025-07-07 22:35:16,307 - root - DEBUG - Ajout du lien: https://www.ancs.tn/fr/tuncert/les-vulnerabiltes/google-chrome-214
+2025-07-07 22:35:16,307 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:35:16,307 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-07 22:35:16,316 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-07 22:35:16,316 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.

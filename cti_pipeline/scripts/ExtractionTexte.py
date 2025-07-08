@@ -8,7 +8,7 @@ import time
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from ocr_library import extract_text as extract_text_ocr
+from cti_pipeline.scripts.ocr_library import extract_text as extract_text_ocr
 from pdf2image import convert_from_path
 
 
@@ -20,6 +20,7 @@ print(API_KEY)
 if not API_KEY:
     print("Erreur : la variable d'environnement VIRUSTOTAL_API_KEY n'est pas définie.")
     exit(1)
+
 
 # --- Extraction du texte ---
 def extraire_texte(fichier):
@@ -41,6 +42,7 @@ def extraire_texte(fichier):
     except Exception as e:
         print(f"[ERREUR] Échec de l'extraction : {e}")
         return ""
+
 
 def extraire_pdf(fichier):
     try:
@@ -82,20 +84,24 @@ def extraire_txt(fichier):
     with open(fichier, "r", encoding="utf-8") as f:
         return f.read()
 
+
 def extraire_json(fichier):
     with open(fichier, "r", encoding="utf-8") as f:
         contenu = json.load(f)
         return json.dumps(contenu, ensure_ascii=False)
+
 
 def extraire_html(fichier):
     with open(fichier, "r", encoding="utf-8") as f:
         soup = BeautifulSoup(f, "html.parser")
         return soup.get_text(separator="\n")
 
+
 def extraire_csv(fichier):
-    with open(fichier, newline='', encoding='utf-8') as f:
+    with open(fichier, newline="", encoding="utf-8") as f:
         lecteur = csv.reader(f)
         return "\n".join("; ".join(ligne) for ligne in lecteur)
+
 
 def nettoyer_texte(texte):
     if not texte:
@@ -103,22 +109,24 @@ def nettoyer_texte(texte):
     lignes = [ligne.strip() for ligne in texte.splitlines() if ligne.strip()]
     return "\n".join(lignes)
 
+
 # --- Trouver liens ---
 def trouver_liens(texte):
     regex = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
     return re.findall(regex, texte)
 
+
 # --- Vérifier lien avec VirusTotal API v3 ---
 def verifier_lien_virustotal(lien):
     print(f"\n🔎 Analyse du lien : {lien}")
-    url_bytes = lien.encode('utf-8')
+    url_bytes = lien.encode("utf-8")
     url_b64 = base64.urlsafe_b64encode(url_bytes).decode().strip("=")
 
-    headers = {
-        "x-apikey": API_KEY
-    }
+    headers = {"x-apikey": API_KEY}
 
-    response = requests.get(f"https://www.virustotal.com/api/v3/urls/{url_b64}", headers=headers)
+    response = requests.get(
+        f"https://www.virustotal.com/api/v3/urls/{url_b64}", headers=headers
+    )
 
     if response.status_code == 200:
         data = response.json()
@@ -132,6 +140,7 @@ def verifier_lien_virustotal(lien):
         print(f"[INFO] Lien non trouvé dans VirusTotal : {lien}")
     else:
         print(f"[ERREUR] Code {response.status_code} pour le lien : {lien}")
+
 
 # --- Programme principal ---
 if __name__ == "__main__":

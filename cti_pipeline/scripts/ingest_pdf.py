@@ -1,92 +1,119 @@
+import logging
 import os
 import json
-import sys
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
-from urllib.parse import urljoin
-import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 from cti_pipeline.scripts.ExtractionTexte import extraire_texte
+from cti_pipeline.scripts.utilities import (
+    get_content_hash,
+    load_processed_items,
+    save_processed_items,
+    is_duplicate,
+)
+from cti_pipeline.scripts.utilities import DATA_DIR, METADATA_DIR, PDF_DIR
 
-DATA_DIR = "cti_pipeline/data/"
-PDF_DIR = "cti_pipeline/PDFs"
-
-
-# ### Collect PDFs from a web page
-# def collect_pdfs(page_url, pdf_dir="cti_pipeline/PDFs"):
-#     os.makedirs(pdf_dir, exist_ok=True)
-#     domain = "/".join(page_url.split("/")[:3])  # Ex: https://www.mandiant.com
-#
-#     try:
-#         r = requests.get(page_url)
-#         r.raise_for_status()
-#     except Exception as e:
-#         print(f"[❌] Failed to access page {page_url}: {e}")
-#         return
-#
-#     soup = BeautifulSoup(r.text, "html.parser")
-#     for link in soup.find_all("a", href=True):
-#         href = link["href"]
-#         if ".pdf" in href.lower():
-#             pdf_url = urljoin(domain, href)
-#             filename = os.path.basename(pdf_url)
-#             dest_path = os.path.join(pdf_dir, filename)
-#
-#             if os.path.exists(dest_path):
-#                 print(f"[✔] Already downloaded: {filename}")
-#                 continue
-#
-#             try:
-#                 resp = requests.get(pdf_url)
-#                 resp.raise_for_status()
-#                 with open(dest_path, "wb") as f:
-#                     f.write(resp.content)
-#                 print(f"[⬇️] Downloaded: {filename}")
-#             except Exception as e:
-#                 print(f"[❌] Failed to download {pdf_url}: {e}")
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-### Ingestion of PDF files
-def ingest_pdf(file_path, output_file="raw_pdf.jsonl"):
-    print(f"[📄] Processing: {file_path}")
-    full_text = extraire_texte(file_path) or ""
+def process_single_pdf(filepath, processed_data):
+    """
+    Process individual PDF file with comprehensive error handling
+    Returns:
+        tuple: (success_status: bool, content_hash: str or None)
+    """
+    try:
+        filename = os.path.basename(filepath)
+        file_stat = os.stat(filepath)
+        file_key = f"{filename}_{file_stat.st_size}_{file_stat.st_mtime}"
 
-    doc = {
-        "source": os.path.basename(file_path),
+        if file_key in processed_data.get("processed_files", []):
+            logger.debug(f"Skipping already processed PDF: {filename}")
+            return False, None
+
+        logger.info(f"Processing PDF: {filename}")
+        full_text = extraire_texte(filepath)
+
+        if not full_text:
+            logger.warning(f"Empty text extracted from {filename}")
+            return False, None
+
+        dummy_url = f"file://{filepath}"
+        if is_duplicate(full_text, dummy_url, processed_data, "pdf"):
+            logger.debug(f"Duplicate content in {filename}")
+            return False, None
+
+        content_hash = get_content_hash(full_text, "pdf")
+        return True, content_hash
+
+    except Exception as e:
+        logger.error(f"Failed to process {filepath}: {str(e)}")
+        return False, None
+
+
+def save_pdf_document(filename, content, output_dir):
+    """Save extracted PDF content to standardized JSONL format"""
+    output_file = os.path.join(
+        output_dir, f"pdf_{datetime.now().strftime('%Y%m%d')}.jsonl"
+    )
+
+    document = {
+        "source": filename,
         "type": "report",
-        "content": full_text.strip(),
-        "date": str(datetime.now()),
+        "content": content.strip(),
+        "date": datetime.now().isoformat(),
         "format": "PDF",
+        "file_size": os.path.getsize(filename),
     }
 
-    os.makedirs(DATA_DIR, exist_ok=True)
-    path = os.path.join(DATA_DIR, output_file)
-
-    try:
-        with open(path, "a", encoding="utf-8") as f:
-            json.dump(doc, f, ensure_ascii=False)
-            f.write("\n")
-        print(f"[+] PDF ingested: {file_path}")
-    except Exception as e:
-        print(f"[❌] Failed to write JSON for {file_path}: {e}")
+    with open(output_file, "a", encoding="utf-8") as f:
+        json.dump(document, f, ensure_ascii=False)
+        f.write("\n")
 
 
-### PDF Ingestion
-def run_pdf_ingestion():
-    # # 1. Collect all PDFs from known sources
-    # for source in PDF_SOURCES:
-    #     print(f"[🌐] Collecting PDFs from {source['name']}...")
-    #     collect_pdfs(source["url"])
+def ingest_all_pdfs(pdf_dir, data_dir, metadata_dir):
+    """
+    Main PDF ingestion workflow with proper state management
+    Returns:
+        dict: {'processed': int, 'skipped': int, 'failed': int}
+    """
+    processed_data = load_processed_items("pdfs", metadata_dir)
+    stats = {"processed": 0, "skipped": 0, "failed": 0}
 
-    # 2. Ingestion of downloaded PDFs
-    PDF_DIR = "cti_pipeline/PDFs"
-    for filename in os.listdir(PDF_DIR):
-        if filename.endswith(".pdf"):
-            filepath = os.path.join(PDF_DIR, filename)
-            ingest_pdf(filepath, output_file="raw_pdf.jsonl")
+    for filename in os.listdir(pdf_dir):
+        if not filename.endswith(".pdf"):
+            continue
+
+        filepath = os.path.join(pdf_dir, filename)
+        success, content_hash = process_single_pdf(filepath, processed_data)
+
+        if not success:
+            stats["skipped" if content_hash is None else "failed"] += 1
+            continue
+
+        try:
+            # Re-extract text to avoid storing in memory
+            full_text = extraire_texte(filepath)
+            save_pdf_document(filename, full_text, data_dir)
+
+            # Update processing metadata
+            file_stat = os.stat(filepath)
+            file_key = f"{filename}_{file_stat.st_size}_{file_stat.st_mtime}"
+
+            processed_data.setdefault("processed_files", []).append(file_key)
+            processed_data.setdefault("hashes", []).append(content_hash)
+            processed_data.setdefault("urls", []).append(f"file://{filepath}")
+            stats["processed"] += 1
+
+        except Exception as e:
+            logger.error(f"Failed to save {filename}: {str(e)}")
+            stats["failed"] += 1
+
+    save_processed_items("pdfs", processed_data, metadata_dir)
+    logger.info(f"PDF processing complete. Stats: {stats}")
+    return stats
 
 
 if __name__ == "__main__":
-    run_pdf_ingestion()
+    result = ingest_all_pdfs(PDF_DIR, DATA_DIR, METADATA_DIR)
+    print(f"Processing result: {result}")
