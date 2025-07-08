@@ -8,7 +8,6 @@ from airflow.decorators import task
 from airflow.operators.python import PythonOperator
 import logging
 import sys
-from datetime import datetime
 
 # Ajoutez le chemin racine du projet au PYTHONPATH
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -62,6 +61,7 @@ for directory in [DATA_DIR, METADATA_DIR, PDF_DIR]:
 def ingest_rss_feed():
     """Airflow task for CERT-FR RSS ingestion"""
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting RSS ingestion")
 
     try:
         result = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
@@ -76,26 +76,28 @@ def ingest_rss_feed():
 
 
 @task()
-def ingest_rss_feed():
+def ingest_tuncert():
     """Airflow task for TUNCERT ingestion"""
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting TUNCERT ingestion")
 
     try:
-        result = ingest_tuncert_vulnerabilities()
+        result = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
         logger.info(
-            f"✅ RSS: {result['processed']} new bulletins collected (out of {result['total']})"
+            f"✅ TUNCERT: {result['processed']} new vulnerabilities collected (out of {result['total']})"
         )
         return result
 
     except Exception as e:
-        logger.error(f"❌ RSS ingestion failed: {str(e)}")
+        logger.error(f"❌ TUNCERT ingestion failed: {str(e)}")
         raise
 
 
 @task()
-def ingest_otx_pulses():
+def ingest_otx():
     """Airflow task for OTX pulse ingestion"""
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting OTX ingestion")
 
     try:
         result = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
@@ -113,6 +115,8 @@ def ingest_otx_pulses():
 def ingest_twitter_data():
     """Tâche Airflow pour l'ingestion Twitter"""
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting Twitter ingestion")
+
     users = ["vxunderground", "CERT_FR", "CISACyber"]
 
     try:
@@ -130,6 +134,8 @@ def ingest_twitter_data():
 def ingest_blog_articles():
     """Airflow task for blog ingestion"""
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting blogs ingestion")
+
     total_processed = 0
 
     try:
@@ -144,12 +150,13 @@ def ingest_blog_articles():
 @task()
 def ingest_pdf_reports():
     """Ingest PDF threat reports"""
-    logging.info("🔄 Starting PDF ingestion")
+    logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting PDF ingestion")
 
     try:
         # Call the function that handles ingestion of all PDFs
-        total_new_pdfs = ingest_all_pdfs
-        logging.info(f"✅ PDFs: {total_new_pdfs} new reports processed")
+        total_new_pdfs = ingest_all_pdfs(PDF_DIR, DATA_DIR, METADATA_DIR)
+        logger.info(f"✅ PDFs: {total_new_pdfs} new reports processed")
         return total_new_pdfs
 
     except Exception as e:
@@ -243,10 +250,11 @@ def generate_ingestion_report():
 with dag:
     # Tâches d'ingestion en parallèle
     rss_task = ingest_rss_feed()
-    otx_task = ingest_otx_pulses()
+    otx_task = ingest_otx()
     twitter_task = ingest_twitter_data()
     blog_task = ingest_blog_articles()
     pdf_task = ingest_pdf_reports()
+    tuncert_task = ingest_tuncert()
 
     # Tâches de maintenance
     cleanup_task = cleanup_old_data()
@@ -255,7 +263,7 @@ with dag:
     # Définition des dépendances
     # Toutes les tâches d'ingestion s'exécutent en parallèle
     (
-        [rss_task, otx_task, twitter_task, blog_task, pdf_task]
+        [rss_task, otx_task, twitter_task, blog_task, pdf_task, tuncert_task]
         >> cleanup_task
         >> report_task
     )
