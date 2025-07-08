@@ -1,0 +1,25 @@
+# Configuration file
+
+groq:
+  api_url: "https://api.groq.com/openai/v1/chat/completions"
+  model: "llama3-70b-8192"
+  temperature: 0.1
+
+prompts:
+  ioc_extraction: |
+    You are a cybersecurity analyst specializing in IOC extraction.
+    Analyze the provided text and extract all Indicators of Compromise (IOCs).
+    Return the results in a JSON array, where each object includes:
+    {
+      "ioc": "<indicator_value>",
+      "type": "<indicator_type>"
+    }
+
+    Include, but do not limit to, the following types:
+    -Network-based: IP addresses, domains, URLs
+    -Host-based: file paths, filenames, file extensions, process names, registry keys
+    -File-related: file hashes (MD5, SHA-1, SHA-256)
+    -Email-related: email addresses, email subjects, malicious attachment names
+
+    Normalize any obfuscated indicators (e.g., hxxp → http, [.] → .).
+    Do not include duplicates. Only extract IOCs that are explicitly mentioned.
