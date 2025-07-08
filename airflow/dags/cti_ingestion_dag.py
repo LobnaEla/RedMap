@@ -16,14 +16,8 @@ sys.path.append(project_root)
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../cti_pipeline"))
 
-# Imports des modules CTI
-from cti_pipeline.scripts.ingest_tuncert import ingest_tuncert_vulnerabilities
-from cti_pipeline.scripts.ingest_rss import ingest_certfr_rss
-from cti_pipeline.scripts.ingest_otx import ingest_otx_pulses
-from cti_pipeline.scripts.ingest_pdf import ingest_all_pdfs
-from cti_pipeline.scripts.ingest_twitter_users import ingest_all_twitter_users
-from cti_pipeline.scripts.scraper_blog import ingest_all_blog
-from cti_pipeline.blog_sources import BLOG_SOURCES
+# Only import lightweight modules at the top level
+# Heavy imports will be done inside task functions
 
 # DAG configuration
 default_args = {
@@ -41,15 +35,15 @@ dag = DAG(
     "cti_ingestion_pipeline",
     default_args=default_args,
     description="CTI ingestion pipeline",
-    schedule_interval=timedelta(hours=1),  # Run every hour
+    schedule=timedelta(hours=1),  # Run every hour
     catchup=False,
     max_active_runs=1,
 )
 
 # Data directories
-DATA_DIR = "cti_pipeline/data/"
-METADATA_DIR = "cti_pipeline/metadata/"
-PDF_DIR = "cti_pipeline/PDFs/"
+DATA_DIR = "/opt/airflow/cti_pipeline/data/"
+METADATA_DIR = "/opt/airflow/cti_pipeline/metadata/"
+PDF_DIR = "/opt/airflow/cti_pipeline/PDFs/"
 
 # Create required directories
 for directory in [DATA_DIR, METADATA_DIR, PDF_DIR]:
@@ -60,6 +54,9 @@ for directory in [DATA_DIR, METADATA_DIR, PDF_DIR]:
 @task()
 def ingest_rss_feed():
     """Airflow task for CERT-FR RSS ingestion"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_rss import ingest_certfr_rss
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting RSS ingestion")
 
@@ -76,8 +73,11 @@ def ingest_rss_feed():
 
 
 @task()
-def ingest_tuncert():
+def ingest_tuncert_vulnerabilities_task():
     """Airflow task for TUNCERT ingestion"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_tuncert import ingest_tuncert_vulnerabilities
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting TUNCERT ingestion")
 
@@ -94,13 +94,18 @@ def ingest_tuncert():
 
 
 @task()
-def ingest_otx():
+def ingest_otx_task():
     """Airflow task for OTX pulse ingestion"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_otx import (
+        ingest_otx_pulses as ingest_otx_pulses_func,
+    )
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting OTX ingestion")
 
     try:
-        result = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
+        result = ingest_otx_pulses_func(DATA_DIR, METADATA_DIR)
         logger.info(
             f"✅ OTX: {result['processed']} new pulses collected (out of {result['total']})"
         )
@@ -112,8 +117,34 @@ def ingest_otx():
 
 
 @task()
+def ingest_tuncert_task():
+    """Airflow task for TUNCERT ingestion"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_tuncert import (
+        ingest_tuncert_vulnerabilities as ingest_tuncert_vulnerabilities_func,
+    )
+
+    logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting TUNCERT ingestion")
+
+    try:
+        result = ingest_tuncert_vulnerabilities_func(DATA_DIR, METADATA_DIR)
+        logger.info(
+            f"✅ TUNCERT: {result['processed']} new vulnerabilities collected (out of {result['total']})"
+        )
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ TUNCERT ingestion failed: {str(e)}")
+        raise
+
+
+@task()
 def ingest_twitter_data():
     """Tâche Airflow pour l'ingestion Twitter"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_twitter_users import ingest_all_twitter_users
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting Twitter ingestion")
 
@@ -133,6 +164,10 @@ def ingest_twitter_data():
 @task()
 def ingest_blog_articles():
     """Airflow task for blog ingestion"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.scraper_blog import ingest_all_blog
+    from cti_pipeline.blog_sources import BLOG_SOURCES
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting blogs ingestion")
 
@@ -150,13 +185,15 @@ def ingest_blog_articles():
 @task()
 def ingest_pdf_reports():
     """Ingest PDF threat reports"""
-    logger = logging.getLogger("airflow.task")
-    logger.info("🔄 Starting PDF ingestion")
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_pdf import ingest_all_pdfs
+
+    logging.info("🔄 Starting PDF ingestion")
 
     try:
         # Call the function that handles ingestion of all PDFs
         total_new_pdfs = ingest_all_pdfs(PDF_DIR, DATA_DIR, METADATA_DIR)
-        logger.info(f"✅ PDFs: {total_new_pdfs} new reports processed")
+        logging.info(f"✅ PDFs: {total_new_pdfs} new reports processed")
         return total_new_pdfs
 
     except Exception as e:
@@ -250,11 +287,12 @@ def generate_ingestion_report():
 with dag:
     # Tâches d'ingestion en parallèle
     rss_task = ingest_rss_feed()
-    otx_task = ingest_otx()
+    tuncert_task = ingest_tuncert_vulnerabilities_task()
+    otx_task = ingest_otx_task()
     twitter_task = ingest_twitter_data()
     blog_task = ingest_blog_articles()
     pdf_task = ingest_pdf_reports()
-    tuncert_task = ingest_tuncert()
+    tuncert_task = ingest_tuncert_task()
 
     # Tâches de maintenance
     cleanup_task = cleanup_old_data()
@@ -263,7 +301,7 @@ with dag:
     # Définition des dépendances
     # Toutes les tâches d'ingestion s'exécutent en parallèle
     (
-        [rss_task, otx_task, twitter_task, blog_task, pdf_task, tuncert_task]
+        [rss_task, tuncert_task, otx_task, twitter_task, blog_task, pdf_task]
         >> cleanup_task
         >> report_task
     )
