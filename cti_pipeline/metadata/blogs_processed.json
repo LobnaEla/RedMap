@@ -1,7 +1,7 @@
 {
   "hashes": [],
   "urls": [],
-  "last_run": "2025-07-08T11:59:50.639724",
+  "last_run": "2025-07-08T14:09:42.138345",
   "google_cloud": {
     "urls": [
       "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v",
@@ -158,6 +158,34 @@
       "ccc1f423b9c57c5af997f05052f70315",
       "c6a638f42f3719554456b3251f346222",
       "d210db5fbd9bd769daff7f66eef97f04"
+    ]
+  },
+  "elemendar": {
+    "urls": [
+      "https://www.elemendar.ai/post/threat-intelligence-update-27-dec-05-jan-2025",
+      "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-25-31-october-2024",
+      "https://www.elemendar.ai/post/threat-intelligence-update-06-dec-11-dec-2024",
+      "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-01-07-november-2024-tl",
+      "https://www.elemendar.ai/post/cybersecurity-threat-landscape-in-2025",
+      "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-october",
+      "https://www.elemendar.ai/post/threat-intelligence-update-22-28-november-2024",
+      "https://www.elemendar.ai/weekly-cti-reports",
+      "https://www.elemendar.ai/post/threat-intelligence-update-29-nov-5-dec-2024",
+      "https://www.elemendar.ai/post/cti-threat-summary-08-14-november-2024-tlp-clear",
+      "https://www.elemendar.ai/post/threat-intelligence-update-15-21-november-2024-tlp-c"
+    ],
+    "hashes": [
+      "ea98d626c11713895c9200040b6c4e8e",
+      "c59fe4d7e7851d7befefc31a658a862e",
+      "5913c15014d26b47dafecaaba2e9f35d",
+      "96e7da745bca0a8f811c9c222f5401d2",
+      "2ca37496fb8167919cbb59bbddb0be7d",
+      "aa01f6010b84b4b9e086307e8f684f16",
+      "c9ce951efb14a4f5582e9e8c72eb663c",
+      "63ab427bcdba1ef8fb4b4592e919c255",
+      "94432c1484087c827c25f922746ed233",
+      "73f9cca7c3489cd4fbeb5bf840680b4d",
+      "832c4841e9f48cb38ebe4305aa793fc9"
     ]
   }
 }
