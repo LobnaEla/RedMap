@@ -11,3 +11,5 @@ airflow/.mypy_cache/
 airflow/.pytest_cache/
 airflow/tmp/
 airflow/db.sqlite3
+
+entity-based-chunking/output/

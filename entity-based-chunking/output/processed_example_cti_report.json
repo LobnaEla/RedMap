@@ -1,0 +1,165 @@
+{
+  "metadata": {
+    "input_file": "tests\\example_cti_report.txt",
+    "total_chunks": 22,
+    "processing_timestamp": "2025-07-08T08:52:06.893826",
+    "strategy": "ioc_based",
+    "window_size": 2
+  },
+  "chunks": [
+    {
+      "chunk": "MedusaLocker ransomware, first observed in Q3 2022, is a sophisticated threat targeting healthcare organizations globally. It employs advanced encryption algorithms (AES-256) to lock critical files, appending a .locked extension, and demands ransom payments in Bitcoin, typically ranging from $50,000 to $500,000. Initial access is primarily achieved through phishing emails containing malicious attachments, such as macro-enabled Word documents or JavaScript droppers. These phishing campaigns are highly targeted, leveraging social engineering to impersonate trusted entities like medical suppliers or IT vendors.",
+      "ioc": ".locked",
+      "type": "file extension",
+      "sentence_position": 1,
+      "chunk_length": 615
+    },
+    {
+      "chunk": "For example, a recent campaign spoofed email domains from legitimate healthcare providers to distribute malicious payloads. The malware's infection chain involves multiple stages. After initial access (MITRE T1566.001), MedusaLocker exploits vulnerabilities like CVE-2023-1234, a privilege escalation flaw in Windows Server 2019, to gain administrative access (MITRE T1068). It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001).",
+      "ioc": "CVE-2023-1234",
+      "type": "CVE",
+      "sentence_position": 6,
+      "chunk_length": 584
+    },
+    {
+      "chunk": "For example, a recent campaign spoofed email domains from legitimate healthcare providers to distribute malicious payloads. The malware's infection chain involves multiple stages. After initial access (MITRE T1566.001), MedusaLocker exploits vulnerabilities like CVE-2023-1234, a privilege escalation flaw in Windows Server 2019, to gain administrative access (MITRE T1068). It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001).",
+      "ioc": "T1566.001",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 6,
+      "chunk_length": 584
+    },
+    {
+      "chunk": "For example, a recent campaign spoofed email domains from legitimate healthcare providers to distribute malicious payloads. The malware's infection chain involves multiple stages. After initial access (MITRE T1566.001), MedusaLocker exploits vulnerabilities like CVE-2023-1234, a privilege escalation flaw in Windows Server 2019, to gain administrative access (MITRE T1068). It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001).",
+      "ioc": "T1068",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 6,
+      "chunk_length": 584
+    },
+    {
+      "chunk": "The malware's infection chain involves multiple stages. After initial access (MITRE T1566.001), MedusaLocker exploits vulnerabilities like CVE-2023-1234, a privilege escalation flaw in Windows Server 2019, to gain administrative access (MITRE T1068). It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001). Network propagation occurs via SMBv1 exploits, targeting unpatched systems (MITRE T1210).",
+      "ioc": "T1490",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 7,
+      "chunk_length": 550
+    },
+    {
+      "chunk": "The malware's infection chain involves multiple stages. After initial access (MITRE T1566.001), MedusaLocker exploits vulnerabilities like CVE-2023-1234, a privilege escalation flaw in Windows Server 2019, to gain administrative access (MITRE T1068). It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001). Network propagation occurs via SMBv1 exploits, targeting unpatched systems (MITRE T1210).",
+      "ioc": "vssadmin.exe",
+      "type": "process name",
+      "sentence_position": 7,
+      "chunk_length": 550
+    },
+    {
+      "chunk": "After initial access (MITRE T1566.001), MedusaLocker exploits vulnerabilities like CVE-2023-1234, a privilege escalation flaw in Windows Server 2019, to gain administrative access (MITRE T1068). It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001). Network propagation occurs via SMBv1 exploits, targeting unpatched systems (MITRE T1210). A notable feature is its use of PowerShell scripts to evade detection, embedding commands in obfuscated .ps1 files.",
+      "ioc": "T1562.001",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 8,
+      "chunk_length": 610
+    },
+    {
+      "chunk": "It then deletes shadow copies using vssadmin.exe (MITRE T1490) to prevent data recovery. The ransomware also disables endpoint protection tools by terminating processes like Windows Defender (MITRE T1562.001). Network propagation occurs via SMBv1 exploits, targeting unpatched systems (MITRE T1210). A notable feature is its use of PowerShell scripts to evade detection, embedding commands in obfuscated .ps1 files. On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC.",
+      "ioc": "T1210",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 9,
+      "chunk_length": 545
+    },
+    {
+      "chunk": "Network propagation occurs via SMBv1 exploits, targeting unpatched systems (MITRE T1210). A notable feature is its use of PowerShell scripts to evade detection, embedding commands in obfuscated .ps1 files. On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}.",
+      "ioc": "CVE-2023-1234",
+      "type": "CVE",
+      "sentence_position": 11,
+      "chunk_length": 600
+    },
+    {
+      "chunk": "A notable feature is its use of PowerShell scripts to evade detection, embedding commands in obfuscated .ps1 files. On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution.",
+      "ioc": "192.168.1.100:8080",
+      "type": "C2 server",
+      "sentence_position": 12,
+      "chunk_length": 617
+    },
+    {
+      "chunk": "On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution. Victims receive a ransom note in a .txt file, often titled README_TO_RECOVER_FILES.txt, displayed on infected systems.",
+      "ioc": "192.168.1.100:8080",
+      "type": "C2 server",
+      "sentence_position": 13,
+      "chunk_length": 620
+    },
+    {
+      "chunk": "On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution. Victims receive a ransom note in a .txt file, often titled README_TO_RECOVER_FILES.txt, displayed on infected systems.",
+      "ioc": "tor.onion.link",
+      "type": "C2 server",
+      "sentence_position": 13,
+      "chunk_length": 620
+    },
+    {
+      "chunk": "On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution. Victims receive a ransom note in a .txt file, often titled README_TO_RECOVER_FILES.txt, displayed on infected systems.",
+      "ioc": "T1566.001",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 13,
+      "chunk_length": 620
+    },
+    {
+      "chunk": "On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution. Victims receive a ransom note in a .txt file, often titled README_TO_RECOVER_FILES.txt, displayed on infected systems.",
+      "ioc": "T1068",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 13,
+      "chunk_length": 620
+    },
+    {
+      "chunk": "On January 15, 2025, a tweet from #vunderground reported: \"MedusaLocker hits EU hospitals, exploits CVE-2023-1234, demands 2 BTC. Check C2 servers at 192.168.1.100:8080.\" This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution. Victims receive a ransom note in a .txt file, often titled README_TO_RECOVER_FILES.txt, displayed on infected systems.",
+      "ioc": "T1490",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 13,
+      "chunk_length": 620
+    },
+    {
+      "chunk": "This aligns with JSON data from AlienVault OTX: {\"threat_actor\": \"MedusaGroup\", \"malware\": \"MedusaLocker\", \"C2\": [\"192.168.1.100:8080\", \"tor.onion.link\"], \"targets\": [\"healthcare\"], \"TTPs\": [\"T1566.001\", \"T1068\", \"T1490\"]}. The campaign's command-and-control (C2) infrastructure uses Tor hidden services, complicating attribution. Victims receive a ransom note in a .txt file, often titled README_TO_RECOVER_FILES.txt, displayed on infected systems. The note provides a Tor-based payment portal and a unique victim ID. MedusaLocker's operators, linked to the MedusaGroup threat actor, are known for double extortion, exfiltrating data before encryption (MITRE T1567).",
+      "ioc": "README_TO_RECOVER_FILES.txt",
+      "type": "filename",
+      "sentence_position": 15,
+      "chunk_length": 667
+    },
+    {
+      "chunk": "Data is uploaded to cloud storage services like Mega or Dropbox, with threats to leak sensitive patient records unless ransoms are paid. A sample ransom note excerpt: \"Your files are encrypted! Pay 2.5 BTC to 1A2b3C4d5E6f7G or lose your data forever.\" In a recent Mandiant report, analysts noted MedusaLocker's use of living-off-the-land binaries (LotL) like certutil.exe for payload delivery (MITRE T1105). The malware also employs anti-analysis techniques, such as checking for virtualized environments (MITRE T1497).",
+      "ioc": "1A2b3C4d5E6f7G",
+      "type": "Bitcoin address",
+      "sentence_position": 20,
+      "chunk_length": 519
+    },
+    {
+      "chunk": "A sample ransom note excerpt: \"Your files are encrypted! Pay 2.5 BTC to 1A2b3C4d5E6f7G or lose your data forever.\" In a recent Mandiant report, analysts noted MedusaLocker's use of living-off-the-land binaries (LotL) like certutil.exe for payload delivery (MITRE T1105). The malware also employs anti-analysis techniques, such as checking for virtualized environments (MITRE T1497). Healthcare organizations are advised to patch CVE-2023-1234, enforce MFA, and monitor for suspicious PowerShell activity.",
+      "ioc": "T1105",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 21,
+      "chunk_length": 504
+    },
+    {
+      "chunk": "A sample ransom note excerpt: \"Your files are encrypted! Pay 2.5 BTC to 1A2b3C4d5E6f7G or lose your data forever.\" In a recent Mandiant report, analysts noted MedusaLocker's use of living-off-the-land binaries (LotL) like certutil.exe for payload delivery (MITRE T1105). The malware also employs anti-analysis techniques, such as checking for virtualized environments (MITRE T1497). Healthcare organizations are advised to patch CVE-2023-1234, enforce MFA, and monitor for suspicious PowerShell activity.",
+      "ioc": "certutil.exe",
+      "type": "process name",
+      "sentence_position": 21,
+      "chunk_length": 504
+    },
+    {
+      "chunk": "Pay 2.5 BTC to 1A2b3C4d5E6f7G or lose your data forever.\" In a recent Mandiant report, analysts noted MedusaLocker's use of living-off-the-land binaries (LotL) like certutil.exe for payload delivery (MITRE T1105). The malware also employs anti-analysis techniques, such as checking for virtualized environments (MITRE T1497). Healthcare organizations are advised to patch CVE-2023-1234, enforce MFA, and monitor for suspicious PowerShell activity. The campaign's impact includes downtime in hospital systems, with one reported case delaying critical surgeries in Germany.",
+      "ioc": "T1497",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 22,
+      "chunk_length": 571
+    },
+    {
+      "chunk": "In a recent Mandiant report, analysts noted MedusaLocker's use of living-off-the-land binaries (LotL) like certutil.exe for payload delivery (MITRE T1105). The malware also employs anti-analysis techniques, such as checking for virtualized environments (MITRE T1497). Healthcare organizations are advised to patch CVE-2023-1234, enforce MFA, and monitor for suspicious PowerShell activity. The campaign's impact includes downtime in hospital systems, with one reported case delaying critical surgeries in Germany. Additionally, an HTML blog post from a cybersecurity researcher on Medium detailed a related attack: \"MedusaLocker's latest variant uses a new obfuscation layer, embedding malicious code in PNG images via steganography.\"",
+      "ioc": "CVE-2023-1234",
+      "type": "CVE",
+      "sentence_position": 23,
+      "chunk_length": 734
+    },
+    {
+      "chunk": "The campaign's impact includes downtime in hospital systems, with one reported case delaying critical surgeries in Germany. Additionally, an HTML blog post from a cybersecurity researcher on Medium detailed a related attack: \"MedusaLocker's latest variant uses a new obfuscation layer, embedding malicious code in PNG images via steganography.\" This technique (MITRE T1027) complicates detection by traditional AV tools. The blog also mentioned a spearphishing email with subject \"Urgent: Medical Supply Invoice,\" linking to a malicious domain (hxxp://fake-medical[.]com). The RedMap project's analysis of these sources aims to map TTPs to MITRE ATT&CK for actionable intelligence.",
+      "ioc": "T1027",
+      "type": "MITRE ATT&CK technique",
+      "sentence_position": 26,
+      "chunk_length": 681
+    }
+  ]
+}
