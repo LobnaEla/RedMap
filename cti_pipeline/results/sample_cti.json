@@ -1,0 +1,38 @@
+{
+    "ips": [
+        "192.168.0.1",
+        "192.168.88.12"
+    ],
+    "domains": [
+        "evil-site.co.uk",
+        "bad-domain.com",
+        "Vue.js"
+    ],
+    "urls": [
+        "http://malicious-sitel.Jcom/login.",
+        "www.url.com",
+        "http://malicious-site.com/login.",
+        "www.linkedin.com/in/nadinesnoussi"
+    ],
+    "malwares": [
+        "lockbit",
+        "emotet"
+    ],
+    "apt_groups": [
+        "LAZARUS",
+        "APT28"
+    ],
+    "ttps": [
+        "C2 communication",
+        "credential dump",
+        "Persistence"
+    ],
+    "hashes": {
+        "md5": [
+            "e99a18c428cb38d5f260853678922e03"
+        ],
+        "sha256": [
+            "44d88612fea8a8f36de82e1278abb02f3b3c8f6f8edc54f3c13a3f5f3ac7fc4b"
+        ]
+    }
+}
