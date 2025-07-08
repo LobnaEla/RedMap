@@ -1,62 +1,107 @@
+import logging
 import os
 import json
 from datetime import datetime
 import requests
 from dotenv import load_dotenv
+from typing import Dict, List, Optional
 
-# Load environment variables from config/.env
+from cti_pipeline.scripts.utilities import (
+    get_content_hash,
+    load_processed_items,
+    save_processed_items,
+    is_duplicate,
+    DATA_DIR,
+    METADATA_DIR,
+    PDF_DIR,
+)
+
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv(dotenv_path="cti_pipeline/config/.env")
-
 OTX_API_KEY = os.getenv("OTX_API_KEY")
-
-if not OTX_API_KEY:
-    raise Exception("❌ OTX API Key not found. Make sure it's set in config/.env")
-
-DATA_DIR = "cti_pipeline/data/"
 OTX_API_URL = "https://otx.alienvault.com/api/v1/pulses/subscribed"
 
 
-### Ingestion of OTX pulses (Open Threat Exchange)
-def ingest_otx(output_file="raw_otx_pulses.jsonl"):
-    headers = {"X-OTX-API-KEY": OTX_API_KEY}
+def fetch_otx_pulses() -> Optional[List[Dict]]:
+    """Fetches pulses from OTX API"""
+    if not OTX_API_KEY:
+        raise ValueError("OTX_API_KEY not found in environment variables")
+
     try:
-        response = requests.get(OTX_API_URL, headers=headers, timeout=30)
+        response = requests.get(
+            OTX_API_URL, headers={"X-OTX-API-KEY": OTX_API_KEY}, timeout=30
+        )
         response.raise_for_status()
+        return response.json().get("results", [])
     except Exception as e:
-        print(f"[-] API Error: {e}")
-        return
+        logger.error(f"OTX API request failed: {str(e)}")
+        return None
 
-    data = response.json()
-    pulses = data.get("results", [])
 
-    os.makedirs(DATA_DIR, exist_ok=True)
-    file_path = os.path.join(DATA_DIR, output_file)
+def process_otx_pulse(pulse: Dict, processed_data: Dict) -> Optional[Dict]:
+    """Processes single OTX pulse with duplicate check"""
+    pulse_id = pulse.get("id")
+    if not pulse_id:
+        return None
 
-    with open(file_path, "a", encoding="utf-8") as f:
+    if pulse_id in processed_data.get("pulse_ids", []):
+        logger.debug(f"Skipping already processed pulse: {pulse_id}")
+        return None
+
+    return {
+        "source": "OTX",
+        "type": "cti_pulse",
+        "pulse_id": pulse_id,
+        "title": pulse.get("name"),
+        "description": pulse.get("description", ""),
+        "tags": pulse.get("tags", []),
+        "created": pulse.get("created"),
+        "modified": pulse.get("modified"),
+        "indicators": pulse.get("indicators", []),
+        "tlp": pulse.get("tlp", "TLP:WHITE"),
+        "date_collected": datetime.now().isoformat(),
+    }
+
+
+def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
+    """Main OTX ingestion function with state management"""
+    from cti_pipeline.scripts.utilities import (
+        load_processed_items,
+        save_processed_items,
+    )
+
+    stats = {"processed": 0, "total": 0}
+    processed_data = load_processed_items("otx", metadata_dir)
+    pulses = fetch_otx_pulses()
+
+    if not pulses:
+        return stats
+
+    stats["total"] = len(pulses)
+    output_file = os.path.join(
+        data_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+    )
+
+    with open(output_file, "w", encoding="utf-8") as f:
         for pulse in pulses:
-            doc = {
-                "source": "OTX",
-                "type": "cti_pulse",
-                "title": pulse.get("name"),
-                "description": pulse.get("description", ""),
-                "tags": pulse.get("tags", []),
-                "created": pulse.get("created"),
-                "modified": pulse.get("modified"),
-                "indicators": pulse.get("indicators", []),
-                "tlp": pulse.get("tlp", "TLP:WHITE"),
-                "date_collected": str(datetime.now()),
-            }
+            doc = process_otx_pulse(pulse, processed_data)
+            if not doc:
+                continue
 
-            try:
-                json.dump(doc, f, ensure_ascii=False)
-                f.write("\n")
-            except Exception as e:
-                print(f"[❌] JSON write failed: {e}")
-                print("[PROBLEMATIC DOC] :", doc)
+            json.dump(doc, f, ensure_ascii=False)
+            f.write("\n")
 
-    print(f"[+] {len(pulses)} CTI pulses collected into {output_file}.")
+            processed_data.setdefault("pulse_ids", []).append(doc["pulse_id"])
+            stats["processed"] += 1
+
+    save_processed_items("otx", processed_data, metadata_dir)
+    return stats
 
 
 if __name__ == "__main__":
-    ingest_otx()
+    logging.basicConfig(level=logging.INFO)
+    results = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
+    print(f"Results: {results}")
     print("[✔] OTX pulse ingestion completed.")
