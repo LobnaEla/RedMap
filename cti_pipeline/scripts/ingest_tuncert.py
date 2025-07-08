@@ -285,17 +285,21 @@ def ingest_tuncert_vulnerabilities(data_dir, metadata_dir):
                     continue
 
                 content_str = json.dumps(vuln_details, sort_keys=True)
-                content_hash = get_content_hash(content_str)
 
-                if content_hash in processed_data.get("hashes", []):
-                    logger.debug(f"Déjà traité : {url}")
+                if is_duplicate(
+                    content_str, url, processed_data, content_type="generic"
+                ):
+                    logger.debug(f"Doublon détecté pour : {url}")
                     continue
+
+                content_hash = get_content_hash(content_str)
 
                 vuln_details["hash"] = content_hash
                 json.dump(vuln_details, f, ensure_ascii=False)
                 f.write("\n")
 
                 processed_data.setdefault("hashes", []).append(content_hash)
+                processed_data.setdefault("urls", []).append(url)
                 new_count += 1
 
         save_processed_items("tuncert", processed_data)

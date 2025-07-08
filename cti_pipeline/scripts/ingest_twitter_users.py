@@ -106,19 +106,32 @@ def scrape_user_tweets(username: str, max_scrolls: int = 3) -> List[Dict]:
 
 
 def process_user_tweets(username: str, processed_data: Dict) -> List[Dict]:
-    user_state = processed_data.get(username, {"tweet_hashes": []})
+    """Traite les tweets d'un utilisateur avec gestion des doublons"""
+    user_state = processed_data.get(username, {"tweet_hashes": [], "tweet_urls": []})
     new_tweets = []
 
     try:
         tweets = scrape_user_tweets(username)
         for tweet in tweets:
             content_str = json.dumps(tweet, sort_keys=True)
-            content_hash = get_content_hash(content_str)
+            url = tweet["tweet_url"]
 
-            if content_hash not in user_state["tweet_hashes"]:
-                tweet["hash"] = content_hash
-                new_tweets.append(tweet)
-                user_state["tweet_hashes"].append(content_hash)
+            if is_duplicate(
+                content_str,
+                url,
+                {
+                    "hashes": user_state["tweet_hashes"],
+                    "urls": user_state["tweet_urls"],
+                },
+            ):
+                logger.debug(f"Tweet déjà traité: {url}")
+                continue
+
+            content_hash = get_content_hash(content_str)
+            tweet["hash"] = content_hash
+            new_tweets.append(tweet)
+            user_state["tweet_hashes"].append(content_hash)
+            user_state["tweet_urls"].append(url)
 
     except Exception as e:
         logger.error(f"Failed to process tweets for @{username}: {str(e)}")

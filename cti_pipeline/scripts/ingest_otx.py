@@ -13,7 +13,6 @@ from cti_pipeline.scripts.utilities import (
     is_duplicate,
     DATA_DIR,
     METADATA_DIR,
-    PDF_DIR,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,19 +40,21 @@ def fetch_otx_pulses() -> Optional[List[Dict]]:
 
 
 def process_otx_pulse(pulse: Dict, processed_data: Dict) -> Optional[Dict]:
-    """Processes single OTX pulse with duplicate check based on content hash"""
+    """Processes a single OTX pulse, skipping duplicates"""
     content_str = json.dumps(pulse, sort_keys=True)
-    content_hash = get_content_hash(content_str)
+    pulse_id = pulse.get("id")
 
-    if content_hash in processed_data.get("pulse_hashes", []):
-        logger.debug(f"Skipping already processed pulse hash: {content_hash}")
+    if is_duplicate(content_str, pulse_id, processed_data, content_type="generic"):
+        logger.debug(f"Skipping duplicate OTX pulse: {pulse_id}")
         return None
+
+    content_hash = get_content_hash(content_str)
 
     return {
         "source": "OTX",
         "type": "cti_pulse",
         "hash": content_hash,
-        "pulse_id": pulse.get("id"),
+        "pulse_id": pulse_id,
         "title": pulse.get("name"),
         "description": pulse.get("description", ""),
         "tags": pulse.get("tags", []),
@@ -66,7 +67,7 @@ def process_otx_pulse(pulse: Dict, processed_data: Dict) -> Optional[Dict]:
 
 
 def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
-    """Main OTX ingestion function with state management"""
+    """Main OTX ingestion function with duplicate detection"""
     stats = {"processed": 0, "total": 0}
     processed_data = load_processed_items("otx")
     pulses = fetch_otx_pulses()
@@ -88,7 +89,8 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
             json.dump(doc, f, ensure_ascii=False)
             f.write("\n")
 
-            processed_data.setdefault("pulse_hashes", []).append(doc["hash"])
+            processed_data.setdefault("hashes", []).append(doc["hash"])
+            processed_data.setdefault("urls", []).append(doc["pulse_id"])
             stats["processed"] += 1
 
     save_processed_items("otx", processed_data)

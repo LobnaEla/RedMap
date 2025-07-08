@@ -1,0 +1,191 @@
+{
+  "hashes": [],
+  "urls": [],
+  "last_run": "2025-07-08T14:35:58.747887",
+  "google_cloud": {
+    "urls": [
+      "https://cloud.google.com/blog/topics/threat-intelligence/unc3944-proactive-hardening-recommendations",
+      "https://cloud.google.com/blog/topics/threat-intelligence/creative-phishing-academics-critics-of-russia",
+      "https://cloud.google.com/blog/topics/threat-intelligence/remote-code-execution-aviatrix-controller",
+      "https://cloud.google.com/blog/topics/threat-intelligence/cybercriminals-weaponize-fake-ai-websites",
+      "https://cloud.google.com/blog/topics/threat-intelligence",
+      "https://cloud.google.com/blog/topics/threat-intelligence/isolated-recovery-environments-modern-cyber-resilience",
+      "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v",
+      "https://cloud.google.com/blog/topics/threat-intelligence/2024-zero-day-trends",
+      "https://cloud.google.com/blog/topics/threat-intelligence/apt41-innovative-tactics",
+      "https://cloud.google.com/blog/topics/threat-intelligence/coldriver-steal-documents-western-targets-ngos",
+      "https://cloud.google.com/blog/topics/threat-intelligence/securing-protection-relays-modern-substations",
+      "https://cloud.google.com/blog/topics/threat-intelligence/voice-phishing-data-extortion",
+      "https://cloud.google.com/blog/topics/threat-intelligence/technical-analysis-vishing-threats"
+    ],
+    "hashes": [
+      "739bf01f16987fe8cef57b45eb4d48da",
+      "bd3cb5f30a31a280b0cd779583ca779a",
+      "167b28090eabc94103d32ffdb35656e9",
+      "feaa75a3a982a8f44a7ffe04c0c7f2ee",
+      "a926fe0fec82bfabc46eabe83e0d7112",
+      "cd67fe3c801fcd27993d01e32924d55f",
+      "24fba4b7c1a140b7f1ed91ae42e082c7",
+      "5970e5e18f4299cc34220c1d8c17e190",
+      "b5268d597a1ae88d4af196c8e19eb10e",
+      "de9aa459e25cbf5dd5656aa4168964b5",
+      "305efdf376004e26da3077f3f56e34b8",
+      "c40e9fe836b4ee2900efaa792f43eaed",
+      "c14350814013655d0f7d7eb8f73d07ef"
+    ]
+  },
+  "unit42_blog": {
+    "urls": [
+      "https://unit42.paloaltonetworks.com/slow-pisces-new-custom-malware/",
+      "https://unit42.paloaltonetworks.com/threat-brief-sap-netweaver-cve-2025-31324/",
+      "https://unit42.paloaltonetworks.com/new-frontier-of-genai-threats-a-comprehensive-guide-to-prompt-attacks/",
+      "https://unit42.paloaltonetworks.com/category/malware/",
+      "https://unit42.paloaltonetworks.com/stately-taurus-uses-bookworm-malware/",
+      "https://unit42.paloaltonetworks.com/category/threat-actor-groups/",
+      "https://unit42.paloaltonetworks.com/lnk-malware/",
+      "https://unit42.paloaltonetworks.com/threat-actor-groups-tracked-by-palo-alto-networks-unit-42/",
+      "https://unit42.paloaltonetworks.com/threat-brief-ivanti-cve-2025-0282-cve-2025-0283/",
+      "https://unit42.paloaltonetworks.com/prepare-for-emerging-ai-risks-unit-42-threat-frontier/",
+      "https://www.paloaltonetworks.com/network-security/advanced-threat-prevention",
+      "https://unit42.paloaltonetworks.com/threat-assessment-howling-scorpius-akira-ransomware/",
+      "https://unit42.paloaltonetworks.com/2024-unit-42-attack-surface-threat-research-internet-connected-exposures/"
+    ],
+    "hashes": [
+      "fb6ce6315e827918b58f7e512cb09afb",
+      "2164a3aee2e670985db10a993ef2830a",
+      "fc14a83164752650428b1a9f34b3a36a",
+      "b8a99269ff983de6fe8810d755692c9d",
+      "e2b1bd898cb1bc75a72dc21f358fa9ab",
+      "946df7ce612d6c216b06c69726be7653",
+      "aed4ff58526ef7aa4de574fe6b209348",
+      "060add42bd6857aa5d4beb44f9fa5ed0",
+      "0b00b794149096b32d1350eedbb2d7a4",
+      "c45469c632ac1b783bba25af37962a44",
+      "c1763b2077d38cb2753fd0d0e391fef5",
+      "d56bf5d0054143952c4d744606bdf66b",
+      "aed1aa04659ebf377a7b58927a559a63"
+    ]
+  },
+  "philiphristoff_medium": {
+    "urls": [
+      "https://medium.com/@philiphristoff/cyber-threat-intelligence-cti-a-clear-process-for-data-ingestion-and-distribution-1889f6a2c5a8?source=user_profile_page---------3-------------ecd40f31e5af----------------------",
+      "https://medium.com/@philiphristoff/how-genghis-khans-war-tactics-translate-into-cybersecurity-cdc8df36cb4b?source=user_profile_page---------1-------------ecd40f31e5af----------------------",
+      "https://medium.com/@philiphristoff/followers?source=user_profile_page----------------------ecd40f31e5af----------------------",
+      "https://medium.com/@philiphristoff/detection-engineering-process-from-threat-analysis-to-production-ready-rules-5843d980c9af?source=user_profile_page---------0-------------ecd40f31e5af----------------------",
+      "https://medium.com/@philiphristoff?source=user_profile_page----------------------ecd40f31e5af----------------------",
+      "https://policy.medium.com/medium-rules-30e5502c4eb4?source=user_profile_page---user_sidebar-------------------ecd40f31e5af----------------------",
+      "https://medium.com/@philiphristoff/lockbit-threat-group-profiling-02b9ae1d280e?source=user_profile_page---------4-------------ecd40f31e5af----------------------"
+    ],
+    "hashes": [
+      "d5deebae8d761d5077fde87e095498e1",
+      "1aa19cb466714880d6bf22c7baf4edec",
+      "cd9a3e3929b310c0aa06d300afc6e55d",
+      "c82fc11c775f672b7840ce2256633440",
+      "a144aae298404b410ca5bc5e76670c06",
+      "5fe661bfabd1b10a4c68e53d44806175",
+      "12c2637808306b5a5d99a8f9532bf28a"
+    ]
+  },
+  "adamgoss_medium": {
+    "urls": [
+      "https://infosecwriteups.com/?source=user_profile_page---------0-------------68844dca856f----------------------",
+      "https://policy.medium.com/medium-rules-30e5502c4eb4?source=user_profile_page---user_sidebar-------------------68844dca856f----------------------",
+      "https://medium.com/@Intel_Ops?source=user_profile_page---blogroll-------------------68844dca856f----------------------"
+    ],
+    "hashes": [
+      "74b836903e7c96c0c403abd76e9f9608",
+      "5fe661bfabd1b10a4c68e53d44806175",
+      "92176393e943c37b1833842d5f55bfc5"
+    ]
+  },
+  "aardvarkinfinity_medium": {
+    "urls": [
+      "https://medium.com/antihero-tsx-analysis?source=user_profile_page---blogroll-------------------15197b0b64e5----------------------",
+      "https://policy.medium.com/medium-rules-30e5502c4eb4?source=user_profile_page---user_sidebar-------------------15197b0b64e5----------------------",
+      "https://medium.com/aardvark-infinity/a-farewell-to-my-readers-on-medium-1fb162e82afa?source=user_profile_page---------0-------------15197b0b64e5----------------------",
+      "https://medium.com/aardvark-infinity/did-you-know-the-1-chief-information-security-officers-cant-answer-these-10-questions-from-4970ce79a1a3?source=user_profile_page---------4-------------15197b0b64e5----------------------",
+      "https://medium.com/ocd-olly?source=user_profile_page---blogroll-------------------15197b0b64e5----------------------"
+    ],
+    "hashes": [
+      "76cfa443fb8a11530d74158a02685e55",
+      "5fe661bfabd1b10a4c68e53d44806175",
+      "f92ad1bf683512e13e88dfe3235d07cc",
+      "785a70cece78a3fed646108eeab86c37",
+      "c24e70b38378691e2ea4ff2d5498fe71"
+    ]
+  },
+  "scottbolen_medium": {
+    "urls": [
+      "https://medium.com/@scottbolen/lists?source=user_profile_page----------------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/newly-emerged-ransomware-groups-in-2025-the-next-wave-of-cyber-threats-6ace55b7eddc?source=user_profile_page---------4-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/the-shifting-sands-of-cybersecurity-navigating-the-threats-and-trends-of-mid-2025-0cf2df6fd385?source=user_profile_page---------3-------------35b95555ccb5----------------------",
+      "https://policy.medium.com/medium-rules-30e5502c4eb4?source=user_profile_page---user_sidebar-------------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/unmasking-sectorj-inside-the-world-of-a-shadowy-cybercrime-collective-c1652b5baf5b?source=user_profile_page---------5-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/navigating-the-cyber-storm-everything-businesses-should-know-about-todays-cti-trends-cbeab10103c5?source=user_profile_page---------2-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/the-shadow-networks-unmasking-mexican-cartel-involvement-in-the-devastating-reality-of-human-6347c0c7ff2d?source=user_profile_page---------8-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/navigating-the-ai-powered-cyber-storm-a-practical-survival-guide-for-your-business-in-june-2025-f391df8b35ec?source=user_profile_page---------1-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/gremlin-stealer-a-deep-dive-into-the-emerging-information-stealing-threat-8b9cdfba9a69?source=user_profile_page---------6-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/threat-report-mexican-cartel-linked-trafficking-networks-d989d1ae6816?source=user_profile_page---------9-------------35b95555ccb5----------------------",
+      "https://medium.com/@scottbolen/inside-the-shadows-how-chinese-triad-fronts-fuel-human-trafficking-and-exploitation-d00127a3c54f?source=user_profile_page---------7-------------35b95555ccb5----------------------"
+    ],
+    "hashes": [
+      "da1112efd3fd30a419f0db3a02ada9a2",
+      "32fa0eddfa2463da238519176a65a2d0",
+      "65566686e11636c267c040b32a2ff15a",
+      "5fe661bfabd1b10a4c68e53d44806175",
+      "a830658e65b618eb22271f10b5d371b6",
+      "d630274dc566119ca3206dd3c3756585",
+      "919e4cdf28c48a79c7348d85d0756afa",
+      "af4f987be3e558fc9070c69b1d37df01",
+      "73ce76518a58395d2d4394dcfe29d420",
+      "fb7f929c1aebeefcbe0981fe5a1f841e",
+      "dbdddb599fd050875d724a998b0ef532"
+    ]
+  },
+  "security_com": {
+    "urls": [
+      "https://www.security.com/threat-intelligence/chrome-extension-leaks",
+      "https://www.security.com/threat-intelligence/fog-ransomware-attack",
+      "https://www.security.com/threat-intelligence",
+      "https://www.security.com/threat-intelligence/chrome-extension-credentials",
+      "https://www.security.com/threat-intelligence/billbug-china-espionage",
+      "https://www.security.com/threat-intelligence/play-ransomware-zero-day"
+    ],
+    "hashes": [
+      "5681e9ddedfc8a82008420346bcf5066",
+      "d210db5fbd9bd769daff7f66eef97f04",
+      "ccc1f423b9c57c5af997f05052f70315",
+      "0d9f8cccb0e9a5dd42b634bd59231321",
+      "e0a2cce82af9a638806011d741611ee7",
+      "c6a638f42f3719554456b3251f346222"
+    ]
+  },
+  "elemendar": {
+    "urls": [
+      "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-25-31-october-2024",
+      "https://www.elemendar.ai/post/threat-intelligence-update-22-28-november-2024",
+      "https://www.elemendar.ai/post/threat-intelligence-update-06-dec-11-dec-2024",
+      "https://www.elemendar.ai/post/threat-intelligence-update-27-dec-05-jan-2025",
+      "https://www.elemendar.ai/post/cti-threat-summary-08-14-november-2024-tlp-clear",
+      "https://www.elemendar.ai/post/threat-intelligence-update-29-nov-5-dec-2024",
+      "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-01-07-november-2024-tl",
+      "https://www.elemendar.ai/post/cybersecurity-threat-landscape-in-2025",
+      "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-october",
+      "https://www.elemendar.ai/weekly-cti-reports",
+      "https://www.elemendar.ai/post/threat-intelligence-update-15-21-november-2024-tlp-c"
+    ],
+    "hashes": [
+      "c59fe4d7e7851d7befefc31a658a862e",
+      "c9ce951efb14a4f5582e9e8c72eb663c",
+      "5913c15014d26b47dafecaaba2e9f35d",
+      "ea98d626c11713895c9200040b6c4e8e",
+      "73f9cca7c3489cd4fbeb5bf840680b4d",
+      "94432c1484087c827c25f922746ed233",
+      "96e7da745bca0a8f811c9c222f5401d2",
+      "2ca37496fb8167919cbb59bbddb0be7d",
+      "aa01f6010b84b4b9e086307e8f684f16",
+      "63ab427bcdba1ef8fb4b4592e919c255",
+      "832c4841e9f48cb38ebe4305aa793fc9"
+    ]
+  }
+}
