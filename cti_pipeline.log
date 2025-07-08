@@ -116,3 +116,7 @@
 2025-07-07 22:35:16,307 - root - INFO - Nombre total de liens trouvés: 10
 2025-07-07 22:35:16,316 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
 2025-07-07 22:35:16,316 - root - INFO - Traitement terminé. 0 nouvelles vulnérabilités ingérées.
+2025-07-08 13:55:51,792 - root - INFO - Nombre total de liens trouvés: 10
+2025-07-08 13:56:05,696 - cti_pipeline.scripts.ingest_pdf - INFO - [📄] Traitement de : 2024-H1-Threat-Intel-Report-Final.pdf
+2025-07-08 13:59:03,330 - cti_pipeline.scripts.ingest_pdf - INFO - [✅] PDF ingéré : 2024-H1-Threat-Intel-Report-Final.pdf
+2025-07-08 13:59:03,331 - cti_pipeline.scripts.ingest_pdf - INFO - [🏁] PDF Ingestion terminée. Résumé : {'processed': 1, 'skipped': 0, 'failed': 0}

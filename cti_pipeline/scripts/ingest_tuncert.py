@@ -71,7 +71,6 @@ requests.packages.urllib3.disable_warnings(
 
 BASE_URL = "https://www.ancs.tn"
 VULN_LIST_URL = BASE_URL + "/fr/tuncert/liste-vulnerabilites"
-os.makedirs(DATA_DIR, exist_ok=True)
 
 # Nouvelle configuration de session sécurisée
 session = requests.Session()
@@ -149,128 +148,127 @@ def fetch_vulnerability_list():
 
 
 def extract_vulnerability_details(url):
-    """Version optimisée pour la structure ANCS"""
+    """Extraction complète d'une page TunCERT structurée"""
     try:
         response = session.get(url, timeout=30, verify=False)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Récupération du contenu principal
         content = soup.find("div", class_="node-content")
         if not content:
             logger.error("Div node-content non trouvée")
             return None
 
-        # Extraction des sections spécifiques
-        sections = content.find_all("section", class_="field")
-
-        # Structure de données finale
         details = {
+            "source": "TUNCERT",
             "source_url": url,
             "title": (
-                soup.find("h1", class_="title").get_text().strip()
+                soup.find("h1", class_="title").get_text(strip=True)
                 if soup.find("h1", class_="title")
                 else "Sans titre"
             ),
-            "date_published": extract_date(soup),
             "technical_details": {
-                "impact": (
-                    extract_section_text(sections[0]) if len(sections) > 0 else None
+                "impact": extract_section_by_label(content, "Impact"),
+                "platform": extract_section_by_label(content, "Plateforme"),
+                "consequences": extract_section_by_label(content, "Conséquence"),
+                "Affected Software": extract_section_by_label(
+                    content, "Logiciels impactés"
                 ),
-                "plateforme": (
-                    extract_section_text(sections[1]) if len(sections) > 1 else None
+                "description": extract_section_by_label(content, "Description"),
+                "problem_identifiers": extract_section_by_label(
+                    content, "Identificants du problème"
                 ),
-                "consequences": (
-                    extract_section_text(sections[2]) if len(sections) > 2 else None
-                ),
-                "description": (
-                    extract_section_text(sections[3]) if len(sections) > 3 else None
-                ),
+                "solution": extract_section_by_label(content, "Solution"),
             },
-            "solution": extract_section_by_label(content, "Solution"),
-            "references": extract_references(content),
+            "additional_documentation": extract_section_by_label(
+                content, "Documentation additionnelle"
+            ),
+            "publish_date": extract_section_by_label(content, "Date de publication"),
+            "reference": extract_section_by_label(content, "Référence"),
         }
-
-        # Extraction spécifique du CVE si disponible
-        cve_section = content.find(
-            "section", class_="field-name-field-vulnerabilite-ref"
-        )
-        if cve_section:
-            details["cve"] = (
-                cve_section.find("div", class_="field-item").get_text().strip()
-            )
 
         return details
 
     except Exception as e:
-        logger.error(f"Erreur d'extraction: {str(e)}", exc_info=True)
+        logger.error(f"Erreur d'extraction depuis {url}: {str(e)}", exc_info=True)
         return None
 
 
 def extract_section_text(section):
-    """Extrait le texte d'une section spécifique"""
     if not section:
+        logger.debug("Section vide ou None reçue.")
         return None
-    item = section.find("div", class_="field-item")
-    return item.get_text().strip() if item else None
+
+    container = section.find(class_="field-items")
+    if not container:
+        container = section.find(class_="field-item")
+        if not container:
+            logger.debug("Pas de div.field-item trouvée dans la section.")
+            return None
+
+    texts = []
+
+    div_items = container.find_all("div", class_="field-item")
+    for item in div_items:
+        logger.debug("Traitement d'un div.field-item")
+        ps = item.find_all("p")
+        if ps:
+            logger.debug(f"  ➤ {len(ps)} paragraphe(s) trouvé(s) dans le div.")
+            for p in ps:
+                text = p.get_text(strip=True)
+                if text:
+                    texts.append(text)
+            continue
+        links = item.find_all("a", href=True)
+        if links:
+            logger.debug(f"  ➤ {len(links)} lien(s) <a> trouvé(s).")
+            for a in links:
+                text = a.get_text(strip=True)
+                href = a["href"]
+                texts.append(f"{text} ({href})")
+            continue
+        spans = item.find_all("span")
+        if spans:
+            logger.debug(f"  ➤ {len(spans)} span(s) trouvé(s) dans le div.")
+            for span in spans:
+                text = span.get_text(strip=True)
+                if text:
+                    texts.append(text)
+            continue
+        raw = item.get_text(strip=True)
+        if raw:
+            logger.debug("  ➤ Texte brut extrait du div.field-item")
+            texts.append(raw)
+
+    li_items = container.find_all("li", class_="field-item")
+    if li_items:
+        logger.debug(f"{len(li_items)} élément(s) <li.field-item> trouvé(s).")
+        for li in li_items:
+            text = li.get_text(strip=True)
+            if text:
+                texts.append(text)
+
+    if not texts:
+        logger.debug("Aucun contenu textuel extrait de la section.")
+
+    return "\n".join(texts).strip() if texts else None
 
 
 def extract_section_by_label(content, label):
-    """Trouve une section par son label"""
     for section in content.find_all("section", class_="field"):
         if (
-            section.find("div", class_="field-label")
-            and label in section.find("div", class_="field-label").get_text()
+            section.find("h2", class_="field-label")
+            and label in section.find("h2", class_="field-label").get_text()
         ):
+            logger.debug(f"Section {label} trouvée")
             return extract_section_text(section)
+    logger.debug(f"❌ Section {label} non trouvée")
     return None
 
 
-def extract_date(soup):
-    """Extrait la date de publication"""
-    date_div = soup.find("div", class_="field-name-post-date")
-    if date_div:
-        return date_div.find("div", class_="field-item").get_text().strip()
-    return datetime.now().strftime("%Y-%m-%d")
-
-
-def extract_publish_date(soup):
-    """Extrait la date de publication"""
-    # Adaptez ceci selon le format réel du site
-    date_tag = soup.find("span", class_="date")
-    return datetime.now().isoformat() if not date_tag else date_tag.get_text().strip()
-
-
-def extract_main_content(soup):
-    """Extrait le contenu principal"""
-    content = soup.find("div", class_="content-body") or soup.find("article")
-    return content.get_text("\n").strip() if content else ""
-
-
-def extract_technical_data(soup):
-    """Extrait les données techniques structurées"""
-    tech_data = {}
-    # Exemple d'extraction - adapter au format réel
-    for row in soup.select("table.technical-data tr"):
-        cells = row.find_all("td")
-        if len(cells) == 2:
-            tech_data[cells[0].get_text().strip()] = cells[1].get_text().strip()
-    return tech_data
-
-
-def extract_references(soup):
-    """Extrait les références externes"""
-    return [
-        a["href"]
-        for a in soup.find_all("a", href=True)
-        if a["href"].startswith("http") and "ancs.tn" not in a["href"]
-    ]
-
-
-def ingest_tuncert_vulnerabilities():
-    """Fonction principale"""
+def ingest_tuncert_vulnerabilities(data_dir, metadata_dir):
     processed_data = load_processed_items("tuncert")
     output_file = os.path.join(
-        DATA_DIR, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
+        data_dir, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
     )
 
     try:
@@ -282,19 +280,26 @@ def ingest_tuncert_vulnerabilities():
         new_count = 0
         with open(output_file, "a", encoding="utf-8") as f:
             for url in vuln_urls:
-                if url in processed_data.get("processed_urls", []):
+                vuln_details = extract_vulnerability_details(url)
+                if not vuln_details:
                     continue
 
-                vuln_details = extract_vulnerability_details(url)
-                if vuln_details:
-                    json.dump(vuln_details, f, ensure_ascii=False)
-                    f.write("\n")
-                    processed_data.setdefault("processed_urls", []).append(url)
-                    new_count += 1
+                content_str = json.dumps(vuln_details, sort_keys=True)
+                content_hash = get_content_hash(content_str)
+
+                if content_hash in processed_data.get("hashes", []):
+                    logger.debug(f"Déjà traité : {url}")
+                    continue
+
+                vuln_details["hash"] = content_hash
+                json.dump(vuln_details, f, ensure_ascii=False)
+                f.write("\n")
+
+                processed_data.setdefault("hashes", []).append(content_hash)
+                new_count += 1
 
         save_processed_items("tuncert", processed_data)
         return new_count
-
     except Exception as e:
         logger.error(f"Erreur majeure: {str(e)}")
         return 0
@@ -303,7 +308,7 @@ def ingest_tuncert_vulnerabilities():
 if __name__ == "__main__":
     debug_mode = "--debug" in sys.argv
     logger = setup_logging(debug=debug_mode)
-    count = ingest_tuncert_vulnerabilities()
+    count = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
     logger.info(f"Traitement terminé. {count} nouvelles vulnérabilités ingérées.")
 else:
     logger = setup_logging()

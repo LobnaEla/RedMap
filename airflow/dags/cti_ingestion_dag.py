@@ -56,7 +56,7 @@ def ingest_rss_feed():
     """Airflow task for CERT-FR RSS ingestion"""
     # Import inside task to avoid slow DAG loading
     from cti_pipeline.scripts.ingest_rss import ingest_certfr_rss
-    
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting RSS ingestion")
 
@@ -77,7 +77,7 @@ def ingest_tuncert_vulnerabilities_task():
     """Airflow task for TUNCERT ingestion"""
     # Import inside task to avoid slow DAG loading
     from cti_pipeline.scripts.ingest_tuncert import ingest_tuncert_vulnerabilities
-    
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting TUNCERT ingestion")
 
@@ -97,8 +97,10 @@ def ingest_tuncert_vulnerabilities_task():
 def ingest_otx_task():
     """Airflow task for OTX pulse ingestion"""
     # Import inside task to avoid slow DAG loading
-    from cti_pipeline.scripts.ingest_otx import ingest_otx_pulses as ingest_otx_pulses_func
-    
+    from cti_pipeline.scripts.ingest_otx import (
+        ingest_otx_pulses as ingest_otx_pulses_func,
+    )
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting OTX ingestion")
 
@@ -115,11 +117,34 @@ def ingest_otx_task():
 
 
 @task()
+def ingest_tuncert_task():
+    """Airflow task for TUNCERT ingestion"""
+    # Import inside task to avoid slow DAG loading
+    from cti_pipeline.scripts.ingest_tuncert import (
+        ingest_tuncert_vulnerabilities as ingest_tuncert_vulnerabilities_func,
+    )
+
+    logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting TUNCERT ingestion")
+
+    try:
+        result = ingest_tuncert_vulnerabilities_func(DATA_DIR, METADATA_DIR)
+        logger.info(
+            f"✅ TUNCERT: {result['processed']} new vulnerabilities collected (out of {result['total']})"
+        )
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ TUNCERT ingestion failed: {str(e)}")
+        raise
+
+
+@task()
 def ingest_twitter_data():
     """Tâche Airflow pour l'ingestion Twitter"""
     # Import inside task to avoid slow DAG loading
     from cti_pipeline.scripts.ingest_twitter_users import ingest_all_twitter_users
-    
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting Twitter ingestion")
 
@@ -142,7 +167,7 @@ def ingest_blog_articles():
     # Import inside task to avoid slow DAG loading
     from cti_pipeline.scripts.scraper_blog import ingest_all_blog
     from cti_pipeline.blog_sources import BLOG_SOURCES
-    
+
     logger = logging.getLogger("airflow.task")
     logger.info("🔄 Starting blogs ingestion")
 
@@ -162,7 +187,7 @@ def ingest_pdf_reports():
     """Ingest PDF threat reports"""
     # Import inside task to avoid slow DAG loading
     from cti_pipeline.scripts.ingest_pdf import ingest_all_pdfs
-    
+
     logging.info("🔄 Starting PDF ingestion")
 
     try:
@@ -267,7 +292,7 @@ with dag:
     twitter_task = ingest_twitter_data()
     blog_task = ingest_blog_articles()
     pdf_task = ingest_pdf_reports()
-    tuncert_task = ingest_tuncert()
+    tuncert_task = ingest_tuncert_task()
 
     # Tâches de maintenance
     cleanup_task = cleanup_old_data()
