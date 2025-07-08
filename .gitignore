@@ -12,4 +12,5 @@ airflow/.pytest_cache/
 airflow/tmp/
 airflow/db.sqlite3
 
-entity-based-chunking/output/
+entity-based-chunking/output/*
+entity-based-chunking/cti_processing.log
