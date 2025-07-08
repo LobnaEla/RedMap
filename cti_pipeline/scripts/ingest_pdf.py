@@ -1,6 +1,6 @@
-import logging
 import os
 import json
+import logging
 from datetime import datetime
 from cti_pipeline.scripts.ExtractionTexte import extraire_texte
 from cti_pipeline.scripts.utilities import (
@@ -8,109 +8,81 @@ from cti_pipeline.scripts.utilities import (
     load_processed_items,
     save_processed_items,
     is_duplicate,
+    DATA_DIR,
+    METADATA_DIR,
+    PDF_DIR,
 )
-from cti_pipeline.scripts.utilities import DATA_DIR, METADATA_DIR, PDF_DIR
 
-# Configure logging
+# Logger configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def process_single_pdf(filepath, processed_data):
-    """
-    Process individual PDF file with comprehensive error handling
-    Returns:
-        tuple: (success_status: bool, content_hash: str or None)
-    """
+def ingest_pdf(file_path, processed_data, output_file="raw_pdf.jsonl"):
     try:
-        filename = os.path.basename(filepath)
-        file_stat = os.stat(filepath)
+        filename = os.path.basename(file_path)
+        file_stat = os.stat(file_path)
         file_key = f"{filename}_{file_stat.st_size}_{file_stat.st_mtime}"
 
         if file_key in processed_data.get("processed_files", []):
-            logger.debug(f"Skipping already processed PDF: {filename}")
-            return False, None
+            logger.debug(f"[⏩] Déjà traité : {filename}")
+            return False, "skipped"
 
-        logger.info(f"Processing PDF: {filename}")
-        full_text = extraire_texte(filepath)
+        logger.info(f"[📄] Traitement de : {filename}")
+        full_text = extraire_texte(file_path) or ""
 
-        if not full_text:
-            logger.warning(f"Empty text extracted from {filename}")
-            return False, None
+        if not full_text.strip():
+            logger.warning(f"[⚠] Aucun texte extrait de {filename}")
+            return False, "skipped"
 
-        dummy_url = f"file://{filepath}"
+        dummy_url = f"file://{file_path}"
         if is_duplicate(full_text, dummy_url, processed_data, "pdf"):
-            logger.debug(f"Duplicate content in {filename}")
-            return False, None
+            logger.info(f"[🔁] Doublon détecté : {filename}")
+            return False, "skipped"
 
         content_hash = get_content_hash(full_text, "pdf")
-        return True, content_hash
+
+        doc = {
+            "source": filename,
+            "type": "report",
+            "content": full_text.strip(),
+            "date": datetime.now().isoformat(),
+            "format": "PDF",
+            "file_size": file_stat.st_size,
+        }
+
+        os.makedirs(DATA_DIR, exist_ok=True)
+        path = os.path.join(DATA_DIR, output_file)
+        with open(path, "a", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False)
+            f.write("\n")
+
+        # Save metadata
+        processed_data.setdefault("processed_files", []).append(file_key)
+        processed_data.setdefault("hashes", []).append(content_hash)
+        processed_data.setdefault("urls", []).append(dummy_url)
+
+        logger.info(f"[✅] PDF ingéré : {filename}")
+        return True, "processed"
 
     except Exception as e:
-        logger.error(f"Failed to process {filepath}: {str(e)}")
-        return False, None
-
-
-def save_pdf_document(filename, content, output_dir):
-    """Save extracted PDF content to standardized JSONL format"""
-    output_file = os.path.join(
-        output_dir, f"pdf_{datetime.now().strftime('%Y%m%d')}.jsonl"
-    )
-
-    document = {
-        "source": filename,
-        "type": "report",
-        "content": content.strip(),
-        "date": datetime.now().isoformat(),
-        "format": "PDF",
-        "file_size": os.path.getsize(filename),
-    }
-
-    with open(output_file, "a", encoding="utf-8") as f:
-        json.dump(document, f, ensure_ascii=False)
-        f.write("\n")
+        logger.error(f"[❌] Échec de traitement {file_path} : {e}", exc_info=True)
+        return False, "failed"
 
 
 def ingest_all_pdfs(pdf_dir, data_dir, metadata_dir):
-    """
-    Main PDF ingestion workflow with proper state management
-    Returns:
-        dict: {'processed': int, 'skipped': int, 'failed': int}
-    """
-    processed_data = load_processed_items("pdfs", metadata_dir)
+    processed_data = load_processed_items("pdfs")
     stats = {"processed": 0, "skipped": 0, "failed": 0}
 
     for filename in os.listdir(pdf_dir):
         if not filename.endswith(".pdf"):
             continue
+        file_path = os.path.join(pdf_dir, filename)
+        success, status = ingest_pdf(file_path, processed_data)
+        stats[status] += 1
 
-        filepath = os.path.join(pdf_dir, filename)
-        success, content_hash = process_single_pdf(filepath, processed_data)
-
-        if not success:
-            stats["skipped" if content_hash is None else "failed"] += 1
-            continue
-
-        try:
-            # Re-extract text to avoid storing in memory
-            full_text = extraire_texte(filepath)
-            save_pdf_document(filename, full_text, data_dir)
-
-            # Update processing metadata
-            file_stat = os.stat(filepath)
-            file_key = f"{filename}_{file_stat.st_size}_{file_stat.st_mtime}"
-
-            processed_data.setdefault("processed_files", []).append(file_key)
-            processed_data.setdefault("hashes", []).append(content_hash)
-            processed_data.setdefault("urls", []).append(f"file://{filepath}")
-            stats["processed"] += 1
-
-        except Exception as e:
-            logger.error(f"Failed to save {filename}: {str(e)}")
-            stats["failed"] += 1
-
-    save_processed_items("pdfs", processed_data, metadata_dir)
-    logger.info(f"PDF processing complete. Stats: {stats}")
+    save_processed_items("pdfs", processed_data)
+    logger.info(f"[🏁] PDF Ingestion terminée. Résumé : {stats}")
     return stats
 
 

@@ -50,7 +50,7 @@ def process_rss_entry(entry: Dict, processed_data: Dict) -> Optional[Dict]:
 def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
     """Main RSS ingestion function with state management"""
     stats = {"processed": 0, "total": 0}
-    processed_data = load_processed_items("rss_certfr", metadata_dir)
+    processed_data = load_processed_items("rss_certfr")
     feed = fetch_rss_feed()
 
     if not feed or not feed.entries:
@@ -75,7 +75,7 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
             processed_data.setdefault("urls", []).append(doc["link"])
             stats["processed"] += 1
 
-    save_processed_items("rss_certfr", processed_data, metadata_dir)
+    save_processed_items("rss_certfr", processed_data)
     return stats
 
 

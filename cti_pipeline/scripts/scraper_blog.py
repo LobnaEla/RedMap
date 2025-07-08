@@ -71,26 +71,26 @@ def extract_article_links(
         return []
 
 
+from urllib.parse import urlparse
+
+
 def _is_valid_link(href: str, base_url: str) -> bool:
     """Helper function to validate links"""
-    if href.startswith("#"):
+    parsed = urlparse(href)
+    if parsed.scheme not in ["http", "https", ""]:
+        return False
+
+    if href.startswith("#") or href.startswith("mailto:"):
         return False
 
     if any(bad in href for bad in IGNORED_SUBSTRINGS):
         return False
 
-    # Get domain from base_url
     domain = base_url.lower()
-
-    # Allow all links from medium and ancs.tn
     if "medium.com" in domain:
         return True
 
-    # For all other sources, apply keyword-based filtering
-    if not any(kw in href.lower() for kw in ["threat", "report", "malware", "blog"]):
-        return False
-
-    return True
+    return any(kw in href.lower() for kw in ["threat", "report", "malware", "blog"])
 
 
 def extract_article_content(url: str, source_name: str = "generic") -> Optional[str]:
@@ -137,7 +137,7 @@ def process_blog_source(blog_config: Dict, data_dir: str, metadata_dir: str) -> 
     Returns number of new articles processed
     """
     blog_name = blog_config["name"]
-    processed_data = load_processed_items("blogs", metadata_dir)
+    processed_data = load_processed_items("blogs")
     blog_state = processed_data.get(blog_name, {"urls": [], "hashes": []})
 
     new_articles = []
@@ -169,7 +169,7 @@ def process_blog_source(blog_config: Dict, data_dir: str, metadata_dir: str) -> 
     if new_articles:
         _save_articles(new_articles, blog_name, data_dir)
         processed_data[blog_name] = blog_state
-        save_processed_items("blogs", processed_data, metadata_dir)
+        save_processed_items("blogs", processed_data)
 
     return len(new_articles)
 

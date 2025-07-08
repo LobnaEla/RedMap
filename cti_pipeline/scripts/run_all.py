@@ -32,7 +32,7 @@ if __name__ == "__main__":
     print("[🏁] Starting full ingestion...")
 
     logging.basicConfig(level=logging.INFO)
-    tuncert_count = ingest_tuncert_vulnerabilities()
+    tuncert_count = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
     print(f"[✔] TUNCERT Processed {tuncert_count} vulnerabilities")
 
     results = ingest_otx_pulses(DATA_DIR, METADATA_DIR)

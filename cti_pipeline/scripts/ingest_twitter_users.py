@@ -106,17 +106,19 @@ def scrape_user_tweets(username: str, max_scrolls: int = 3) -> List[Dict]:
 
 
 def process_user_tweets(username: str, processed_data: Dict) -> List[Dict]:
-    """Traite les tweets d'un utilisateur avec gestion des doublons"""
-    user_state = processed_data.get(username, {"tweet_ids": []})
+    user_state = processed_data.get(username, {"tweet_hashes": []})
     new_tweets = []
 
     try:
         tweets = scrape_user_tweets(username)
         for tweet in tweets:
-            tweet_id = tweet["tweet_url"].split("/")[-1]
-            if tweet_id not in user_state["tweet_ids"]:
+            content_str = json.dumps(tweet, sort_keys=True)
+            content_hash = get_content_hash(content_str)
+
+            if content_hash not in user_state["tweet_hashes"]:
+                tweet["hash"] = content_hash
                 new_tweets.append(tweet)
-                user_state["tweet_ids"].append(tweet_id)
+                user_state["tweet_hashes"].append(content_hash)
 
     except Exception as e:
         logger.error(f"Failed to process tweets for @{username}: {str(e)}")
@@ -143,7 +145,7 @@ def ingest_all_twitter_users(
 ) -> Dict[str, int]:
     """Point d'entrée principal pour l'ingestion Twitter"""
     stats = {"processed": 0, "users": len(users)}
-    processed_data = load_processed_items("twitter", metadata_dir)
+    processed_data = load_processed_items("twitter")
 
     for username in users:
         try:
@@ -158,7 +160,7 @@ def ingest_all_twitter_users(
             logger.error(f"Failed to ingest tweets for @{username}: {str(e)}")
             continue
 
-    save_processed_items("twitter", processed_data, metadata_dir)
+    save_processed_items("twitter", processed_data)
     return stats
 
 
