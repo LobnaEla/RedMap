@@ -58,6 +58,7 @@ def ingest_rss_feed():
     from cti_pipeline.scripts.ingest_rss import ingest_certfr_rss
     
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting RSS ingestion")
 
     try:
         result = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
@@ -78,9 +79,10 @@ def ingest_tuncert_vulnerabilities_task():
     from cti_pipeline.scripts.ingest_tuncert import ingest_tuncert_vulnerabilities
     
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting TUNCERT ingestion")
 
     try:
-        result = ingest_tuncert_vulnerabilities()
+        result = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
         logger.info(
             f"✅ TUNCERT: {result['processed']} new vulnerabilities collected (out of {result['total']})"
         )
@@ -98,6 +100,7 @@ def ingest_otx_task():
     from cti_pipeline.scripts.ingest_otx import ingest_otx_pulses as ingest_otx_pulses_func
     
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting OTX ingestion")
 
     try:
         result = ingest_otx_pulses_func(DATA_DIR, METADATA_DIR)
@@ -118,6 +121,8 @@ def ingest_twitter_data():
     from cti_pipeline.scripts.ingest_twitter_users import ingest_all_twitter_users
     
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting Twitter ingestion")
+
     users = ["vxunderground", "CERT_FR", "CISACyber"]
 
     try:
@@ -139,6 +144,8 @@ def ingest_blog_articles():
     from cti_pipeline.blog_sources import BLOG_SOURCES
     
     logger = logging.getLogger("airflow.task")
+    logger.info("🔄 Starting blogs ingestion")
+
     total_processed = 0
 
     try:
@@ -260,6 +267,7 @@ with dag:
     twitter_task = ingest_twitter_data()
     blog_task = ingest_blog_articles()
     pdf_task = ingest_pdf_reports()
+    tuncert_task = ingest_tuncert()
 
     # Tâches de maintenance
     cleanup_task = cleanup_old_data()
