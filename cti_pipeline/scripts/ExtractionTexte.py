@@ -13,7 +13,10 @@ from pdf2image import convert_from_path
 
 
 # --- Récupérer la clé API depuis variable d'environnement ---
-load_dotenv()
+from dotenv import load_dotenv
+import os
+
+load_dotenv(dotenv_path="C:/Users/USER/Desktop/Stage ete WEVIOO/cti_pipeline/config/.env.example")
 API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
 print(API_KEY)
 
