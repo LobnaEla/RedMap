@@ -4,6 +4,7 @@ cti_pipeline/config/.env
 __pycache__/
 /data/*
 .env
+*.log
 
 airflow/logs/
 airflow/__pycache__/
