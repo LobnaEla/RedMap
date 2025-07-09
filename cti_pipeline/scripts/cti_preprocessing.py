@@ -2,13 +2,14 @@ import os
 import re
 import json
 import csv
+import shutil
 import numpy as np
 from collections import Counter
 import unicodedata
-from ExtractionTexte import extraire_texte  # Doit extraire le texte des PDFs
-import easyocr
 from PIL import Image
 from pdf2image import convert_from_path
+import easyocr
+from ExtractionTexte import extraire_texte  # Assure-toi que ce module est présent
 
 REPLACEMENTS = {
     r'\[\.\]': '.',
@@ -49,46 +50,39 @@ TTP_KEYWORDS = [
     r'service\s*abuse',
 ]
 
-
 def normalize_unicode(text):
     return unicodedata.normalize("NFKD", text).strip()
-
 
 def replace_patterns(text):
     for pattern, repl in REPLACEMENTS.items():
         text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
     return text
 
-
 def remove_special_chars(text):
     return ''.join(c for c in text if unicodedata.category(c)[0] in ('L', 'N', 'P', 'Z'))
-
 
 def is_generic_line(line):
     return any(kw.lower() in line.lower() for kw in GENERIC_KEYWORDS)
 
-
 def is_short_line(line, min_len=MIN_LINE_LENGTH):
     return len(line.strip()) <= min_len
-
 
 def has_enough_valid_chars(line, threshold=5):
     return len(re.sub(r'\W+', '', line)) >= threshold
 
-
-def clean_text_lines(lines):
+def clean_text_lines(lines, remove_special=True):
     cleaned = []
     for line in lines:
         line = normalize_unicode(line)
         line = replace_patterns(line)
-        line = remove_special_chars(line)
+        if remove_special:
+            line = remove_special_chars(line)
         if is_short_line(line):
             continue
         if not has_enough_valid_chars(line):
             continue
         if is_generic_line(line):
             continue
-        # **Ne pas supprimer les URLs ici !**
         line = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', '', line)
         line = re.sub(r'\(?\+?[0-9][0-9.\-\s\(\)]{7,}\b', '', line)
         line = line.strip()
@@ -96,12 +90,10 @@ def clean_text_lines(lines):
             cleaned.append(line)
     return cleaned
 
-
 def remove_repeated_lines(lines, threshold=HEADER_FOOTER_THRESHOLD):
     counts = Counter(lines)
     frequent = set(line for line, count in counts.items() if count > threshold)
     return [line for line in lines if line not in frequent]
-
 
 def ocr_easyocr(filepath=None, image=None):
     if image is None and filepath:
@@ -109,55 +101,62 @@ def ocr_easyocr(filepath=None, image=None):
         if ext not in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff']:
             return ""
         image = Image.open(filepath)
-
     if image is None:
         return ""
-
     image_np = np.array(image.convert('RGB'))
-
     reader = easyocr.Reader(['en'], gpu=False)
     result = reader.readtext(image_np, detail=0, paragraph=True)
     return "\n".join(result)
-
 
 def extract_images_from_pdf(pdf_path):
     try:
         images = convert_from_path(pdf_path)
         return images
     except Exception as e:
-        print(f"❌ Erreur lors de l'extraction des images du PDF {pdf_path} : {e}")
+        print(f"❌ Erreur extraction images PDF {pdf_path} : {e}")
         return []
 
+def preprocess_json(json_path, text_field="text"):
+    if not os.path.exists(json_path):
+        print(f"❌ Fichier JSON introuvable : {json_path}")
+        return ""
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    raw_text = ""
+    if isinstance(data, dict) and text_field in data:
+        content = data[text_field]
+        if isinstance(content, list):
+            raw_text = "\n".join(str(line) for line in content)
+        else:
+            raw_text = str(content)
+    else:
+        print(f"⚠️ Clé '{text_field}' non trouvée dans JSON.")
+        return ""
+
+    return raw_text
 
 def extract_iocs_and_ttps_from_file(filepath):
-    print(f"📄 Extraction du texte depuis : {filepath}")
-
+    print(f"📄 Extraction : {filepath}")
     ext = os.path.splitext(filepath)[1].lower()
     raw_text = ""
-
     if ext == ".pdf":
-        pdf_text = extraire_texte(filepath)
-        raw_text += pdf_text + "\n"
-
+        raw_text += extraire_texte(filepath) + "\n"
         images = extract_images_from_pdf(filepath)
         for idx, image in enumerate(images):
-            print(f"🖼️ Traitement de l'image {idx + 1} du PDF...")
-            img_text = ocr_easyocr(image=image)
-            raw_text += img_text + "\n"
-
+            print(f"🖼️ OCR image {idx + 1}")
+            raw_text += ocr_easyocr(image=image) + "\n"
     elif ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff']:
         raw_text = ocr_easyocr(filepath)
+    elif ext == ".json":
+        raw_text = preprocess_json(filepath)
     else:
         raw_text = extraire_texte(filepath)
-
     if not raw_text:
-        print("⚠️ Aucun texte extrait.")
+        print("⚠️ Aucun texte.")
         return {}
 
-    # Déobfusquer avant extraction
     text_for_ioc = replace_patterns(raw_text)
-
-    # Extraire URLs AVANT nettoyage
     urls_found = re.findall(IOC_PATTERNS['url'], text_for_ioc)
 
     ip_candidates = re.findall(IOC_PATTERNS['ip'], text_for_ioc)
@@ -171,9 +170,8 @@ def extract_iocs_and_ttps_from_file(filepath):
             continue
 
     lines = raw_text.split('\n')
-    lines = clean_text_lines(lines)
+    lines = clean_text_lines(lines, remove_special=False)
     lines = remove_repeated_lines(lines)
-
     text = '\n'.join(lines)
     text = replace_patterns(text)
 
@@ -200,83 +198,75 @@ def extract_iocs_and_ttps_from_file(filepath):
             ttp = match.strip()
             if ttp and ttp not in result["ttps"]:
                 result["ttps"].append(ttp)
-
     return result
-
 
 def save_result_to_json(result, filepath, output_dir="results"):
     os.makedirs(output_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(filepath))[0]
+    ext = os.path.splitext(filepath)[1].lower().replace(".", "")
+    result_with_meta = {
+        "filename": base_name,
+        "source_type": ext,
+        "iocs": result
+    }
     output_path = os.path.join(output_dir, f"{base_name}_cti.json")
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=4, ensure_ascii=False)
-    print(f"✅ Résultat sauvegardé : {output_path}")
+        json.dump(result_with_meta, f, indent=4, ensure_ascii=False)
+    print(f"✅ Sauvegardé : {output_path}")
 
+def is_ioc_result_empty(iocs):
+    if not iocs:
+        return True
+    if isinstance(iocs, dict):
+        for key, value in iocs.items():
+            if isinstance(value, dict):
+                if any(value.values()):
+                    return False
+            elif value:
+                return False
+    return True
 
-def process_directory(directory_path, output_dir="results"):
-    os.makedirs(output_dir, exist_ok=True)
-    for filename in os.listdir(directory_path):
-        filepath = os.path.join(directory_path, filename)
-        print(f"\n📄 Traitement : {filename}")
-        try:
-            result = extract_iocs_and_ttps_from_file(filepath)
-            if result:
-                save_result_to_json(result, filepath, output_dir)
-            else:
-                print("⚠️ Aucun IoC trouvé.")
-        except Exception as e:
-            print(f"[Erreur] Traitement échoué : {e}")
-
-
-def export_all_iocs_to_csv(results_dir="results", output_csv="all_iocs.csv"):
+def export_all_iocs_to_json(results_dir="results", output_json="all_iocs.json"):
     all_data = []
     for filename in os.listdir(results_dir):
         if filename.endswith("_cti.json"):
             with open(os.path.join(results_dir, filename), "r", encoding="utf-8") as f:
-                data = json.load(f)
-            for ip in data.get("ips", []):
-                all_data.append({"type": "ip", "value": ip, "source": filename})
-            for domain in data.get("domains", []):
-                all_data.append({"type": "domain", "value": domain, "source": filename})
-            for url in data.get("urls", []):
-                all_data.append({"type": "url", "value": url, "source": filename})
-            for malware in data.get("malwares", []):
-                all_data.append({"type": "malware", "value": malware, "source": filename})
-            for apt in data.get("apt_groups", []):
-                all_data.append({"type": "apt", "value": apt, "source": filename})
-
+                entry = json.load(f)
+                if not is_ioc_result_empty(entry.get("iocs", {})):
+                    all_data.append(entry)
     if all_data:
-        keys = all_data[0].keys()
-        with open(output_csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=keys)
-            writer.writeheader()
-            writer.writerows(all_data)
-        print(f"\n📊 Export CSV terminé : {output_csv}")
+        with open(output_json, "w", encoding="utf-8") as f:
+            json.dump(all_data, f, indent=4, ensure_ascii=False)
+        print(f"\n📁 Export JSON filtré terminé : {output_json}")
     else:
-        print("\n⚠️ Aucun IoC trouvé à exporter.")
-
+        print("\n⚠️ Aucun résultat non vide à exporter.")
 
 if __name__ == "__main__":
-    samples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "samples"))
-    results_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "results"))
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    samples_dir = os.path.join(base_dir, "samples")
+    results_dir = os.path.join(base_dir, "results")
+
+    # Nettoyer le dossier results
+    if os.path.exists(results_dir):
+        shutil.rmtree(results_dir)
+    os.makedirs(results_dir, exist_ok=True)
 
     sample_files = [
         os.path.join(samples_dir, "sample.pdf"),
         os.path.join(samples_dir, "testTXT.txt"),
         os.path.join(samples_dir, "testHTML.html"),
+        os.path.join(samples_dir, "example.json"),
     ]
 
     print("🔍 Démarrage du pipeline CTI...\n")
-
     for file in sample_files:
         if os.path.exists(file):
-            print(f"📄 Traitement de {file} ...")
+            print(f"📄 Analyse de : {file}")
             result = extract_iocs_and_ttps_from_file(file)
             print(json.dumps(result, indent=2))
             save_result_to_json(result, file, results_dir)
         else:
             print(f"❌ Fichier introuvable : {file}")
 
-    export_all_iocs_to_csv(results_dir, "all_iocs.csv")
-
-    print("\n✅ Pipeline CTI terminé.")
+    export_all_iocs_to_json(results_dir, "all_iocs.json")
+    print("\n✅ Pipeline terminé.")

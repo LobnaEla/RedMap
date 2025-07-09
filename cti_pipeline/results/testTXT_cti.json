@@ -1,22 +1,26 @@
 {
-    "ips": [
-        "192.168.0.1"
-    ],
-    "domains": [
-        "evil-site.co.uk"
-    ],
-    "urls": [],
-    "malwares": [
-        "lockbit"
-    ],
-    "apt_groups": [
-        "LAZARUS"
-    ],
-    "ttps": [
-        "C2 communication"
-    ],
-    "hashes": {
-        "md5": [],
-        "sha256": []
+    "filename": "testTXT",
+    "source_type": "txt",
+    "iocs": {
+        "ips": [
+            "192.168.0.1"
+        ],
+        "domains": [
+            "evil-site.co.uk"
+        ],
+        "urls": [],
+        "malwares": [
+            "lockbit"
+        ],
+        "apt_groups": [
+            "LAZARUS"
+        ],
+        "ttps": [
+            "C2 communication"
+        ],
+        "hashes": {
+            "md5": [],
+            "sha256": []
+        }
     }
 }

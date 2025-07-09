@@ -1,3 +1,8 @@
+import os
+import logging
+import warnings
+from bs4 import XMLParsedAsHTMLWarning
+
 from cti_pipeline.scripts.ingest_rss import ingest_certfr_rss
 from cti_pipeline.scripts.ingest_otx import ingest_otx_pulses
 from cti_pipeline.scripts.ingest_pdf import ingest_all_pdfs
@@ -8,6 +13,8 @@ from cti_pipeline.scripts.ocr_library import extract_text, final_ocr_polish
 from cti_pipeline.scripts.ingest_tuncert import ingest_tuncert_vulnerabilities
 from cti_pipeline.blog_sources import BLOG_SOURCES
 
+from cti_preprocessing import extract_iocs_and_ttps_from_file, save_result_to_json, export_all_iocs_to_json
+
 from cti_pipeline.scripts.utilities import (
     get_content_hash,
     load_processed_items,
@@ -17,21 +24,34 @@ from cti_pipeline.scripts.utilities import (
     METADATA_DIR,
     PDF_DIR,
 )
-import logging
-import os
-from bs4 import XMLParsedAsHTMLWarning
-import warnings
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
+def lancer_preprocessing():
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # remonte à cti_pipeline
+    samples_dir = os.path.join(base_dir, "samples")
+    results_dir = os.path.join(base_dir, "results")
 
-users = ["vxunderground", "CERT_FR", "CISACyber"]
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+
+    for filename in os.listdir(samples_dir):
+        filepath = os.path.join(samples_dir, filename)
+        if os.path.isfile(filepath):
+            print(f"📄 Traitement de {filename}")
+            result = extract_iocs_and_ttps_from_file(filepath)
+            if result:
+                save_result_to_json(result, filepath, results_dir)
+
+    export_all_iocs_to_json(results_dir, os.path.join(base_dir, "all_iocs.json"))
+    print("✅ Pipeline de prétraitement terminé.")
 
 
 if __name__ == "__main__":
     print("[🏁] Starting full ingestion...")
 
     logging.basicConfig(level=logging.INFO)
+
     tuncert_count = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
     print(f"[✔] TUNCERT Processed {tuncert_count} vulnerabilities")
 
@@ -53,3 +73,6 @@ if __name__ == "__main__":
     print("[✔] Blog scraping completed.")
 
     print("[✅] Ingestion completed.")
+
+    print("📥 Démarrage du pipeline de prétraitement...")
+    lancer_preprocessing()

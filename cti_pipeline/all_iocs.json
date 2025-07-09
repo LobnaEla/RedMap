@@ -1,0 +1,120 @@
+[
+    {
+        "filename": "example",
+        "source_type": "json",
+        "iocs": {
+            "ips": [
+                "192.168.0.1"
+            ],
+            "domains": [],
+            "urls": [
+                "https://www.example.com"
+            ],
+            "malwares": [
+                "emotet"
+            ],
+            "apt_groups": [
+                "APT28"
+            ],
+            "ttps": [],
+            "hashes": {
+                "md5": [
+                    "d41d8cd98f00b204e9800998ecf8427e"
+                ],
+                "sha256": [
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                ]
+            }
+        }
+    },
+    {
+        "filename": "sample",
+        "source_type": "pdf",
+        "iocs": {
+            "ips": [
+                "192.168.0.1",
+                "192.168.88.12"
+            ],
+            "domains": [
+                "bad-domain.com",
+                "evil-site.co.uk",
+                "Vue.js"
+            ],
+            "urls": [
+                "www.linkedin.com/in/nadinesnoussi",
+                "http://malicious-site.com/login.",
+                "www.url.com",
+                "http://malicious-sitel.Jcom/login."
+            ],
+            "malwares": [
+                "emotet",
+                "lockbit"
+            ],
+            "apt_groups": [
+                "LAZARUS",
+                "APT28"
+            ],
+            "ttps": [
+                "C2 communication",
+                "credential dump",
+                "Persistence"
+            ],
+            "hashes": {
+                "md5": [
+                    "e99a18c428cb38d5f260853678922e03"
+                ],
+                "sha256": [
+                    "44d88612fea8a8f36de82e1278abb02f3b3c8f6f8edc54f3c13a3f5f3ac7fc4b"
+                ]
+            }
+        }
+    },
+    {
+        "filename": "testHTML",
+        "source_type": "html",
+        "iocs": {
+            "ips": [
+                "192.168.1.100"
+            ],
+            "domains": [],
+            "urls": [],
+            "malwares": [
+                "emotet"
+            ],
+            "apt_groups": [
+                "APT28"
+            ],
+            "ttps": [],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        }
+    },
+    {
+        "filename": "testTXT",
+        "source_type": "txt",
+        "iocs": {
+            "ips": [
+                "192.168.0.1"
+            ],
+            "domains": [
+                "evil-site.co.uk"
+            ],
+            "urls": [],
+            "malwares": [
+                "lockbit"
+            ],
+            "apt_groups": [
+                "LAZARUS"
+            ],
+            "ttps": [
+                "C2 communication"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        }
+    }
+]
