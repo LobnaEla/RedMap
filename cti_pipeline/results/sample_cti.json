@@ -7,15 +7,15 @@
             "192.168.88.12"
         ],
         "domains": [
-            "bad-domain.com",
             "evil-site.co.uk",
+            "bad-domain.com",
             "Vue.js"
         ],
         "urls": [
             "www.linkedin.com/in/nadinesnoussi",
-            "http://malicious-site.com/login.",
             "www.url.com",
-            "http://malicious-sitel.Jcom/login."
+            "http://malicious-sitel.Jcom/login.",
+            "http://malicious-site.com/login."
         ],
         "malwares": [
             "emotet",

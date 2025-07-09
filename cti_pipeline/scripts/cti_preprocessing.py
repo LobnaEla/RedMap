@@ -136,6 +136,27 @@ def preprocess_json(json_path, text_field="text"):
 
     return raw_text
 
+def preprocess_jsonl(jsonl_path, text_field="text"):
+    if not os.path.exists(jsonl_path):
+        print(f"❌ Fichier JSONL introuvable : {jsonl_path}")
+        return []
+
+    results = []
+    with open(jsonl_path, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            try:
+                data = json.loads(line.strip())
+                content = data.get(text_field, "")
+                if isinstance(content, list):
+                    text = "\n".join(str(x) for x in content)
+                else:
+                    text = str(content)
+                results.append(text)
+            except Exception as e:
+                print(f"⚠️ Ligne {i} ignorée : {e}")
+    return results
+
+
 def extract_iocs_and_ttps_from_file(filepath):
     print(f"📄 Extraction : {filepath}")
     ext = os.path.splitext(filepath)[1].lower()
@@ -150,6 +171,15 @@ def extract_iocs_and_ttps_from_file(filepath):
         raw_text = ocr_easyocr(filepath)
     elif ext == ".json":
         raw_text = preprocess_json(filepath)
+    elif ext == ".jsonl":
+        texts = preprocess_jsonl(filepath)
+        all_results = []
+        for i, text in enumerate(texts):
+            print(f"📄 Extraction ligne {i+1}")
+            result = extract_iocs_from_text(text)
+            if result:
+                all_results.append(result)
+        return all_results  # retourne une liste de résultats pour jsonl
     else:
         raw_text = extraire_texte(filepath)
     if not raw_text:
@@ -198,6 +228,55 @@ def extract_iocs_and_ttps_from_file(filepath):
             ttp = match.strip()
             if ttp and ttp not in result["ttps"]:
                 result["ttps"].append(ttp)
+    return result
+
+def extract_iocs_from_text(raw_text):
+    if not raw_text:
+        return {}
+
+    text_for_ioc = replace_patterns(raw_text)
+    urls_found = re.findall(IOC_PATTERNS['url'], text_for_ioc)
+
+    ip_candidates = re.findall(IOC_PATTERNS['ip'], text_for_ioc)
+    cleaned_ips = []
+    for ip in ip_candidates:
+        try:
+            parts = ip.split('.')
+            if len(parts) == 4 and all(0 <= int(p) <= 255 for p in parts):
+                cleaned_ips.append(ip)
+        except:
+            continue
+
+    lines = raw_text.split('\n')
+    lines = clean_text_lines(lines, remove_special=False)
+    lines = remove_repeated_lines(lines)
+    text = '\n'.join(lines)
+    text = replace_patterns(text)
+
+    domains_found = re.findall(IOC_PATTERNS['domain'], text)
+    malware_matches = re.findall(IOC_PATTERNS['malware'], text, re.IGNORECASE)
+    apt_matches = re.findall(IOC_PATTERNS['apt'], text, re.IGNORECASE)
+
+    result = {
+        "ips": list(set(cleaned_ips)),
+        "domains": [d for d in set(domains_found) if not any(d in url for url in urls_found)],
+        "urls": list(set(urls_found)),
+        "malwares": list(set(m.lower() for m in malware_matches)),
+        "apt_groups": list(set(a.upper() for a in apt_matches)),
+        "ttps": [],
+        "hashes": {
+            "md5": list(set(re.findall(IOC_PATTERNS['hash_md5'], text))),
+            "sha256": list(set(re.findall(IOC_PATTERNS['hash_sha256'], text))),
+        }
+    }
+
+    for keyword in TTP_KEYWORDS:
+        matches = re.findall(keyword, text, re.IGNORECASE | re.DOTALL)
+        for match in matches:
+            ttp = match.strip()
+            if ttp and ttp not in result["ttps"]:
+                result["ttps"].append(ttp)
+
     return result
 
 def save_result_to_json(result, filepath, output_dir="results"):

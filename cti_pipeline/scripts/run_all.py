@@ -2,6 +2,11 @@ import os
 import logging
 import warnings
 from bs4 import XMLParsedAsHTMLWarning
+from dotenv import load_dotenv  # <- import pour charger .env
+
+# Charger le .env depuis le dossier config
+dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'config', '.env'))
+load_dotenv(dotenv_path)
 
 from cti_pipeline.scripts.ingest_rss import ingest_certfr_rss
 from cti_pipeline.scripts.ingest_otx import ingest_otx_pulses
@@ -27,22 +32,44 @@ from cti_pipeline.scripts.utilities import (
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
-def lancer_preprocessing():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # remonte à cti_pipeline
-    samples_dir = os.path.join(base_dir, "samples")
+import os
+from cti_preprocessing import extract_iocs_and_ttps_from_file, save_result_to_json, export_all_iocs_to_json
+
+def lancer_preprocessing_dataset():
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     results_dir = os.path.join(base_dir, "results")
+    data_dir = os.path.join(base_dir, "data")      # dossier ingestion data (json, blogs, twitter, etc)
+    pdf_dir = os.path.join(base_dir, "pdfs")       # dossier PDF
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
 
-    for filename in os.listdir(samples_dir):
-        filepath = os.path.join(samples_dir, filename)
-        if os.path.isfile(filepath):
-            print(f"📄 Traitement de {filename}")
-            result = extract_iocs_and_ttps_from_file(filepath)
-            if result:
-                save_result_to_json(result, filepath, results_dir)
+    # Parcours récursif du dossier data (JSON, blogs, tweets)
+    for root, dirs, files in os.walk(data_dir):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            if os.path.isfile(filepath):
+                print(f"📄 Traitement de {filepath}")
+                result = extract_iocs_and_ttps_from_file(filepath)
+                if result:
+                    save_result_to_json(result, filepath, results_dir)
 
+    # Parcours des fichiers PDF
+    if os.path.exists(pdf_dir):
+        for filename in os.listdir(pdf_dir):
+            filepath = os.path.join(pdf_dir, filename)
+            if os.path.isfile(filepath) and filename.lower().endswith(".pdf"):
+                print(f"📄 Traitement PDF {filepath}")
+                results = extract_iocs_and_ttps_from_file(filepath)
+                if isinstance(results, list):
+                    for idx, res in enumerate(results):
+                        temp_path = f"{filepath}_line{idx}"
+                        save_result_to_json(res, temp_path, results_dir)
+                elif results:
+                    save_result_to_json(results, filepath, results_dir)
+
+
+    # Export global
     export_all_iocs_to_json(results_dir, os.path.join(base_dir, "all_iocs.json"))
     print("✅ Pipeline de prétraitement terminé.")
 
@@ -74,5 +101,5 @@ if __name__ == "__main__":
 
     print("[✅] Ingestion completed.")
 
-    print("📥 Démarrage du pipeline de prétraitement...")
-    lancer_preprocessing()
+    print("📥 Démarrage du pipeline de prétraitement dataset...")
+    lancer_preprocessing_dataset()
