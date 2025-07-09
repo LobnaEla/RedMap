@@ -3,19 +3,19 @@
     "source_type": "pdf",
     "iocs": {
         "ips": [
-            "192.168.0.1",
-            "192.168.88.12"
+            "192.168.88.12",
+            "192.168.0.1"
         ],
         "domains": [
             "evil-site.co.uk",
-            "bad-domain.com",
-            "Vue.js"
+            "Vue.js",
+            "bad-domain.com"
         ],
         "urls": [
-            "www.linkedin.com/in/nadinesnoussi",
-            "www.url.com",
             "http://malicious-sitel.Jcom/login.",
-            "http://malicious-site.com/login."
+            "www.linkedin.com/in/nadinesnoussi",
+            "http://malicious-site.com/login.",
+            "www.url.com"
         ],
         "malwares": [
             "emotet",

@@ -1,3 +1,0 @@
-APT group Lazarus has been observed using the domain evil-site.co.uk.
-Malware: LockBit
-C2 communication with 192.168.0.1

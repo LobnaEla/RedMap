@@ -9,7 +9,7 @@ import unicodedata
 from PIL import Image
 from pdf2image import convert_from_path
 import easyocr
-from ExtractionTexte import extraire_texte  # Assure-toi que ce module est présent
+from ExtractionTexte import extraire_texte 
 
 REPLACEMENTS = {
     r'\[\.\]': '.',
@@ -136,7 +136,43 @@ def preprocess_json(json_path, text_field="text"):
 
     return raw_text
 
-def preprocess_jsonl(jsonl_path, text_field="text"):
+def preprocess_jsonl_medium(filepath): #blog
+    """
+    Pour les fichiers JSONL de type Medium ou blog
+    Extrait principalement depuis les champs 'content', 'url' et 'title'
+    """
+    if not os.path.exists(filepath):
+        print(f"❌ Fichier introuvable : {filepath}")
+        return []
+
+    results = []
+    with open(filepath, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            try:
+                data = json.loads(line.strip())
+
+                # Champs pertinents pour Medium/blog
+                content = ""
+                for field in ["content", "title", "url"]:
+                    value = data.get(field, "")
+                    if isinstance(value, list):
+                        content += " ".join(str(x) for x in value) + "\n"
+                    else:
+                        content += str(value) + "\n"
+
+                if content.strip():
+                    results.append(content.strip())
+
+            except Exception as e:
+                print(f"⚠️ Ligne {i} ignorée : {e}")
+
+    return results
+
+def preprocess_jsonl(jsonl_path, text_fields = [
+    "description", "problem_identifiers", "title", "solution",
+    "references", "indicators", "adversary", "targeted_countries",
+    "attack_pattern", "content", "body"
+]):
     if not os.path.exists(jsonl_path):
         print(f"❌ Fichier JSONL introuvable : {jsonl_path}")
         return []
@@ -146,49 +182,70 @@ def preprocess_jsonl(jsonl_path, text_field="text"):
         for i, line in enumerate(f):
             try:
                 data = json.loads(line.strip())
-                content = data.get(text_field, "")
-                if isinstance(content, list):
-                    text = "\n".join(str(x) for x in content)
-                else:
-                    text = str(content)
-                results.append(text)
+
+                # Combine relevant text fields into one string per line
+                combined_text = ""
+                for field in text_fields:
+                    content = data.get(field, "")
+                    if isinstance(content, list):
+                        combined_text += "\n".join(str(x) for x in content) + "\n"
+                    else:
+                        combined_text += str(content) + "\n"
+
+                if combined_text.strip():
+                    results.append(combined_text)
+
             except Exception as e:
                 print(f"⚠️ Ligne {i} ignorée : {e}")
-    return results
 
+    return results
 
 def extract_iocs_and_ttps_from_file(filepath):
     print(f"📄 Extraction : {filepath}")
     ext = os.path.splitext(filepath)[1].lower()
     raw_text = ""
+
     if ext == ".pdf":
+        # Extraire le texte brut du PDF
         raw_text += extraire_texte(filepath) + "\n"
-        images = extract_images_from_pdf(filepath)
-        for idx, image in enumerate(images):
-            print(f"🖼️ OCR image {idx + 1}")
-            raw_text += ocr_easyocr(image=image) + "\n"
+
+        # Vérifier si le texte brut est exploitable
+        if not raw_text or len(raw_text.strip()) < 50:  # Seuil arbitraire pour "texte court"
+            # Le PDF semble être une image scannée → OCR nécessaire
+            images = extract_images_from_pdf(filepath)
+            for idx, image in enumerate(images):
+                print(f"🖼️ OCR image {idx + 1}")
+                raw_text += ocr_easyocr(image=image) + "\n"
+        else:
+            print("✅ Texte natif suffisant, pas besoin d'OCR.")
     elif ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff']:
         raw_text = ocr_easyocr(filepath)
     elif ext == ".json":
         raw_text = preprocess_json(filepath)
     elif ext == ".jsonl":
-        texts = preprocess_jsonl(filepath)
+        filename = os.path.basename(filepath).lower()
+        
+        if "otx" in filename:
+            texts = preprocess_jsonl(filepath)
+        else:
+            texts = preprocess_jsonl_medium(filepath)
+
         all_results = []
         for i, text in enumerate(texts):
             print(f"📄 Extraction ligne {i+1}")
             result = extract_iocs_from_text(text)
             if result:
                 all_results.append(result)
-        return all_results  # retourne une liste de résultats pour jsonl
+        return all_results
     else:
         raw_text = extraire_texte(filepath)
+
     if not raw_text:
         print("⚠️ Aucun texte.")
         return {}
 
     text_for_ioc = replace_patterns(raw_text)
     urls_found = re.findall(IOC_PATTERNS['url'], text_for_ioc)
-
     ip_candidates = re.findall(IOC_PATTERNS['ip'], text_for_ioc)
     cleaned_ips = []
     for ip in ip_candidates:
@@ -228,6 +285,7 @@ def extract_iocs_and_ttps_from_file(filepath):
             ttp = match.strip()
             if ttp and ttp not in result["ttps"]:
                 result["ttps"].append(ttp)
+
     return result
 
 def extract_iocs_from_text(raw_text):
@@ -296,14 +354,28 @@ def save_result_to_json(result, filepath, output_dir="results"):
 def is_ioc_result_empty(iocs):
     if not iocs:
         return True
+
+    # Si c'est une liste de résultats (cas du JSONL)
+    if isinstance(iocs, list):
+        if len(iocs) == 0:
+            return True
+        # Vérifie si tous les éléments sont vides
+        return all(is_ioc_result_empty(item) for item in iocs)
+
+    # Si c'est un dictionnaire classique
     if isinstance(iocs, dict):
         for key, value in iocs.items():
             if isinstance(value, dict):
                 if any(value.values()):
                     return False
-            elif value:
+            elif isinstance(value, list):
+                if len(value) > 0:
+                    return False
+            elif value:  # Autre type non vide
                 return False
-    return True
+        return True
+
+    return True  # Par défaut, considère que c’est vide
 
 def export_all_iocs_to_json(results_dir="results", output_json="all_iocs.json"):
     all_data = []
@@ -330,12 +402,7 @@ if __name__ == "__main__":
         shutil.rmtree(results_dir)
     os.makedirs(results_dir, exist_ok=True)
 
-    sample_files = [
-        os.path.join(samples_dir, "sample.pdf"),
-        os.path.join(samples_dir, "testTXT.txt"),
-        os.path.join(samples_dir, "testHTML.html"),
-        os.path.join(samples_dir, "example.json"),
-    ]
+    sample_files = []
 
     print("🔍 Démarrage du pipeline CTI...\n")
     for file in sample_files:

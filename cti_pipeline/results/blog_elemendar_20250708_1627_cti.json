@@ -1,0 +1,633 @@
+{
+    "filename": "blog_elemendar_20250708_1627",
+    "source_type": "jsonl",
+    "iocs": [
+        {
+            "ips": [
+                "185.235.241.208",
+                "95.164.17.24"
+            ],
+            "domains": [
+                "cybersecurityadmin.onmicrosoft.com",
+                "AntispamConnectUS.exe",
+                "qr-s1.com",
+                "supportserviceadmin.onmicrosoft.com",
+                "securityadminhelper.onmicrosoft.com",
+                "supportadministrator.onmicrosoft.com",
+                "AntispamUpdate.exe",
+                "AntispamAccount.exe"
+            ],
+            "urls": [
+                "https://unit42.paloaltonetworks.com/north-korean-threat-actors-lure-tech-job-seekers-as-fake-recruiters/",
+                "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-25-31-october-2024",
+                "https://www.hhs.gov/sites/default/files/black-basta-threat-profile.pdf",
+                "https://therecord.media/an-interview-with-blackmatter-a-new-ransomware-group-thats-learning-from-the-mistakes-of-darkside-and-revil",
+                "https://intel471.com/blog/threat-hunting-case-study-uncovering-fin7",
+                "https://thehackernews.com/2023/10/i-had-dream-and-generative-ai-jailbreaks.html",
+                "https://securitylabs.datadoghq.com/articles/tenacious-pungsan-dprk-threat-actor-contagious-interview/",
+                "https://stacklok.com/blog/dependency-hijacking-dissecting-north-koreas-new-wave-of-defi-themed-open-source-attacks-targeting-developers",
+                "https://www.darkreading.com/application-security/chatgpt-manipulated-hex-code",
+                "https://cybersecuritynews.com/encoding-technique-jailbreaks-chatgpt-4o/",
+                "https://blog.qualys.com/vulnerabilities-threat-research/2024/09/19/black-basta-ransomware-what-you-need-to-know",
+                "https://www.bleepingcomputer.com/news/security/black-basta-ransomware-poses-as-it-support-on-microsoft-teams-to-breach-networks/",
+                "https://www.reliaquest.com/blog/black-basta-social-engineering-technique-microsoft-teams/",
+                "https://thehackernews.com/2024/10/beavertail-malware-resurfaces-in.html"
+            ],
+            "malwares": [
+                "qakbot"
+            ],
+            "apt_groups": [],
+            "ttps": [
+                "Command and Control",
+                "command and control",
+                "phishing",
+                "Phishing",
+                "initial access",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": [
+                    "ad8a819d7b68905fa6a8425295755c329504dd0bb48b2fba8dd17e54562b0c6f",
+                    "fd9e8fcc5bda88870b12b47cbb1cc8775ccff285f980c4a2b683463b26e36bf0",
+                    "0621d37818c35e2557fdd8a729e50ea662ba518df8ca61a44cc3add5c6deb3cd",
+                    "36cac29ff3c503c2123514ea903836d5ad81067508a8e16f7947e3e675a08670",
+                    "07183a60ebcb02546c53e82d92da3ddcf447d7a1438496c4437ec06b4d9eb287",
+                    "34170bda5eb84d737577096438a776a968cb36eff88817f12317edcb9d144b35",
+                    "486a9a79bbb81abee2e81679ace6267c3f3e37d9b8c8074f9ec7aebc9be75cdd",
+                    "d801ad1beeab3500c65434da51326d7648a3c54923d794b2411b7b6a2960f31e",
+                    "a69e89a62203b8f2f89ec12a13e46c71b6b4d505deb19527ff73fd002df9bc6b",
+                    "9e3a9dbf10793a27361b3cef4d2c87dbd3662646f4470e5242074df4cb96c6b4",
+                    "cde5afd20b7bb5c9457b68e02c13094125025fb974df425020361303dc6fcdfc",
+                    "de6f9e9e2ce58a604fe22a9d42144191cfc90b4e0048dffcc69d696826ff7170",
+                    "d0a5b9dc988834cc930624661e6e7dd1943d480d75594fff0f4bc39d229c5999",
+                    "0f5f0a3ac843df675168f82021c24180ea22f764f87f82f9f77fe8f0ba0b7132",
+                    "d5c0b89e1dfbe9f5e5b2c3f745af895a36adf772f0b72a22052ae6dfa045cea6",
+                    "9ece783ac52c9ec2f6bdfa669763a7ed1bbb24af1e04e029a0a91954582690cf",
+                    "8563eecbc85a0c43b689b9d9f31fe5977e630c276dee0d7dbfe1a47ab1ab4550",
+                    "1c218d15b35b79d762b966db8bc2ca90fc62a95903bd78ac85648de1d828dbce",
+                    "8de446957ce96826628c88da9fd4e7ff9d6327d8004afc4e9e86d59e7d6948dc",
+                    "589e22005aa166b207a7aa7384dd3c7f90b71775688e587108801c3894a43358",
+                    "b9be6b0ac414ac2a033c17c3ac649417e97e5d0580db796a8ff55169299de50e",
+                    "5e820d8b2bd139b3018574c349cd48ce77e7b31cf85e9462712167fcab99b30a",
+                    "000b4a77b1905cabdb59d2b576f6da1b2ef55a0258004e4a9e290e9f41fb6923",
+                    "6e065f1e4d1d8232da5de830d270a13fff8284a91e81c060377ebe66aa75d81d",
+                    "f08e88c7397443e35697e145887af2683a83d2415ccd0c7536cea09e35da9ef7",
+                    "9abf6b93eafb797a3556bea1fe8a3b7311d2864d5a9a3687fce84bc1ec4a428c",
+                    "4343fa4e313a61f10de08fa5b1b8acb98589faf5739ab5b606f540983b630f79",
+                    "10f86be3e564f2e463e45420eb5f9fbdb14f7427eac665cd9cc7901efbc4cc59",
+                    "e0568196f1494137a5bbee897a37bc4fe15f87175b57a30403450a88486190c4"
+                ]
+            }
+        },
+        {
+            "ips": [],
+            "domains": [
+                "environments.Given"
+            ],
+            "urls": [
+                "https://redcanary.com/blog/threat-intelligence/storm-1811-black-basta/",
+                "https://www.ncsc.gov.uk/files/NCSC_Annual_Review_2024.pdf",
+                "https://cybersecuritynews.com/rmm-tools-to-deliver-black-basta-ransomware/",
+                "https://www.twenty-four.it/services/cyber-security-services/cyber-crime-prevention/cybercrime-statistics-uk/",
+                "https://www.infosecurity-magazine.com/news/inc-ransom-cyberattack-uk-children/",
+                "https://www.england.nhs.uk/london/synnovis-ransomware-cyber-attack/",
+                "https://www.digitalhealth.net/2024/05/nhs-dumfries-and-galloway-working-with-ncsc-after-3tb-data-leak/",
+                "https://www.elemendar.ai/post/threat-intelligence-update-29-nov-5-dec-2024",
+                "https://www.microsoft.com/en-us/security/blog/2024/05/15/threat-actors-misusing-quick-assist-in-social-engineering-attacks-leading-to-ransomware/",
+                "https://www.infosecurity-magazine.com/news/lockbit-affiliates-exploit-citrix"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [
+                "C2 communication",
+                "remote code execution",
+                "phishing",
+                "lateral movement",
+                "Credential Dump",
+                "initial access",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        },
+        {
+            "ips": [],
+            "domains": [
+                "Cipher.exe"
+            ],
+            "urls": [
+                "https://www.radware.com/cyberpedia/ddos-attacks/fancy-bear-apt28-threat-actor/#TheHistoryofFancyBear",
+                "https://www.bleepingcomputer.com/news/security/new-ghost-tap-attack-abuses-nfc-mobile-payments-to-steal-money/",
+                "https://www.hipaajournal.com/global-healthcare-cyberattacks-increased-by-74-in-2022/",
+                "https://www.volexity.com/blog/2024/11/22/the-nearest-neighbor-attack-how-a-russian-apt-weaponized-nearby-wi-fi-networks-for-covert-access/",
+                "https://www.dni.gov/files/CTIIC/documents/products/Ransomware_Attacks_Surge_in_2023.pdf",
+                "https://www.elemendar.ai/post/threat-intelligence-update-22-28-november-2024",
+                "https://www.wired.com/story/russia-gru-apt28-wifi-daisy-chain-breach/",
+                "https://www.threatfabric.com/blogs/ghost-tap-new-cash-out-tactic-with-nfc-relay",
+                "https://www.theregister.com/2024/11/26/third_major_cyber_incident_declared/",
+                "https://www.bleepingcomputer.com/news/security/hackers-breach-us-firm-over-wi-fi-from-russia-in-nearest-neighbor-attack/"
+            ],
+            "malwares": [],
+            "apt_groups": [
+                "APT28"
+            ],
+            "ttps": [
+                "Command and Control",
+                "phishing",
+                "Phishing",
+                "Lateral Movement",
+                "lateral movement",
+                "Persistence",
+                "Initial Access",
+                "initial access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        },
+        {
+            "ips": [],
+            "domains": [
+                "Censys.IO"
+            ],
+            "urls": [
+                "https://www.microsoft.com/en-us/security/blog/2024/10/31/chinese-threat-actor-storm-0940-uses-credentials-from-password-spray-attacks-from-a-covert-network/",
+                "https://www.justice.gov/opa/pr/us-government-disrupts-botnet-peoples-republic-china-used-conceal-hacking-critical",
+                "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-01-07-november-2024-tl",
+                "https://www.bleepingcomputer.com/news/security/chatgpt-4o-can-be-used-for-autonomous-voice-based-scams/",
+                "https://informationsecuritybuzz.com/microsoft-warns-major-credential-theft/",
+                "https://www.cyber.gov.au/about-us/view-all-content/alerts-and-advisories/apt40-advisory-prc-mss-tradecraft-in-action",
+                "https://lab.wallarm.com/attackers-abuse-docusign-api-to-send-authentic-looking-invoices-at-scale/",
+                "https://www.occrp.org/en/news/us-chinas-hackers-hijack-small-routers-to-reach-big-targets",
+                "https://www.bleepingcomputer.com/news/security/docusigns-envelopes-api-abused-to-send-realistic-fake-invoices/",
+                "https://arxiv.org/pdf/2410.15650"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [
+                "phishing",
+                "Phishing",
+                "lateral movement",
+                "persistence",
+                "Persistence",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        },
+        {
+            "ips": [],
+            "domains": [],
+            "urls": [
+                "https://www.sentinelone.com/cybersecurity-101/cybersecurity/ransomware-examples/",
+                "https://securityintelligence.com/articles/roundup-the-top-ransomware-stories-of-2024/",
+                "https://www.malwarebytes.com/cybersecurity/basics/risks-of-ai-in-cyber-security",
+                "https://www.ncsc.gov.uk/whitepaper/preparing-for-quantum-safe-cryptography",
+                "https://www.scworld.com/brief/u-k-cybersecurity-chief-warns-of-increasing-cyber-threats",
+                "https://www.gov.uk/government/publications/research-on-the-cyber-security-of-ai/cyber-security-risks-to-artificial-intelligence",
+                "https://www.ncsc.gov.uk/collection/ncsc-annual-review-2024",
+                "https://www.ncsc.gov.uk/news/risk-facing-uk-widely-underestimated-cyber-chief-to-warn-in-first-major-speech",
+                "https://www.reuters.com/technology/cybersecurity/cyberattacks-us-utilities-surged-70-this-year-says-check-point-2024-09-11/",
+                "https://www.elemendar.ai/post/cybersecurity-threat-landscape-in-2025",
+                "https://www.ibm.com/topics/quantum-safe-cryptography",
+                "https://www.cloudflare.com/en-gb/learning/ddos/glossary/mirai-botnet/",
+                "https://ico.org.uk/about-the-ico/research-reports-impact-and-evaluation/research-and-reports/learning-from-the-mistakes-of-others-a-retrospective-review/supply-chain-attacks/#:~:text=A%20supply%20chain%20attack%20is,services%20that%20you%20rely%20on.",
+                "https://www.checkpoint.com/cyber-hub/network-security/what-is-iot/iot-botnet/",
+                "https://www.scmr.com/article/analyzing-the-supply-chain-risks-behind-the-top-data-breaches-in-2024#:~:text=In%202024%2C%20cyberattacks%20targeting%20critical,and%20the%20digital%20supply%20chain.",
+                "https://www.secalliance.com/blog/the-changing-landscape-of-hacktivism?utm_",
+                "https://threatresearch.ext.hp.com/anticipating-the-quantum-threat-to-cryptography/#:~:text=Capture%20and%20decrypt%20attacks&text=An%20attacker%20can%20intercept%20and,security%20requirement%20has%20been%20broken.",
+                "https://www.phoenixs.co.uk/resources/blog/understanding-state-sponsored-cyber-attacks",
+                "https://www.sentinelone.com/labs/cybervolk-a-deep-dive-into-the-hacktivists-tools-and-ransomware-fueling-pro-russian-cyber-attacks/",
+                "https://macaonews.org/news/city/macau-news-legislators-deepfake-images-ai-macao/",
+                "https://ico.org.uk/action-weve-taken/data-security-incident-trends/",
+                "https://www.crowdstrike.com/en-us/cybersecurity-101/cyberattacks/ai-powered-cyberattacks/",
+                "https://www.ncsc.gov.uk/collection/ncsc-annual-review-2024/chapter-01",
+                "https://www.ncsc.gov.uk/collection/annual-review-2023/resilience/case-study-securing-cni",
+                "https://www.wired.com/story/alphv-change-healthcare-ransomware-payment/",
+                "https://cybertechaccord.org/cyber-mercenaries-a-growing-threat-prompting-collective-action-at-the-2024-summit-for-democracy",
+                "https://csrc.nist.gov/CSRC/media/Projects/Supply-Chain-Risk-Management/documents/briefings/Workshop-Brief-on-Cyber-Supply-Chain-Best-Practices.pdf",
+                "https://www.ncsc.gov.uk/report/impact-of-ai-on-cyber-threat",
+                "https://www.infosecurity-magazine.com/news/iot-vulnerabilities-entry-point",
+                "https://www.americanscientist.org/article/is-quantum-computing-a-cybersecurity-threat"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [
+                "phishing",
+                "Phishing",
+                "lateral movement"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        },
+        {
+            "ips": [],
+            "domains": [],
+            "urls": [
+                "https://www.elemendar.ai/weekly-cti-reports"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        },
+        {
+            "ips": [
+                "103.68.109.208",
+                "15.235.176.166",
+                "95.169.204.214",
+                "198.135.48.191",
+                "107.173.4.16",
+                "139.99.17.158",
+                "15.235.138.155",
+                "192.3.220.22"
+            ],
+            "domains": [
+                "Valvulate.Cru",
+                "net.exe",
+                "Aerognosy.Res",
+                "Vaccinerende.exe"
+            ],
+            "urls": [
+                "https://news.sophos.com/en-us/2024/11/08/veeam-exploit-seen-used-again-with-a-new-ransomware-frag/",
+                "https://www.elemendar.ai/post/cti-threat-summary-08-14-november-2024-tlp-clear",
+                "https://www.justice.gov/opa/pr/us-government-disrupts-botnet-peoples-republic-china-used-conceal-hacking-critical",
+                "https://og1.in/2Rxzb3",
+                "https://www.bleepingcomputer.com/news/security/critical-veeam-rce-bug-now-used-in-frag-ransomware-attacks/",
+                "https://www.darkreading.com/cyberattacks-data-breaches/fake-copyright-infringement-emails-rhadamanthys",
+                "https://www.fortinet.com/blog/threat-research/new-campaign-uses-remcos-rat-to-exploit-victims",
+                "https://research.checkpoint.com/2024/massive-phishing-campaign-deploys-latest-rhadamanthys-version/",
+                "https://securityaffairs.com/170717/malware/veeam-backup-replication-flaw-frag-ransomware.html",
+                "http://192.3.220.22/hFXELFSwRHRwqbE214.bin",
+                "https://agger-labs.com/ransomware/unpacking-the-frag-ransomware-how-attackers-exploit-vulnerabilities-and-use-lolbins-to-disrupt-organisations/",
+                "http://192.3.220.22/430/dllhost.exe",
+                "https://informationsecuritybuzz.com/phishing-campaign-remcos-rat-variant/",
+                "http://192.3.220.22/xampp/en/cookienetbookinetcahce.hta"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [
+                "C2 communication",
+                "malicious file",
+                "remote code execution",
+                "Phishing",
+                "phishing",
+                "persistence",
+                "Persistence",
+                "initial access",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": [
+                    "00fc4b8a4c65c06766608f3ef3f92385c8e147f5991dabe290e33dd14b39ad44",
+                    "b529c6df6164ff8badf30f942220a3126f99e3fc2c2ea1494aa3e305b3b53c1f",
+                    "12b7390835f30c1bcdeddd258e49684c98133cee4a6a2ccab869785567deae4f",
+                    "97286b6f3a6535ff1172ef65172e6967e3670c6b14a3313c3bf0d6c171b1fc85",
+                    "783c7f4bf23072343f6247ee14e54e4af0b147553ad1ef42b4e7fb44386d667c",
+                    "11ba24d023b544e28c37b6cb8afe27d06638175d7f56c2e4d4ff97bf7bd813b6",
+                    "9abf9fb94e2529d8819a3873f2025bdd90d14e75fe4af81e489f6d0560809f9c",
+                    "3de252c9023bc8920d77570acdfe21813532727af3f91d59af35fa8abcd3700f",
+                    "98e28d3423f5d414effe3c0ed6fd0f1c8154942e5e127ecee5f051e1196ffc75",
+                    "b1ac4ad92045e935c132214015188d27ec4382f930d0152dfb303695b708b38d",
+                    "cf9d93951e558ed22815b34446cfa2bd2cf3d1582d8bd97912612f4d4128a64e",
+                    "a9896a8f96407a5eedda08a63dd40967f0fe0b3926e7002b6e1abc11f6ab81cc",
+                    "2e0c99758432a3759b5af6f190ec5cb72a5a84c977d8883dcf041c4de003f3d3",
+                    "a15d0aedc8b4e54a170b6ecc3d9a06835cc499f07b05c6ca261081ace505debf",
+                    "ebd167ca477af620065548a9e55567682b0750625b3e078fc4498dd5adeabdc6",
+                    "99c0bebdc8cb7b0948000a601f510fc70487f9da532be199b8641512a2db9839",
+                    "5418e42706bca4712ff2a3db67853eb42a2310660c51cff2f9020586cffedeb3",
+                    "623bb3f1f476c37afc309d6c0ab89e216aaedc03b8a7ec1aaec5fb5085d78a97",
+                    "a064bbc4b58642ab4d7118abc55fb81db6584cbc633800ad14048e8370a95ef2",
+                    "a72083974e886856b7d985bdc79888234c8cd9012ed39b2566851fb0d86cca50",
+                    "2aa58fa8d71bd2b4fd1ffac16a6461191bbf6f4b2c97455ae52800cce929a0f2",
+                    "d0e3f547e3efcc9d9794774a765b9c3950955e7ad752f3e630ebd5ab9425bcdc",
+                    "b936853a0c50a0cd0bc8b33103b55bd88e19c6c28768d990b954c11d714286ca",
+                    "3648e89e7449ea433a8b3ef0e5b605b5dc4157048c03b20dedc5e3b920fa8552",
+                    "0a3dfe260dd7b038ddb8911689c899541391c188aff966261e7bd9d0280d153d",
+                    "878917b6a8d241031fc330eff771f416a9fffaecab42c39d57e58ac2d8f38f11",
+                    "9bdf49b27fd4d80ef087f63e0bfa0a0822686814863eca09ac506404ad76dfda",
+                    "d285677cba6acf848aa4869df74af959f60ef1bc1271b4032000fcdd44f407f2",
+                    "10eafd75429ffadee2384acd37b0d4e7ca26b83666e6786f2acaf1b1c29c3f17",
+                    "c5bb808a88f9e729484c05a1bc3097157bbfbd28469e502f2ebc4c6e6135df42",
+                    "F99757C98007DA241258AE12EC0FD5083F0475A993CA6309811263AAD17D4661",
+                    "cd3040c88a6fd71ed1ce8c2a5d0b13ed8e25e49835932a39891c514ef946dd29",
+                    "7d7a3e254b7968400a301d83fcd44a69f655386b9b95998a36113cfb2e542720",
+                    "69573694d16b7ccadfa208ff976bfe1b3e36837aba3e5dc4dfc80e66341ef61e",
+                    "f4fcba1c9d7f4ae8e3868f901035ea1e0e9e1122a362a83afd3d111c17a97d7a",
+                    "751f149665f87dd20cc8dff743f28e5da1ff2a5f04874d4b8569b9afceeedfec",
+                    "00086cf4f35b6fb7f897cfa2f0d5ad9876aa9819cdc87416c798005ce901d3a1",
+                    "9d10835f7717c89d17886b7e59cc2dfc9133bfaa044bad5f070e1c8e1212e257",
+                    "416f3fa48b75ab168e3373dae77cab7f4702de5158835d23a02629e8c1d20156",
+                    "48aaa2dec95537cdf9fc471dbcbb4ff726be4a0647dbdf6300fa61858c2b0099",
+                    "3ecf2838b2e07e6d329d45cde7d0162ba47fea4b94bacb24838358314daed756",
+                    "D4D98FDBE306D61986BED62340744554E0A288C5A804ED5C924F66885CBF3514",
+                    "f2429f4bd09897653d0ffa41206a14cafa55356d5edc04dc0915c116867f8c27",
+                    "5cec33e8f47855da3c4ce1f3953d750275864714b16e08a94605bc3889867caf",
+                    "4A670E3D4B8481CED88C74458FEC448A0FE40064AB2B1B00A289AB504015E944",
+                    "dbdeede6f39936305c4c5bd8e4f7bfccb0b823c025130e7f8fa285e80383be0f",
+                    "9327aa03760431b6d86eeb2f1a3efc36aa443b842b5116fbbe0f2a7794c4e70e",
+                    "dbb4f7e6354621c316fbba7e7a15f59cf229684e16ab6d21027f310beecaf49b",
+                    "dc3d72f72247141efeba3c2ffd498025f68e0c4b34c9a4dc2686ffec09b6d401",
+                    "e8aa9a061c6ea803faaf4c8d7a80c6886b4ee73d9a89a9dc6e87e3fecf7a6851",
+                    "258ffcc13dbe110bcce21b91f7f075995719791fdd3c9f55ea5934984fa4373d",
+                    "d00d3adf81bf95ff4994dcbd2ae1305a6ee6b0edfad6eb55b87217f85645651a",
+                    "865a4f2583679f7a40357b61301d75567cf516a5b8295dc8155e6d4aa2ce244a",
+                    "d452461f3527d674de3e9b680026ceb2b02c56d6d3f7c94da3aab65c05f52c03",
+                    "415ee9b12002f17ca4f36bef794fdb19884e22980e21bf8a15043258624c439b",
+                    "8d0b1174cbda6b102bb98c91ba123e9f404b9fad23b49a4e29f3cfd8d20a577a",
+                    "d57f45096e646837dec51129222fcbe79981c595721164009aec68be09bf5dcf",
+                    "7f99e506c17676b98dcc08e6a19f100ef933cde3e0423c6d4072f6802a9196bb",
+                    "970e199e40511e90d6dd5d6f3c9f3701215fd881b1273fe2617bd44444b0bee9",
+                    "2be6ad454fa9e87f78dea80d2855f1c14df81a881093a1a0d57f348377f477a8",
+                    "2a276ca5b2e095cdac7b24e58b3f7a67cee7db2fb5c1568e4775909265c7e914",
+                    "6044e08402d1abd52991f5c6a4749ba6aa29a0587ff196edf60b38862392e855",
+                    "4cbcfa2a8d56976eff1e8ac0ef4d7703d0b802f227975a0cc36f3dcd3a90e73e",
+                    "0b9bd95d815af9ea4a59840ef6fcdc7ccfd0e239c40974334cb4cfb41df530db",
+                    "e6315b24e0311758da1c25daa5f2724da4f534ed7ed644cbf43f3cc64c4676a7",
+                    "24A4EBF1DE71F332F38DE69BAF2DA3019A87D45129411AD4F7D3EA48F506119D",
+                    "1a2399ecc38f3288206c75b55762d125d3d75254062a2c0d85c86e7f896736ac",
+                    "aa04c9307a9087455d21dfac02d7f322ab337cd5978f9161285a9c79379efecc",
+                    "f7eef906c7dc1ce2ffe586d4b7f316a5f5c6761b5cdbf22d892fbc87a5ee2f6f",
+                    "7990765022c4400a45f996046971b9e6b69cca5b06f8d2adb61bc267fd362197",
+                    "ccb539bf17d479d9707ee717d0afb03cd57e9b6f023becf1abf9cdbd88e1b06c",
+                    "9ef9c88cef51ee0fb77ea9a78dbe60651603ef807ddb6c44d5bda95cc9026527",
+                    "9124D7696D2B94E7959933C3F7A8F68E61A5CE29CD5934A4D0379C2193B126BE",
+                    "7e270a80cd0f04f245309e8c75cfc2cb46dc075ba01a00b30f66cb8b5deaaf3f",
+                    "7dc07b8aa268485e40ab78bfbb03a367d80ebd7b2c6c74961dc6842cae7086e1",
+                    "6de4f65b1d738d84f8e825613092bbd360194195fe8a1c986e12a9bb704217c1",
+                    "741dfdae8948f3e430a5b7b66c8fb4b8a750695b67a84a12abc0b6089e8fba31",
+                    "2cbc1e8a4cb5d18a867666adbd3417bc88d48a74ae6500593959aec1a1c92d2d",
+                    "be9c3feed5f6e81ccd375902c8c92616f77694b6cd14f69896d44dd4b1ea4990",
+                    "b2588061ba5ee9948bbccd320b40c6d7b8d6a693d181f3bce61e5e267f53aa7e",
+                    "324dfc7bb75f27e6fba8d67dea67a63525efbe947bf8e29ef39980c6efc1c3f6",
+                    "f2536e520d37512d868a418797974a5c11e67742824a5477100b7e3f5b2efbc3",
+                    "0de8d2d3217cebd37a2fe488713d1c288ae5a63d3d3b2a3495e2e636ba6a1f89",
+                    "9a249dfdc2c16700bc5add2455f2ed00e47a2610b7779cc33e40aac576a2a74d",
+                    "a03d2956ff8d0ae4d96c9e6cced79b335b70eef10feb0f7202609cb8652179f6",
+                    "3448005600ccb0ae52443a4c227a657de9cd767b389e9a1ed75ef074709981bd",
+                    "F9B744D0223EFE3C01C94D526881A95523C2F5E457F03774DD1D661944E60852",
+                    "a8729621ca4310e8e1a7ad3e1426708f1e1954a16af420cd3ce46c501e9692ab",
+                    "fefba5ce20c71a71cfe35dd8ff06c514bf6ffde60356babf4f4bba66dd904b78",
+                    "342a5c7df2bdd040570f4b83c74366d4c96a90d6418149d432cb5e8577f2f6b1",
+                    "90c7688e0dc23ba4530bac1d567bad920c4ef1c06cbf4b2d867eeb363271eefe",
+                    "fe55c1d263e0ea356d86afd8b2b1cedff570568e45b8a3810e05ea482b8a9329",
+                    "0ad65fd0897a6547f6febf398708ab2d423a8f8834b53136219cb490ec3ebd13",
+                    "c622c0f67eb5d9a90008e5e120065cd5a1a6e25c6e758e8205d377596059b8fe",
+                    "b36205464ead176a473ab43ea7b5e0c2b8749b3eb9549d65609be2337dce25db",
+                    "b9c4c8343ba75081954b2db54940585c6c0c9bb47e053ac1b9229b4fa8fc9293",
+                    "e9a18755312011e30081e7ce0fcc1db3e3aec3b9f3ed3a776dd38498830a2738",
+                    "05e02f0f9b8625fe3959ae1219f31b0167d787fefc0a9d152edf6524d6859590",
+                    "4b33219c5cadb4d741044874f6f0184d45f43891d28ad5b489716d4da21310fd",
+                    "78200cd816acbd39b6664c6582e06500f6d46085b62b49d2f914bea5a004197a",
+                    "9102e564c3262b2c291e8ca3d67f8a55c06650aa86f617c919916f6053c03c9b",
+                    "de933f7b47707f4bf8d5a4aaef8b31f5059d3b8f465bcaae3e22438466e8390b",
+                    "eb4e39d44ad016b8d6d1dc8dc25a9ea3d3e18df87516922fdbd995de15b68f54",
+                    "ce2f00f1d0e71287e746d5a3507547f355297a3e45a7c2cc0322015916a0137c",
+                    "41a3edb3a8e8d5cf093cbd02791911f6ee26df39a377fceb6b101d66a7b7aff2",
+                    "4bbe0f6b5488a51295b15d8144d0a1c9b41bb86384299b88ea48e88c76704f52"
+                ]
+            }
+        },
+        {
+            "ips": [],
+            "domains": [
+                "cmd.exe",
+                "logon.bat"
+            ],
+            "urls": [
+                "https://blog.sekoia.io/helldown-ransomware-an-overview-of-this-emerging-threat/",
+                "https://informationsecuritybuzz.com/ransomware-attacks-on-healthcare-secto/",
+                "https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-038a",
+                "https://thehackernews.com/2024/11/new-helldown-ransomware-expands-attacks.html",
+                "https://securitybrief.co.nz/story/cyber-espionage-group-volt-typhoon-resurfaces-globally",
+                "https://www.elemendar.ai/post/threat-intelligence-update-15-21-november-2024-tlp-c",
+                "https://www.pymnts.com/cybersecurity/2024/t-mobile-network-reportedly-breached-in-chinese-hacking-campaign/"
+            ],
+            "malwares": [
+                "lockbit"
+            ],
+            "apt_groups": [],
+            "ttps": [
+                "C2 Communication",
+                "Command and Control",
+                "lateral movement",
+                "persistence",
+                "Persistence",
+                "initial access",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": [
+                    "cb48e4298b216ae532cfd3c89c8f2cbd1e32bb402866d2c81682c6671aa4f8ea",
+                    "7731d73e048a351205615821b90ed4f2507abc65acf4d6fe30ecdb211f0b0872",
+                    "67aea3de7ab23b72e02347cbf6514f28fb726d313e62934b5de6d154215ee733",
+                    "2b15e09b98bc2835a4430c4560d3f5b25011141c9efa4331f66e9a707e2a23c0",
+                    "ccd78d3eba6c53959835c6407d81262d3094e8d06bf2712fefa4b04baadd4bfe",
+                    "2621c5c7e1c12560c6062fdf2eeeb815de4ce3856376022a1a9f8421b4bae8e1",
+                    "6ef9a0b6301d737763f6c59ae6d5b3be4cf38941a69517be0f069d0a35f394dd",
+                    "9ab19741ac36e198fb2fd912620bf320aa7fdeeeb8d4a9e956f3eb3d2092c92c",
+                    "7cd7c04c62d2a8b4697ceebbe7dd95c910d687e4a6989c1d839117e55c1cafd7",
+                    "3e3fad9888856ce195c9c239ad014074f687ba288c78ef26660be93ddd97289e",
+                    "47635e2cf9d41cab4b73f2a37e6a59a7de29428b75a7b4481205aee4330d4d19"
+                ]
+            }
+        },
+        {
+            "ips": [],
+            "domains": [
+                "modoodeul.com",
+                "pabloarruda.com",
+                "TSVIPSrv.dll",
+                "web05-zoom.us",
+                "kansaskollection.com",
+                "bowerchalke.com",
+                "alienmanfc6.com",
+                "cdm-join.us",
+                "lirelasuisse.com",
+                "time.qnapntp.com",
+                "cphoops.com",
+                "phperl.com",
+                "utv4fun.com",
+                "patrickcateman.com",
+                "us002webzoom.us",
+                "carolinejuskus.com",
+                "wmic.exe",
+                "mensadvancega.com",
+                "Report-41952.lnk",
+                "dekhke.com",
+                "apunanwu.com",
+                "pakoyayinlari.com",
+                "mdalies.com",
+                "stonance.com",
+                "texttable.xsl",
+                "iloanshop.com",
+                "us01web-zoom.us",
+                "github.com",
+                "webroom-zoom.us",
+                "msiexec.exe",
+                "Rundll32.exe",
+                "meet.googie.com-join.us",
+                "web-join.com",
+                "googiedrivers.com",
+                "cautrucanhtuan.com"
+            ],
+            "urls": [
+                "https://meet.google.webjoining.com/exw-jfaj-hpa",
+                "https://www.bleepingcomputer.com/news/security/bumblebee-malware-returns-after-recent-law-enforcement-disruption/",
+                "https://www.darkreading.com/threat-intelligence/lockbit-ransomware-takedown-strikes-brand-viability",
+                "https://meet.google.us-join.com/ywk-batf-sfh",
+                "https://www.elemendar.ai/post/cyber-threat-intelligence-summary-october",
+                "https://rhisac.org/threat-intelligence/chinese-nation-state-hackers-apt41-attack-gambling-sector-for-financial-gain/",
+                "https://blog.sekoia.io/clickfix-tactic-the-phantom-meet/#h-victimology-of-clickfix-clusters",
+                "https://thehackernews.com/2024/10/beware-fake-google-meet-pages-deliver.htm",
+                "https://meet.google.com-join.us/wmq-qcdn-orj",
+                "https://meet.google.us07host.com/coc-btru-ays",
+                "https://cloud.google.com/blog/topics/threat-intelligence/apt41-arisen-from-dust",
+                "https://cybersrcc.com/2024/10/22/chinese-nation-state-hackers-apt41-hit-gambling-sector-for-financial-gain/",
+                "https://www.mandiant.com/sites/default/files/2022-02/rt-apt41-dual-operation.pdf"
+            ],
+            "malwares": [
+                "lockbit",
+                "trickbot"
+            ],
+            "apt_groups": [
+                "APT41"
+            ],
+            "ttps": [
+                "malicious file",
+                "phishing",
+                "Phishing",
+                "lateral movement",
+                "credential dump",
+                "persistence",
+                "Persistence",
+                "initial access",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": [
+                    "2853a61188b4446be57543858adcc704e8534326d4d84ac44a60743b1a44cbfe",
+                    "94379fa0a97cc2ecd8d5514d0b46c65b0d46ff9bb8d5a4a29cf55a473da550d5",
+                    "a834be6d2bec10f39019606451b507742b7e87ac8d19dc0643ae58df183f773c",
+                    "92a8cc4e385f170db300de8d423686eeeec72a32475a9356d967bee9e3453138"
+                ]
+            }
+        },
+        {
+            "ips": [],
+            "domains": [
+                "S93InitSystemd.sh",
+                "InitSystemd.sh"
+            ],
+            "urls": [
+                "https://thehackernews.com/2024/12/bitter-apt-targets-turkish-defense.html",
+                "https://www.ccc.de/en/updates/2024/wir-wissen-wo-dein-auto-steht",
+                "https://www.bleepingcomputer.com/news/security/new-iocontrol-malware-used-in-critical-infrastructure-attacks/",
+                "https://www.techradar.com/pro/security/over-800-000-electric-car-owners-and-drivers-may-have-had-private-info-exposed-online",
+                "https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-038a",
+                "https://www.cisa.gov/sites/default/files/2024-02/Joint-Guidance-Identifying-and-Mitigating-LOTL_V3508c.pdf",
+                "https://www.bleepingcomputer.com/news/security/customer-data-from-800-000-electric-cars-and-owners-exposed-online/",
+                "https://thehackernews.com/2024/12/chinese-apt-exploits-beyondtrust-api.html",
+                "https://www.elemendar.ai/post/threat-intelligence-update-27-dec-05-jan-2025"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [
+                "C2 communication",
+                "Command and Control",
+                "command and control",
+                "phishing",
+                "lateral movement",
+                "persistence",
+                "Persistence",
+                "initial access"
+            ],
+            "hashes": {
+                "md5": [],
+                "sha256": []
+            }
+        },
+        {
+            "ips": [
+                "139.162.179.170",
+                "172.104.133.212",
+                "199.247.4.86"
+            ],
+            "domains": [
+                "interactions.Dubbed",
+                "Meethub.gg",
+                "cuesee.com",
+                "deliverynetwork.observer",
+                "UpdateMC.exe",
+                "meeten.gg",
+                "index.js",
+                "Meeten.exe",
+                "UpdateMC.zip",
+                "AdditionalFilesForMeet.zip",
+                "Package.json",
+                "CallCSSetup.pkg",
+                "Node.js",
+                "MeetenApp.exe",
+                "MicrosoftRuntimeComponentsX64.exe"
+            ],
+            "urls": [
+                "https://thehackernews.com/2024/12/hackers-using-fake-video-conferencing.html",
+                "https://latam.kaspersky.com/about/press-releases/america-latina-enfrenta-mas-de-31-millones-de-ataques-de-malware-por-dia-alerta-kaspersky",
+                "https://www.bleepingcomputer.com/news/security/new-droidbot-android-malware-targets-77-banking-crypto-apps/",
+                "https://www.cleafy.com/cleafy-labs/droidbot-insights-from-a-new-turkish-maas-fraud-operation",
+                "https://cybersecuritynews.com/bluealpha-apt-abuses-cloudflare-tunnels/",
+                "https://www.cloudflare.com/en-gb/the-net/web3-security/",
+                "www.meetone.gg",
+                "https://www.cadosecurity.com/blog/meeten-malware-threat",
+                "https://www.elemendar.ai/post/threat-intelligence-update-06-dec-11-dec-2024",
+                "www.meetio.one",
+                "https://thehackernews.com/2024/12/hackers-leveraging-cloudflare-tunnels.html",
+                "https://go.recordedfuture.com/hubfs/reports/cta-ru-2024-1205.pdf",
+                "www.meeten.us",
+                "www.clusee.com"
+            ],
+            "malwares": [],
+            "apt_groups": [],
+            "ttps": [
+                "C2 communication",
+                "command and control",
+                "Command and control",
+                "Command and Control",
+                "malicious file",
+                "Malicious File",
+                "Malicious file",
+                "phishing",
+                "Phishing",
+                "Lateral Movement",
+                "lateral movement",
+                "persistence",
+                "Persistence",
+                "Initial Access"
+            ],
+            "hashes": {
+                "md5": [
+                    "6a925b71afa41d72e4a7d01034e8501b",
+                    "09b7650d8b4a6d8c8fbb855d6626e25d",
+                    "d74a885545ec5c0143a172047094ed59",
+                    "209af36bb119a5e070bad479d73498f7",
+                    "9b2d4837572fb53663fffece9415ec5a"
+                ],
+                "sha256": []
+            }
+        }
+    ]
+}
