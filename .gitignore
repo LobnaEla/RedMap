@@ -18,3 +18,4 @@ entity-based-chunking/cti_processing.log
 
 cti_pipeline.log
 cti_pipeline/metadata/
+cti_pipeline/results/

@@ -8,8 +8,8 @@ import time
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from cti_pipeline.scripts.ocr_library import extract_text as extract_text_ocr
-from pdf2image import convert_from_path
+# from cti_pipeline.scripts.preprocessing.ocr_client import extract_text as extract_text_ocr
+# from pdf2image import convert_from_path
 
 
 # --- Récupérer la clé API depuis variable d'environnement ---
@@ -51,35 +51,40 @@ def extraire_pdf(fichier):
     try:
         with open(fichier, "rb") as f:
             reader = PdfReader(f)
-            images = convert_from_path(fichier, dpi=300)
+            # OCR-related code commented out for debugging/migration
+            # images = convert_from_path(fichier, dpi=300)
 
             texte_total = ""
 
             for i, page in enumerate(reader.pages):
                 texte_brut = page.extract_text() or ""
 
-                temp_path = f"temp_page_{i+1}.png"
-                images[i].save(temp_path)
-
-                texte_ocr = extract_text_ocr(temp_path)
-                os.remove(temp_path)
+                # OCR processing commented out - using only direct PDF text extraction
+                # temp_path = f"temp_page_{i+1}.png"
+                # images[i].save(temp_path)
+                # texte_ocr = extract_text_ocr(temp_path)
+                # os.remove(temp_path)
 
                 print(f"[PAGE {i+1}] Texte brut longueur : {len(texte_brut)}")
-                print(f"[PAGE {i+1}] Texte OCR longueur : {len(texte_ocr)}")
+                # print(f"[PAGE {i+1}] Texte OCR longueur : {len(texte_ocr)}")
 
-                # Fusionner les 2 textes (éviter doublons)
-                if texte_brut.strip() and texte_ocr.strip():
-                    # Exemple simple : concaténation avec séparation
-                    texte_total += texte_brut + "\n--- OCR ---\n" + texte_ocr + "\n"
-                elif texte_brut.strip():
+                # OCR text merging commented out - using only direct PDF text
+                # if texte_brut.strip() and texte_ocr.strip():
+                #     # Exemple simple : concaténation avec séparation
+                #     texte_total += texte_brut + "\n--- OCR ---\n" + texte_ocr + "\n"
+                # elif texte_brut.strip():
+                #     texte_total += texte_brut + "\n"
+                # else:
+                #     texte_total += texte_ocr + "\n"
+                
+                # Using only direct PDF text extraction (no OCR)
+                if texte_brut.strip():
                     texte_total += texte_brut + "\n"
-                else:
-                    texte_total += texte_ocr + "\n"
 
             return texte_total
 
     except Exception as e:
-        print(f"[ERREUR OCR] {e}")
+        print(f"[ERREUR PDF] {e}")
         return ""
 
 
