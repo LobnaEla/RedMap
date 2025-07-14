@@ -20,4 +20,5 @@ cti_pipeline.log
 cti_pipeline/metadata/
 
 folder/
-data/
+
+cti_pipeline/results/

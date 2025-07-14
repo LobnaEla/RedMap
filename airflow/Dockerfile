@@ -1,15 +1,9 @@
 FROM apache/airflow:3.0.2
 
-# Install required system libraries
+# Install required system libraries (lighter dependencies without OCR libs)
 USER root
 RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgtk-3-0 \
+    curl \
     && apt-get clean
 
 USER airflow

@@ -9,7 +9,7 @@ import unicodedata
 from PIL import Image
 from pdf2image import convert_from_path
 import easyocr
-from ExtractionTexte import extraire_texte 
+from cti_pipeline.scripts.preprocessing.ExtractionTexte import extraire_texte  # Assure-toi que ce module est présent
 
 REPLACEMENTS = {
     r'\[\.\]': '.',
@@ -136,164 +136,28 @@ def preprocess_json(json_path, text_field="text"):
 
     return raw_text
 
-def preprocess_jsonl_medium(filepath): #blog
-    """
-    Pour les fichiers JSONL de type Medium ou blog
-    Extrait principalement depuis les champs 'content', 'url' et 'title'
-    """
-    if not os.path.exists(filepath):
-        print(f"❌ Fichier introuvable : {filepath}")
-        return []
-
-    results = []
-    with open(filepath, "r", encoding="utf-8") as f:
-        for i, line in enumerate(f):
-            try:
-                data = json.loads(line.strip())
-
-                # Champs pertinents pour Medium/blog
-                content = ""
-                for field in ["content", "title", "url"]:
-                    value = data.get(field, "")
-                    if isinstance(value, list):
-                        content += " ".join(str(x) for x in value) + "\n"
-                    else:
-                        content += str(value) + "\n"
-
-                if content.strip():
-                    results.append(content.strip())
-
-            except Exception as e:
-                print(f"⚠️ Ligne {i} ignorée : {e}")
-
-    return results
-
-def preprocess_jsonl(jsonl_path, text_fields = [
-    "description", "problem_identifiers", "title", "solution",
-    "references", "indicators", "adversary", "targeted_countries",
-    "attack_pattern", "content", "body"
-]):
-    if not os.path.exists(jsonl_path):
-        print(f"❌ Fichier JSONL introuvable : {jsonl_path}")
-        return []
-
-    results = []
-    with open(jsonl_path, "r", encoding="utf-8") as f:
-        for i, line in enumerate(f):
-            try:
-                data = json.loads(line.strip())
-
-                # Combine relevant text fields into one string per line
-                combined_text = ""
-                for field in text_fields:
-                    content = data.get(field, "")
-                    if isinstance(content, list):
-                        combined_text += "\n".join(str(x) for x in content) + "\n"
-                    else:
-                        combined_text += str(content) + "\n"
-
-                if combined_text.strip():
-                    results.append(combined_text)
-
-            except Exception as e:
-                print(f"⚠️ Ligne {i} ignorée : {e}")
-
-    return results
-
 def extract_iocs_and_ttps_from_file(filepath):
     print(f"📄 Extraction : {filepath}")
     ext = os.path.splitext(filepath)[1].lower()
     raw_text = ""
-
     if ext == ".pdf":
-        # Extraire le texte brut du PDF
         raw_text += extraire_texte(filepath) + "\n"
-
-        # Vérifier si le texte brut est exploitable
-        if not raw_text or len(raw_text.strip()) < 50:  # Seuil arbitraire pour "texte court"
-            # Le PDF semble être une image scannée → OCR nécessaire
-            images = extract_images_from_pdf(filepath)
-            for idx, image in enumerate(images):
-                print(f"🖼️ OCR image {idx + 1}")
-                raw_text += ocr_easyocr(image=image) + "\n"
-        else:
-            print("✅ Texte natif suffisant, pas besoin d'OCR.")
+        images = extract_images_from_pdf(filepath)
+        for idx, image in enumerate(images):
+            print(f"🖼️ OCR image {idx + 1}")
+            raw_text += ocr_easyocr(image=image) + "\n"
     elif ext in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff']:
         raw_text = ocr_easyocr(filepath)
     elif ext == ".json":
         raw_text = preprocess_json(filepath)
-    elif ext == ".jsonl":
-        filename = os.path.basename(filepath).lower()
-        
-        if "otx" in filename:
-            texts = preprocess_jsonl(filepath)
-        else:
-            texts = preprocess_jsonl_medium(filepath)
-
-        all_results = []
-        for i, text in enumerate(texts):
-            print(f"📄 Extraction ligne {i+1}")
-            result = extract_iocs_from_text(text)
-            if result:
-                all_results.append(result)
-        return all_results
     else:
         raw_text = extraire_texte(filepath)
-
     if not raw_text:
         print("⚠️ Aucun texte.")
         return {}
 
     text_for_ioc = replace_patterns(raw_text)
     urls_found = re.findall(IOC_PATTERNS['url'], text_for_ioc)
-    ip_candidates = re.findall(IOC_PATTERNS['ip'], text_for_ioc)
-    cleaned_ips = []
-    for ip in ip_candidates:
-        try:
-            parts = ip.split('.')
-            if len(parts) == 4 and all(0 <= int(p) <= 255 for p in parts):
-                cleaned_ips.append(ip)
-        except:
-            continue
-
-    lines = raw_text.split('\n')
-    lines = clean_text_lines(lines, remove_special=False)
-    lines = remove_repeated_lines(lines)
-    text = '\n'.join(lines)
-    text = replace_patterns(text)
-
-    domains_found = re.findall(IOC_PATTERNS['domain'], text)
-    malware_matches = re.findall(IOC_PATTERNS['malware'], text, re.IGNORECASE)
-    apt_matches = re.findall(IOC_PATTERNS['apt'], text, re.IGNORECASE)
-
-    result = {
-        "ips": list(set(cleaned_ips)),
-        "domains": [d for d in set(domains_found) if not any(d in url for url in urls_found)],
-        "urls": list(set(urls_found)),
-        "malwares": list(set(m.lower() for m in malware_matches)),
-        "apt_groups": list(set(a.upper() for a in apt_matches)),
-        "ttps": [],
-        "hashes": {
-            "md5": list(set(re.findall(IOC_PATTERNS['hash_md5'], text))),
-            "sha256": list(set(re.findall(IOC_PATTERNS['hash_sha256'], text))),
-        }
-    }
-
-    for keyword in TTP_KEYWORDS:
-        matches = re.findall(keyword, text, re.IGNORECASE | re.DOTALL)
-        for match in matches:
-            ttp = match.strip()
-            if ttp and ttp not in result["ttps"]:
-                result["ttps"].append(ttp)
-
-    return result
-
-def extract_iocs_from_text(raw_text):
-    if not raw_text:
-        return {}
-
-    text_for_ioc = replace_patterns(raw_text)
-    urls_found = re.findall(IOC_PATTERNS['url'], text_for_ioc)
 
     ip_candidates = re.findall(IOC_PATTERNS['ip'], text_for_ioc)
     cleaned_ips = []
@@ -334,7 +198,6 @@ def extract_iocs_from_text(raw_text):
             ttp = match.strip()
             if ttp and ttp not in result["ttps"]:
                 result["ttps"].append(ttp)
-
     return result
 
 def save_result_to_json(result, filepath, output_dir="results"):
@@ -354,28 +217,14 @@ def save_result_to_json(result, filepath, output_dir="results"):
 def is_ioc_result_empty(iocs):
     if not iocs:
         return True
-
-    # Si c'est une liste de résultats (cas du JSONL)
-    if isinstance(iocs, list):
-        if len(iocs) == 0:
-            return True
-        # Vérifie si tous les éléments sont vides
-        return all(is_ioc_result_empty(item) for item in iocs)
-
-    # Si c'est un dictionnaire classique
     if isinstance(iocs, dict):
         for key, value in iocs.items():
             if isinstance(value, dict):
                 if any(value.values()):
                     return False
-            elif isinstance(value, list):
-                if len(value) > 0:
-                    return False
-            elif value:  # Autre type non vide
+            elif value:
                 return False
-        return True
-
-    return True  # Par défaut, considère que c’est vide
+    return True
 
 def export_all_iocs_to_json(results_dir="results", output_json="all_iocs.json"):
     all_data = []
@@ -402,7 +251,12 @@ if __name__ == "__main__":
         shutil.rmtree(results_dir)
     os.makedirs(results_dir, exist_ok=True)
 
-    sample_files = []
+    sample_files = [
+        os.path.join(samples_dir, "sample.pdf"),
+        os.path.join(samples_dir, "testTXT.txt"),
+        os.path.join(samples_dir, "testHTML.html"),
+        os.path.join(samples_dir, "example.json"),
+    ]
 
     print("🔍 Démarrage du pipeline CTI...\n")
     for file in sample_files:

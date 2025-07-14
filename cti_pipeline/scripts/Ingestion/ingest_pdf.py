@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from cti_pipeline.scripts.ExtractionTexte import extraire_texte
+from cti_pipeline.scripts.preprocessing.ExtractionTexte import extraire_texte
 from cti_pipeline.scripts.utilities import (
     get_content_hash,
     load_processed_items,
