@@ -47,7 +47,8 @@ def ingest_rss_feeds():
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
-        return result
+        # result is a dict with statistics
+        return {"source": "rss_feeds", "stats": result, "status": "success"}
     except Exception as e:
         raise
 
@@ -58,7 +59,7 @@ def ingest_otx_pulses():
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
-        return result
+        return {"source": "otx_pulses", "stats": result, "status": "success"}
     except Exception as e:
         raise
 
@@ -69,7 +70,7 @@ def ingest_pdfs():
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_all_pdfs(PDF_DIR, DATA_DIR, METADATA_DIR)
-        return result
+        return {"source": "pdfs", "stats": result, "status": "success"}
     except Exception as e:
         raise
 
@@ -81,7 +82,7 @@ def ingest_twitter_users():
         os.makedirs(METADATA_DIR, exist_ok=True)
         twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
         result = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
-        return result
+        return {"source": "twitter", "processed_count": result['processed'], "users": len(twitter_users), "status": "success"}
     except Exception as e:
         raise
 
@@ -93,7 +94,8 @@ def ingest_blogs():
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_all_blog(BLOG_SOURCES, DATA_DIR, METADATA_DIR)
-        return result
+        # result is an integer representing total processed items
+        return {"source": "blogs", "processed_count": result, "status": "success"}
     except Exception as e:
         raise
 
@@ -104,7 +106,7 @@ def ingest_tuncert():
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
-        return result
+        return {"source": "tuncert", "stats": result, "status": "success"}
     except Exception as e:
         raise
 
