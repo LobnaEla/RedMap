@@ -7,9 +7,9 @@ import re
 
 
 # Data directories
-DATA_DIR = "/opt/airflow/cti_pipeline/data/"
-METADATA_DIR = "/opt/airflow/cti_pipeline/metadata/"
-PDF_DIR = "/opt/airflow/cti_pipeline/PDFs/"
+DATA_DIR = "/opt/project/cti_pipeline/data/"
+METADATA_DIR = "/opt/project/cti_pipeline/metadata/"
+PDF_DIR = "/opt/project/cti_pipeline/PDFs/"
 
 # Create required directories
 for directory in [DATA_DIR, METADATA_DIR, PDF_DIR]:

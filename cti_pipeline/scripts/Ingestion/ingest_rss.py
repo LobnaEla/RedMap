@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import feedparser
 from datetime import datetime
@@ -13,7 +12,6 @@ from cti_pipeline.scripts.utilities import (
     METADATA_DIR,
 )
 
-logger = logging.getLogger(__name__)
 
 CERT_FR_RSS_URL = "https://www.cert.ssi.gouv.fr/feed/"
 
@@ -23,7 +21,6 @@ def fetch_rss_feed() -> Optional[feedparser.FeedParserDict]:
     try:
         return feedparser.parse(CERT_FR_RSS_URL)
     except Exception as e:
-        logger.error(f"Failed to fetch RSS feed: {str(e)}")
         return None
 
 
@@ -33,7 +30,6 @@ def process_rss_entry(entry: Dict, processed_data: Dict) -> Optional[Dict]:
     url = entry.link
 
     if is_duplicate(content, url, processed_data, "rss"):
-        logger.debug(f"Skipping duplicate entry: {url}")
         return None
 
     return {
@@ -80,6 +76,5 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     results = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
     print("[✔] RSS feed ingestion completed.")
