@@ -43,7 +43,8 @@ from .pipeline import ComponentFactory, PipelineFactory
 from .pipeline.config import (
     PipelineConfig, ConfigManager, ProcessingLevel,
     StepConfig, ExtractionConfig, CleaningConfig, 
-    NormalizationConfig, AnonymizationConfig,
+    NormalizationConfig,
+    #   AnonymizationConfig,
     create_minimal_config, create_standard_config, 
     create_full_config, create_cti_config
 )
@@ -60,7 +61,7 @@ from .processors.extraction import TextExtractor, ExtractionResult, extract_text
 # Individual processing components (for advanced usage)
 from .processors.cleaning import TextCleaner, clean_text
 from .processors.cleaning import TextNormalizer, normalize_text
-from .processors.anonymization import TextAnonymizer, anonymize_text, anonymize_cti_text
+# from .processors.anonymization import TextAnonymizer, anonymize_text, anonymize_cti_text
 
 # Convenience functions for quick usage
 from .processors.preprocessing import (
@@ -86,7 +87,8 @@ __all__ = [
     # Configuration
     'PipelineConfig', 'ConfigManager', 'ProcessingLevel',
     'StepConfig', 'ExtractionConfig', 'CleaningConfig', 
-    'NormalizationConfig', 'AnonymizationConfig',
+    'NormalizationConfig', 
+    # 'AnonymizationConfig',
     'create_minimal_config', 'create_standard_config', 
     'create_full_config', 'create_cti_config',
     
@@ -104,10 +106,10 @@ __all__ = [
     'TextExtractor', 'ExtractionResult', 'extract_text_from_file', 'extract_with_result',
     
     # Individual components
-    'TextCleaner', 'TextNormalizer', 'TextAnonymizer',
+    'TextCleaner', 'TextNormalizer', # 'TextAnonymizer',
     
     # Convenience functions
-    'clean_text', 'normalize_text', 'anonymize_text', 'anonymize_cti_text',
+    'clean_text', 'normalize_text', # 'anonymize_text', 'anonymize_cti_text',
     'preprocess_text', 'preprocess_cti_text',
     'preprocess_file', 'preprocess_cti_file', 'process_file_with_result',
     

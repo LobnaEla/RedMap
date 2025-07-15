@@ -4,10 +4,12 @@ Cleaning Processors
 This package contains text cleaning and normalization components.
 """
 
-from .cleaning import TextCleaner
-from .normalization import TextNormalizer
+from .cleaning import TextCleaner, clean_text
+from .normalization import TextNormalizer, normalize_text
 
 __all__ = [
     'TextCleaner',
-    'TextNormalizer'
+    'TextNormalizer',
+    'clean_text',
+    'normalize_text'
 ]
