@@ -4,6 +4,7 @@ import os
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 # Add the project root to Python path for imports
 sys.path.append("/opt/project")  # Path inside Docker container
@@ -32,7 +33,7 @@ dag = DAG(
     description="Complete CTI Pipeline: Ingestion -> Preprocessing -> Chunking",
     schedule_interval=timedelta(hours=12),  # Run every 12 hours
     catchup=False,
-    tags=["cti", "ingestion", "preprocessing", "chunking"],
+    tags=['cti', 'ingestion'],
     max_active_runs=1,  # Prevent concurrent runs
 )
 
@@ -67,26 +68,17 @@ def ingest_otx_pulses():
     except Exception as e:
         raise
 
-
-def ingest_twitter_users():
-    """Ingest data from Twitter users"""
-    try:
-        from cti_pipeline.scripts.Ingestion.ingest_twitter_users import (
-            ingest_all_twitter_users,
-        )
-
-        os.makedirs(DATA_DIR, exist_ok=True)
-        os.makedirs(METADATA_DIR, exist_ok=True)
-        twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
-        result = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
-        return {
-            "source": "twitter",
-            "processed_count": result["processed"],
-            "users": len(twitter_users),
-            "status": "success",
-        }
-    except Exception as e:
-        raise
+# def ingest_twitter_users():
+#     """Ingest data from Twitter users"""
+#     try:
+#         from cti_pipeline.scripts.Ingestion.ingest_twitter_users import ingest_all_twitter_users
+#         os.makedirs(DATA_DIR, exist_ok=True)
+#         os.makedirs(METADATA_DIR, exist_ok=True)
+#         twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
+#         result = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
+#         return {"source": "twitter", "processed_count": result['processed'], "users": len(twitter_users), "status": "success"}
+#     except Exception as e:
+#         raise
 
 
 def ingest_blogs():
@@ -167,11 +159,11 @@ ingest_otx_task = PythonOperator(
     dag=dag,
 )
 
-ingest_twitter_task = PythonOperator(
-    task_id="ingest_twitter_users",
-    python_callable=ingest_twitter_users,
-    dag=dag,
-)
+# ingest_twitter_task = PythonOperator(
+#     task_id='ingest_twitter_users',
+#     python_callable=ingest_twitter_users,
+#     dag=dag,
+# )
 
 ingest_blog_task = PythonOperator(
     task_id="ingest_blogs",
@@ -200,20 +192,23 @@ end_task = PythonOperator(
     dag=dag,
 )
 
+# Trigger preprocessing DAG after ingestion completes
+trigger_preprocessing = TriggerDagRunOperator(
+    task_id='trigger_preprocessing_dag',
+    trigger_dag_id='preprocess_pipeline',
+    wait_for_completion=False,  # Don't wait for preprocessing to complete
+    dag=dag,
+)
+
 # ================================
 # TASK DEPENDENCIES
 # ================================
 
 # Define the pipeline flow
-(
-    start_task
-    >> [
-        ingest_rss_task,
-        ingest_otx_task,
-        ingest_twitter_task,
-        ingest_blog_task,
-        ingest_tuncert_task,
-    ]
-    >> validate_task
-    >> end_task
-)
+start_task >> [
+    ingest_rss_task,
+    ingest_otx_task,
+    # ingest_twitter_task,  # Commented out
+    ingest_blog_task,
+    ingest_tuncert_task,
+] >> validate_task >> end_task >> trigger_preprocessing

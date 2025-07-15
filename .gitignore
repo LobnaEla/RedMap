@@ -24,5 +24,6 @@ folder/
 cti_pipeline/results/
 cti_pipeline/samples/
 cti_pipeline/scripts/preprocess/tests/test/
+cti_pipeline/processed
 
 cti-to-mitre-llm/mitre-ttp-mapping/

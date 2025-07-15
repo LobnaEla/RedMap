@@ -14,5 +14,5 @@ __all__ = [
     'cleaning',
     'extraction', 
     'preprocessing',
-    'anonymization'
+    # 'anonymization'
 ]
