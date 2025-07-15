@@ -3,6 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from datetime import datetime
+from selenium.webdriver.chrome.service import Service
 import time, json, os
 
 from cti_pipeline.scripts.utilities import (
@@ -41,7 +42,9 @@ def initialize_driver() -> webdriver.Chrome:
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--log-level=3")
-    return webdriver.Chrome(options=chrome_options)
+    service = Service("/usr/bin/chromedriver")
+
+    return webdriver.Chrome(service=service, options=chrome_options)
 
 
 def extract_tweet_data(tweet_element) -> Optional[Dict]:
