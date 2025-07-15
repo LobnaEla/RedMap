@@ -63,17 +63,6 @@ def ingest_otx_pulses():
     except Exception as e:
         raise
 
-def ingest_pdfs():
-    """Ingest data from PDF files"""
-    try:
-        from cti_pipeline.scripts.Ingestion.ingest_pdf import ingest_all_pdfs
-        os.makedirs(DATA_DIR, exist_ok=True)
-        os.makedirs(METADATA_DIR, exist_ok=True)
-        result = ingest_all_pdfs(PDF_DIR, DATA_DIR, METADATA_DIR)
-        return {"source": "pdfs", "stats": result, "status": "success"}
-    except Exception as e:
-        raise
-
 def ingest_twitter_users():
     """Ingest data from Twitter users"""
     try:
@@ -154,12 +143,6 @@ ingest_otx_task = PythonOperator(
     dag=dag,
 )
 
-ingest_pdf_task = PythonOperator(
-    task_id='ingest_pdfs',
-    python_callable=ingest_pdfs,
-    dag=dag,
-)
-
 ingest_twitter_task = PythonOperator(
     task_id='ingest_twitter_users',
     python_callable=ingest_twitter_users,
@@ -186,20 +169,6 @@ validate_task = PythonOperator(
     dag=dag,
 )
 
-# Preprocessing placeholder
-preprocessing_task = PythonOperator(
-    task_id='preprocessing_placeholder',
-    python_callable=preprocessing_placeholder,
-    dag=dag,
-)
-
-# Chunking placeholder
-chunking_task = PythonOperator(
-    task_id='chunking_placeholder',
-    python_callable=chunking_placeholder,
-    dag=dag,
-)
-
 # End task
 end_task = PythonOperator(
     task_id='pipeline_completion',
@@ -215,8 +184,7 @@ end_task = PythonOperator(
 start_task >> [
     ingest_rss_task,
     ingest_otx_task,
-    ingest_pdf_task,
     ingest_twitter_task,
     ingest_blog_task,
     ingest_tuncert_task,
-] >> validate_task >> preprocessing_task >> chunking_task >> end_task
+] >> validate_task >> end_task
