@@ -40,6 +40,9 @@ x-airflow-common:
       condition: service_healthy
     postgres:
       condition: service_healthy
+  build:
+    context: .
+    dockerfile: Dockerfile
 
 services:
   postgres:
