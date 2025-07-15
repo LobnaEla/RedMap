@@ -22,3 +22,5 @@ cti_pipeline/metadata/
 folder/
 
 cti_pipeline/results/
+cti_pipeline/samples/
+cti_pipeline/scripts/preprocess/tests/test/

@@ -67,6 +67,7 @@ def ingest_otx_pulses():
     except Exception as e:
         raise
 
+<<<<<<< HEAD
 
 def ingest_pdfs():
     """Ingest data from PDF files"""
@@ -81,6 +82,8 @@ def ingest_pdfs():
         raise
 
 
+=======
+>>>>>>> 73b0a78c48b72aefdd27161ae75ec6843b3205bb
 def ingest_twitter_users():
     """Ingest data from Twitter users"""
     try:
@@ -180,12 +183,15 @@ ingest_otx_task = PythonOperator(
     dag=dag,
 )
 
+<<<<<<< HEAD
 ingest_pdf_task = PythonOperator(
     task_id="ingest_pdfs",
     python_callable=ingest_pdfs,
     dag=dag,
 )
 
+=======
+>>>>>>> 73b0a78c48b72aefdd27161ae75ec6843b3205bb
 ingest_twitter_task = PythonOperator(
     task_id="ingest_twitter_users",
     python_callable=ingest_twitter_users,
@@ -212,6 +218,7 @@ validate_task = PythonOperator(
     dag=dag,
 )
 
+<<<<<<< HEAD
 # Preprocessing placeholder
 preprocessing_task = PythonOperator(
     task_id="preprocessing_placeholder",
@@ -226,6 +233,8 @@ chunking_task = PythonOperator(
     dag=dag,
 )
 
+=======
+>>>>>>> 73b0a78c48b72aefdd27161ae75ec6843b3205bb
 # End task
 end_task = PythonOperator(
     task_id="pipeline_completion",
@@ -238,6 +247,7 @@ end_task = PythonOperator(
 # ================================
 
 # Define the pipeline flow
+<<<<<<< HEAD
 (
     start_task
     >> [
@@ -253,3 +263,12 @@ end_task = PythonOperator(
     >> chunking_task
     >> end_task
 )
+=======
+start_task >> [
+    ingest_rss_task,
+    ingest_otx_task,
+    ingest_twitter_task,
+    ingest_blog_task,
+    ingest_tuncert_task,
+] >> validate_task >> end_task
+>>>>>>> 73b0a78c48b72aefdd27161ae75ec6843b3205bb
