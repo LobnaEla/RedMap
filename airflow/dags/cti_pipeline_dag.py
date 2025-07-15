@@ -8,6 +8,12 @@ from airflow.operators.dummy import DummyOperator
 # Add the project root to Python path for imports
 sys.path.append('/opt/project')  # Path inside Docker container
 
+# Centralized path configuration
+BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
+DATA_DIR = f"{BASE_PROJECT_PATH}/data"
+METADATA_DIR = f"{BASE_PROJECT_PATH}/metadata" 
+PDF_DIR = f"{BASE_PROJECT_PATH}/PDFs"
+
 # Default arguments for the DAG
 default_args = {
     'owner': 'cti-pipeline',
@@ -38,11 +44,9 @@ def ingest_rss_feeds():
     """Ingest data from RSS feeds (CERT-FR)"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_rss import ingest_certfr_rss
-        data_dir = "/opt/project/cti_pipeline/data"
-        metadata_dir = "/opt/project/cti_pipeline/metadata"
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(metadata_dir, exist_ok=True)
-        result = ingest_certfr_rss(data_dir, metadata_dir)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(METADATA_DIR, exist_ok=True)
+        result = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
         return result
     except Exception as e:
         raise
@@ -51,11 +55,9 @@ def ingest_otx_pulses():
     """Ingest data from OTX pulses"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_otx import ingest_otx_pulses
-        data_dir = "/opt/project/cti_pipeline/data"
-        metadata_dir = "/opt/project/cti_pipeline/metadata"
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(metadata_dir, exist_ok=True)
-        result = ingest_otx_pulses(data_dir, metadata_dir)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(METADATA_DIR, exist_ok=True)
+        result = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
         return result
     except Exception as e:
         raise
@@ -64,12 +66,9 @@ def ingest_pdfs():
     """Ingest data from PDF files"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_pdf import ingest_all_pdfs
-        data_dir = "/opt/project/cti_pipeline/data"
-        metadata_dir = "/opt/project/cti_pipeline/metadata"
-        pdf_dir = "/opt/project/cti_pipeline/PDFs"
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(metadata_dir, exist_ok=True)
-        result = ingest_all_pdfs(pdf_dir, data_dir, metadata_dir)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(METADATA_DIR, exist_ok=True)
+        result = ingest_all_pdfs(PDF_DIR, DATA_DIR, METADATA_DIR)
         return result
     except Exception as e:
         raise
@@ -78,12 +77,10 @@ def ingest_twitter_users():
     """Ingest data from Twitter users"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_twitter_users import ingest_all_twitter_users
-        data_dir = "/opt/project/cti_pipeline/data"
-        metadata_dir = "/opt/project/cti_pipeline/metadata"
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(metadata_dir, exist_ok=True)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(METADATA_DIR, exist_ok=True)
         twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
-        result = ingest_all_twitter_users(twitter_users, data_dir, metadata_dir)
+        result = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
         return result
     except Exception as e:
         raise
@@ -93,11 +90,9 @@ def ingest_blogs():
     try:
         from cti_pipeline.scripts.Ingestion.scraper_blog import ingest_all_blog
         from cti_pipeline.blog_sources import BLOG_SOURCES
-        data_dir = "/opt/project/cti_pipeline/data"
-        metadata_dir = "/opt/project/cti_pipeline/metadata"
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(metadata_dir, exist_ok=True)
-        result = ingest_all_blog(BLOG_SOURCES, data_dir, metadata_dir)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(METADATA_DIR, exist_ok=True)
+        result = ingest_all_blog(BLOG_SOURCES, DATA_DIR, METADATA_DIR)
         return result
     except Exception as e:
         raise
@@ -106,11 +101,9 @@ def ingest_tuncert():
     """Ingest data from TUNCERT vulnerabilities"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_tuncert import ingest_tuncert_vulnerabilities
-        data_dir = "/opt/project/cti_pipeline/data"
-        metadata_dir = "/opt/project/cti_pipeline/metadata"
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(metadata_dir, exist_ok=True)
-        result = ingest_tuncert_vulnerabilities(data_dir, metadata_dir)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(METADATA_DIR, exist_ok=True)
+        result = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
         return result
     except Exception as e:
         raise
