@@ -32,7 +32,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ../:/opt/project  
-    - pip-cache-volume:/home/airflow/.cache/pip  
+    - pip-cache-volume:/root/.cache/pip  
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
   depends_on:
     &airflow-common-depends-on
@@ -115,13 +115,10 @@ services:
     environment:
       <<: *airflow-common-env
       DUMB_INIT_SETSID: "0"
-      # Pip cache 
-      PIP_CACHE_DIR: "/home/airflow/.cache/pip"
+      # Pip cache optimization
+      PIP_CACHE_DIR: "/root/.cache/pip"
       PIP_NO_CACHE_DIR: "false"
       _PIP_ADDITIONAL_REQUIREMENTS: "feedparser==6.0.11 pypdf==5.7.0 beautifulsoup4==4.13.4 selenium==4.34.0"
-    volumes:
-      # Add pip cache volume mount for airflow user
-      - pip-cache-volume:/home/airflow/.cache/pip
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
