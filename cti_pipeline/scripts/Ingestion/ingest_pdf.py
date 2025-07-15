@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 from datetime import datetime
 from cti_pipeline.scripts.preprocessing.ExtractionTexte import extraire_texte
 from cti_pipeline.scripts.utilities import (
@@ -13,9 +12,6 @@ from cti_pipeline.scripts.utilities import (
     PDF_DIR,
 )
 
-# Logger configuration
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 def ingest_pdf(file_path, processed_data, output_file="raw_pdf.jsonl"):
@@ -25,19 +21,15 @@ def ingest_pdf(file_path, processed_data, output_file="raw_pdf.jsonl"):
         file_key = f"{filename}_{file_stat.st_size}_{file_stat.st_mtime}"
 
         if file_key in processed_data.get("processed_files", []):
-            logger.debug(f"[⏩] Déjà traité : {filename}")
             return False, "skipped"
 
-        logger.info(f"[📄] Traitement de : {filename}")
         full_text = extraire_texte(file_path) or ""
 
         if not full_text.strip():
-            logger.warning(f"[⚠] Aucun texte extrait de {filename}")
             return False, "skipped"
 
         dummy_url = f"file://{file_path}"
         if is_duplicate(full_text, dummy_url, processed_data, "pdf"):
-            logger.info(f"[🔁] Doublon détecté : {filename}")
             return False, "skipped"
 
         content_hash = get_content_hash(full_text, "pdf")
@@ -62,11 +54,9 @@ def ingest_pdf(file_path, processed_data, output_file="raw_pdf.jsonl"):
         processed_data.setdefault("hashes", []).append(content_hash)
         processed_data.setdefault("urls", []).append(dummy_url)
 
-        logger.info(f"[✅] PDF ingéré : {filename}")
         return True, "processed"
 
     except Exception as e:
-        logger.error(f"[❌] Échec de traitement {file_path} : {e}", exc_info=True)
         return False, "failed"
 
 
@@ -82,7 +72,6 @@ def ingest_all_pdfs(pdf_dir, data_dir, metadata_dir):
         stats[status] += 1
 
     save_processed_items("pdfs", processed_data)
-    logger.info(f"[🏁] PDF Ingestion terminée. Résumé : {stats}")
     return stats
 
 

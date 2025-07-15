@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, List, Optional
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,7 +14,6 @@ from cti_pipeline.scripts.utilities import (
     PDF_DIR,
 )
 
-logger = logging.getLogger(__name__)
 
 CTI_KEYWORDS = [
     "APT",
@@ -64,7 +62,6 @@ def extract_tweet_data(tweet_element) -> Optional[Dict]:
             "collected_at": datetime.utcnow().isoformat(),
         }
     except Exception as e:
-        logger.debug(f"Failed to extract tweet data: {str(e)}")
         return None
 
 
@@ -80,12 +77,11 @@ def scrape_user_tweets(username: str, max_scrolls: int = 3) -> List[Dict]:
     tweets_data = []
 
     try:
-        logger.info(f"Scraping tweets from @{username}")
         driver.get(f"https://twitter.com/{username}")
         time.sleep(5)
 
         for scroll in range(max_scrolls):
-            logger.debug(f"Scroll {scroll + 1}/{max_scrolls}")
+
             tweet_blocks = driver.find_elements(
                 By.XPATH, '//article[@data-testid="tweet"]'
             )
@@ -124,7 +120,6 @@ def process_user_tweets(username: str, processed_data: Dict) -> List[Dict]:
                     "urls": user_state["tweet_urls"],
                 },
             ):
-                logger.debug(f"Tweet déjà traité: {url}")
                 continue
 
             content_hash = get_content_hash(content_str)
@@ -134,8 +129,7 @@ def process_user_tweets(username: str, processed_data: Dict) -> List[Dict]:
             user_state["tweet_urls"].append(url)
 
     except Exception as e:
-        logger.error(f"Failed to process tweets for @{username}: {str(e)}")
-
+        pass
     return new_tweets, user_state
 
 
@@ -168,9 +162,7 @@ def ingest_all_twitter_users(
                 processed_data[username] = user_state
                 stats["processed"] += len(new_tweets)
 
-            logger.info(f"Processed {len(new_tweets)} new tweets from @{username}")
         except Exception as e:
-            logger.error(f"Failed to ingest tweets for @{username}: {str(e)}")
             continue
 
     save_processed_items("twitter", processed_data)

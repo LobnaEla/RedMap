@@ -1,9 +1,7 @@
-import logging
 import os
 import json
 from datetime import datetime
 import requests
-from dotenv import load_dotenv
 from typing import Dict, List, Optional
 
 from cti_pipeline.scripts.utilities import (
@@ -15,10 +13,8 @@ from cti_pipeline.scripts.utilities import (
     METADATA_DIR,
 )
 
-logger = logging.getLogger(__name__)
 
 # Load environment variables
-load_dotenv(dotenv_path="cti_pipeline/config/.env")
 OTX_API_KEY = os.getenv("OTX_API_KEY")
 OTX_API_URL = "https://otx.alienvault.com/api/v1/pulses/subscribed"
 
@@ -35,7 +31,7 @@ def fetch_otx_pulses() -> Optional[List[Dict]]:
         response.raise_for_status()
         return response.json().get("results", [])
     except Exception as e:
-        logger.error(f"OTX API request failed: {str(e)}")
+        print(f"[ERROR] Failed to fetch OTX pulses: {str(e)}")
         return None
 
 
@@ -45,7 +41,7 @@ def process_otx_pulse(pulse: Dict, processed_data: Dict) -> Optional[Dict]:
     pulse_id = pulse.get("id")
 
     if is_duplicate(content_str, pulse_id, processed_data, content_type="generic"):
-        logger.debug(f"Skipping duplicate OTX pulse: {pulse_id}")
+        print(f"[DUPLICATE] Pulse {pulse_id} already processed, skipping.")
         return None
 
     content_hash = get_content_hash(content_str)
@@ -98,7 +94,6 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     results = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
     print(f"Results: {results}")
     print("[✔] OTX pulse ingestion completed.")

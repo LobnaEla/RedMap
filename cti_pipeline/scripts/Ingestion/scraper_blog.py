@@ -1,4 +1,3 @@
-import logging
 import os
 import json
 from typing import Dict, List, Optional
@@ -17,7 +16,6 @@ from cti_pipeline.scripts.utilities import (
     PDF_DIR,
 )
 
-logger = logging.getLogger(__name__)
 from cti_pipeline.blog_sources import BLOG_SOURCES
 
 DATA_DIR = "cti_pipeline/data/blogs"
@@ -46,7 +44,6 @@ CTI_KEYWORDS = [
     "mitre",
 ]
 
-logger = logging.getLogger(__name__)
 
 
 def extract_article_links(
@@ -67,7 +64,6 @@ def extract_article_links(
         )
 
     except Exception as e:
-        logger.error(f"Failed to extract links from {index_url}: {str(e)}")
         return []
 
 
@@ -107,7 +103,6 @@ def extract_article_content(url: str, source_name: str = "generic") -> Optional[
         return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
     except Exception as e:
-        logger.error(f"Failed to extract content from {url}: {str(e)}")
         return None
 
 
@@ -188,8 +183,6 @@ def ingest_all_blog(blog_sources: List[Dict], data_dir: str, metadata_dir: str):
     for blog in blog_sources:
         count = process_blog_source(blog, DATA_DIR, METADATA_DIR)
         total_processed += count
-        logger.info(f"Processed {count} new articles from {blog['name']}")
-    logger.info(f"✅ Total: {total_processed} new blog articles collected")
     return total_processed
 
 
