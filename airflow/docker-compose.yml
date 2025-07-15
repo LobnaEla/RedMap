@@ -33,7 +33,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ../:/opt/project  
     - pip-cache-volume:/root/.cache/pip  
-  user: "${AIRFLOW_UID:-1000}:0"
+  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
   depends_on:
     &airflow-common-depends-on
     redis:
@@ -90,7 +90,7 @@ services:
     <<: *airflow-common
     command: scheduler
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      test: ["CMD-SHELL", "pgrep -f 'airflow scheduler' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
