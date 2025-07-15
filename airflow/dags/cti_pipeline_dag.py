@@ -7,30 +7,30 @@ from airflow.operators.dummy import DummyOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 # Add the project root to Python path for imports
-sys.path.append('/opt/project')  # Path inside Docker container
+sys.path.append("/opt/project")  # Path inside Docker container
 
 # Centralized path configuration
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
-METADATA_DIR = f"{BASE_PROJECT_PATH}/metadata" 
+METADATA_DIR = f"{BASE_PROJECT_PATH}/metadata"
 PDF_DIR = f"{BASE_PROJECT_PATH}/PDFs"
 
 # Default arguments for the DAG
 default_args = {
-    'owner': 'cti-pipeline',
-    'depends_on_past': False,
-    'start_date': datetime(2025, 1, 1),
-    'email_on_failure': False,
-    'email_on_retry': False,
-    'retries': 2,
-    'retry_delay': timedelta(minutes=10),
+    "owner": "cti-pipeline",
+    "depends_on_past": False,
+    "start_date": datetime(2025, 1, 1),
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=10),
 }
 
 # Define the DAG
 dag = DAG(
-    'cti_pipeline',
+    "cti_pipeline",
     default_args=default_args,
-    description='Complete CTI Pipeline: Ingestion -> Preprocessing -> Chunking',
+    description="Complete CTI Pipeline: Ingestion -> Preprocessing -> Chunking",
     schedule_interval=timedelta(hours=12),  # Run every 12 hours
     catchup=False,
     tags=['cti', 'ingestion'],
@@ -41,10 +41,12 @@ dag = DAG(
 # INGESTION TASK FUNCTIONS
 # ================================
 
+
 def ingest_rss_feeds():
     """Ingest data from RSS feeds (CERT-FR)"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_rss import ingest_certfr_rss
+
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
@@ -53,10 +55,12 @@ def ingest_rss_feeds():
     except Exception as e:
         raise
 
+
 def ingest_otx_pulses():
     """Ingest data from OTX pulses"""
     try:
         from cti_pipeline.scripts.Ingestion.ingest_otx import ingest_otx_pulses
+
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
@@ -76,11 +80,13 @@ def ingest_otx_pulses():
 #     except Exception as e:
 #         raise
 
+
 def ingest_blogs():
     """Ingest data from blog sources"""
     try:
         from cti_pipeline.scripts.Ingestion.scraper_blog import ingest_all_blog
         from cti_pipeline.blog_sources import BLOG_SOURCES
+
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_all_blog(BLOG_SOURCES, DATA_DIR, METADATA_DIR)
@@ -89,10 +95,14 @@ def ingest_blogs():
     except Exception as e:
         raise
 
+
 def ingest_tuncert():
     """Ingest data from TUNCERT vulnerabilities"""
     try:
-        from cti_pipeline.scripts.Ingestion.ingest_tuncert import ingest_tuncert_vulnerabilities
+        from cti_pipeline.scripts.Ingestion.ingest_tuncert import (
+            ingest_tuncert_vulnerabilities,
+        )
+
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
         result = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
@@ -105,21 +115,26 @@ def validate_ingestion():
     """Validate that ingestion tasks completed successfully"""
     return "Ingestion validation successful"
 
+
 # ================================
 # PLACEHOLDER TASK FUNCTIONS
 # ================================
+
 
 def preprocessing_placeholder():
     """Placeholder for preprocessing tasks"""
     return "Preprocessing placeholder executed"
 
+
 def chunking_placeholder():
     """Placeholder for chunking tasks"""
     return "Chunking placeholder executed"
 
+
 def pipeline_completion():
     """Final task to mark pipeline completion"""
     return "Pipeline completed"
+
 
 # ================================
 # TASK DEFINITIONS
@@ -127,19 +142,19 @@ def pipeline_completion():
 
 # Start task
 start_task = DummyOperator(
-    task_id='start_pipeline',
+    task_id="start_pipeline",
     dag=dag,
 )
 
 # Ingestion tasks (can run in parallel)
 ingest_rss_task = PythonOperator(
-    task_id='ingest_rss_feeds',
+    task_id="ingest_rss_feeds",
     python_callable=ingest_rss_feeds,
     dag=dag,
 )
 
 ingest_otx_task = PythonOperator(
-    task_id='ingest_otx_pulses',
+    task_id="ingest_otx_pulses",
     python_callable=ingest_otx_pulses,
     dag=dag,
 )
@@ -151,13 +166,13 @@ ingest_otx_task = PythonOperator(
 # )
 
 ingest_blog_task = PythonOperator(
-    task_id='ingest_blogs',
+    task_id="ingest_blogs",
     python_callable=ingest_blogs,
     dag=dag,
 )
 
 ingest_tuncert_task = PythonOperator(
-    task_id='ingest_tuncert',
+    task_id="ingest_tuncert",
     python_callable=ingest_tuncert,
     dag=dag,
 )
@@ -165,14 +180,14 @@ ingest_tuncert_task = PythonOperator(
 
 # Validation task (waits for all ingestion to complete)
 validate_task = PythonOperator(
-    task_id='validate_ingestion',
+    task_id="validate_ingestion",
     python_callable=validate_ingestion,
     dag=dag,
 )
 
 # End task
 end_task = PythonOperator(
-    task_id='pipeline_completion',
+    task_id="pipeline_completion",
     python_callable=pipeline_completion,
     dag=dag,
 )
