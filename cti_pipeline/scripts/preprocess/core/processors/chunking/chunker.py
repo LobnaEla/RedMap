@@ -1,145 +1,125 @@
 """
 CTI Chunker Module
 
-Main chunking class that orchestrates IOC extraction and text chunking.
+Main chunking class that orchestrates IOC extraction and text chunking by
+leveraging the entity-based-chunking system.
 """
-
-import time
+import os
+import sys
 from typing import List, Dict, Any, Optional
-from .config import ChunkingConfig, ChunkingResult
-from .ioc_extractor import IOCExtractor
-from .text_processor import TextProcessor
+
+# Add the project root to sys.path to allow for absolute imports
+# This makes the import robust, regardless of where the script is run from
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../"))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+    print(f"Project root set to: {project_root}")
+    print(f"Contents of project root: {os.listdir(project_root)}")
+
+try:
+    # Import functions from entity_based_chunking package
+    from entity_based_chunking import process_cti_text, extract_iocs_only as extract_iocs_from_module
+    from entity_based_chunking import load_config
+    print("✓ Successfully imported entity_based_chunking functions")
+except ImportError as e:
+    print(f"Could not import from 'entity_based_chunking'. Ensure the path is correct. Error: {e}")
+    # Define dummy functions to prevent application crash if the import fails
+    def process_cti_text(*args, **kwargs):
+        raise NotImplementedError("process_cti_text could not be imported.")
+    def extract_iocs_from_module(*args, **kwargs):
+        raise NotImplementedError("extract_iocs_only could not be imported.")
+    def load_config(*args, **kwargs):
+        return {}
 
 class CTIChunker:
-    """Main CTI chunking processor"""
+    """
+    Main CTI chunking processor.
+    This class acts as a simplified facade for the entity-based-chunking functions.
+    """
     
-    def __init__(self, config: Optional[ChunkingConfig] = None):
-        """Initialize the chunker with configuration"""
-        self.config = config or ChunkingConfig()
-        self.ioc_extractor = IOCExtractor(self.config)
-        self.text_processor = TextProcessor(self.config)
-        
-        print(f"[Chunker] CTI Chunker initialized with strategy: {self.config.chunk_strategy}")
-    
-    def chunk(self, text: str) -> ChunkingResult:
+    def __init__(self, config_path: Optional[str] = None):
         """
-        Main chunking method that processes text and returns chunks
+        Initialize the chunker.
         
         Args:
-            text: Input text to chunk
+            config_path: Optional path to a 'config.yaml' for the entity-based-chunking processor.
+                         If None, will use the default config from entity_based_chunking.
+        """
+        try:
+            # Load config from entity_based_chunking directory
+            if config_path is None:
+                # Use default config from entity_based_chunking
+                entity_config_path = os.path.join(project_root, "entity_based_chunking", "config.yaml")
+                self.config = load_config(entity_config_path)
+            else:
+                self.config = load_config(config_path)
+            print(f"[Chunker] Config loaded successfully.")
+        except Exception as e:
+            print(f"[Chunker] Warning: Could not load config: {e}. Using None.")
+            self.config = None  # Functions will handle None config
+        
+        print("[Chunker] CTIChunker initialized.")
+
+    def chunk(self, text: str, window: int = 2) -> List[Dict[str, Any]]:
+        """
+        Main chunking method that processes text and returns IOC-based chunks.
+        
+        Args:
+            text: Input text to chunk.
+            window: The context window size (number of sentences) around an IOC.
             
         Returns:
-            ChunkingResult with chunks and metadata
+            A list of chunk dictionaries, where each chunk is centered around an IOC.
         """
-        start_time = time.time()
-        
         if not text or not text.strip():
-            return ChunkingResult(
-                chunks=[],
-                original_text=text,
-                processing_time=0.0,
-                success=False,
-                strategy_used=self.config.chunk_strategy,
-                errors=["Empty or whitespace-only text provided"]
-            )
+            print("[Chunker] Empty or whitespace-only text provided.")
+            return []
         
-        print(f"[Chunker] Starting chunking with strategy: {self.config.chunk_strategy}")
+        print(f"[Chunker] Starting chunking with window size: {window}")
         
         try:
-            if self.config.chunk_strategy == "ioc_based":
-                result = self._chunk_ioc_based(text)
-            elif self.config.chunk_strategy == "fixed_size":
-                result = self._chunk_fixed_size(text)
-            else:
-                raise ValueError(f"Unknown chunking strategy: {self.config.chunk_strategy}")
-            
-            result.processing_time = time.time() - start_time
-            result.strategy_used = self.config.chunk_strategy
-            result.window_size = self.config.window_size
-            
-            print(f"[Chunker] Chunking completed in {result.processing_time:.3f}s: {result.total_chunks} chunks")
-            return result
-            
+            # Use the high-level function directly
+            chunks = process_cti_text(text, config=self.config, window=window)
+            print(f"[Chunker] Chunking completed. Found {len(chunks)} chunks.")
+            return chunks
         except Exception as e:
             print(f"[Chunker] Chunking failed: {e}")
-            return ChunkingResult(
-                chunks=[],
-                original_text=text,
-                processing_time=time.time() - start_time,
-                success=False,
-                strategy_used=self.config.chunk_strategy,
-                errors=[str(e)]
-            )
-    
-    def _chunk_ioc_based(self, text: str) -> ChunkingResult:
-        """Perform IOC-based chunking"""
-        extraction_start = time.time()
-        
-        # Extract IOCs
-        ioc_data = self.ioc_extractor.extract_iocs(text)
-        extraction_time = time.time() - extraction_start
-        
-        if not ioc_data:
-            print("[Chunker] No IOCs found, falling back to fixed-size chunking")
-            # Fallback to fixed-size chunking
-            original_strategy = self.config.chunk_strategy
-            self.config.chunk_strategy = "fixed_size"
-            result = self._chunk_fixed_size(text)
-            self.config.chunk_strategy = original_strategy
-            result.strategy_used = "fixed_size_fallback"
-            result.extraction_time = extraction_time
-            return result
-        
-        # Generate chunks based on IOCs
-        chunking_start = time.time()
-        chunks = self.text_processor.generate_ioc_based_chunks(text, ioc_data)
-        chunking_time = time.time() - chunking_start
-        
-        return ChunkingResult(
-            chunks=chunks,
-            original_text=text,
-            processing_time=0.0,  # Will be set in main method
-            success=True,
-            extraction_time=extraction_time,
-            chunking_time=chunking_time,
-            strategy_used="ioc_based"
-        )
-    
-    def _chunk_fixed_size(self, text: str) -> ChunkingResult:
-        """Perform fixed-size chunking"""
-        chunking_start = time.time()
-        chunks = self.text_processor.generate_fixed_size_chunks(text)
-        chunking_time = time.time() - chunking_start
-        
-        return ChunkingResult(
-            chunks=chunks,
-            original_text=text,
-            processing_time=0.0,  # Will be set in main method
-            success=True,
-            extraction_time=0.0,
-            chunking_time=chunking_time,
-            strategy_used="fixed_size"
-        )
-    
+            return []
+
     def extract_iocs_only(self, text: str) -> List[Dict[str, str]]:
-        """Extract only IOCs without chunking"""
+        """
+        Extract only IOCs from the text without performing chunking.
+        
+        Args:
+            text: The input text from which to extract IOCs.
+            
+        Returns:
+            A list of dictionaries, each representing a found IOC.
+        """
         try:
-            return self.ioc_extractor.extract_iocs(text)
+            # Use the high-level function directly
+            return extract_iocs_from_module(text, config=self.config)
         except Exception as e:
             print(f"[Chunker] IOC extraction failed: {e}")
             return []
-    
+
     def get_chunk_statistics(self, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Get statistics about chunks"""
-        if not chunks:
-            return {"total_chunks": 0, "average_length": 0, "ioc_types": {}}
+        """
+        Calculate and return statistics about the generated chunks.
         
-        # Basic statistics
+        Args:
+            chunks: A list of chunks as produced by the chunk() method.
+            
+        Returns:
+            A dictionary containing statistics like total chunks, average length, and IOC type distribution.
+        """
+        if not chunks:
+            return {"total_chunks": 0, "total_length": 0, "average_length": 0, "ioc_types": {}}
+        
         total_chunks = len(chunks)
         total_length = sum(len(chunk.get("chunk", "")) for chunk in chunks)
         average_length = total_length / total_chunks if total_chunks > 0 else 0
         
-        # IOC type distribution
         ioc_types = {}
         for chunk in chunks:
             ioc_type = chunk.get("type", "unknown")
@@ -151,16 +131,3 @@ class CTIChunker:
             "average_length": average_length,
             "ioc_types": ioc_types
         }
-    
-    def update_config(self, **kwargs):
-        """Update chunker configuration"""
-        for key, value in kwargs.items():
-            if hasattr(self.config, key):
-                setattr(self.config, key, value)
-                print(f"[Chunker] Updated config: {key} = {value}")
-            else:
-                print(f"[Chunker] Unknown config parameter: {key}")
-        
-        # Reinitialize processors with new config
-        self.ioc_extractor = IOCExtractor(self.config)
-        self.text_processor = TextProcessor(self.config)

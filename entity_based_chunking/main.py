@@ -1,10 +1,11 @@
 import json
 import logging
 import sys
+from typing import List, Dict, Any, Optional, Union
 from pathlib import Path
-from typing import Optional, Dict, List, Any, Union
-from chunking.processor import CTIProcessor
-from utils.config import load_config, validate_config
+
+from .chunking.processor import CTIProcessor
+from .utils.config import load_config, validate_config
 
 # Configure logging
 logging.basicConfig(
