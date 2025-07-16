@@ -31,8 +31,7 @@ CTI_KEYWORDS = [
     "attack",
 ]
 
-DATA_DIR = "cti_pipeline/data/twitter"
-os.makedirs(DATA_DIR, exist_ok=True)
+# Remove the hardcoded DATA_DIR since it will be passed as parameter
 
 
 def initialize_driver() -> webdriver.Chrome:
@@ -138,8 +137,12 @@ def save_twitter_data(tweets: List[Dict], username: str, data_dir: str):
     if not tweets:
         return
 
+    # Create structured directory for Twitter data
+    twitter_dir = os.path.join(data_dir, "raw_scraped_data", "twitter")
+    os.makedirs(twitter_dir, exist_ok=True)
+
     output_file = os.path.join(
-        data_dir, f"twitter_{username}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+        twitter_dir, f"twitter_{username}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
     )
     with open(output_file, "w", encoding="utf-8") as f:
         for tweet in tweets:
@@ -170,6 +173,7 @@ def ingest_all_twitter_users(
 
 
 if __name__ == "__main__":
+    from cti_pipeline.scripts.utilities import DATA_DIR, METADATA_DIR
     twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
     stats = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
     print(f"[+] Processed {stats['processed']} new tweets from {stats['users']} users.")

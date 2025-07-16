@@ -211,8 +211,13 @@ def extract_section_by_label(content, label):
 
 def ingest_tuncert_vulnerabilities(data_dir, metadata_dir):
     processed_data = load_processed_items("tuncert")
+    
+    # Create structured directory for TUNCERT data
+    tuncert_dir = os.path.join(data_dir, "raw_scraped_data", "tuncert")
+    os.makedirs(tuncert_dir, exist_ok=True)
+    
     output_file = os.path.join(
-        data_dir, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
+        tuncert_dir, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
     )
 
     try:

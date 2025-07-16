@@ -18,8 +18,7 @@ from cti_pipeline.scripts.utilities import (
 
 from cti_pipeline.blog_sources import BLOG_SOURCES
 
-DATA_DIR = "cti_pipeline/data/blogs"
-os.makedirs(DATA_DIR, exist_ok=True)
+# Remove hardcoded DATA_DIR since it will be passed as parameter
 
 IGNORED_SUBSTRINGS = [
     "x.com",
@@ -171,8 +170,12 @@ def process_blog_source(blog_config: Dict, data_dir: str, metadata_dir: str) -> 
 
 def _save_articles(articles: List[Dict], blog_name: str, output_dir: str):
     """Saves articles to a dated JSONL file"""
+    # Create structured directory for blog data
+    blogs_dir = os.path.join(output_dir, "raw_scraped_data", "blogs")
+    os.makedirs(blogs_dir, exist_ok=True)
+    
     filename = f"blog_{blog_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
-    with open(os.path.join(output_dir, filename), "w", encoding="utf-8") as f:
+    with open(os.path.join(blogs_dir, filename), "w", encoding="utf-8") as f:
         for article in articles:
             json.dump(article, f, ensure_ascii=False)
             f.write("\n")

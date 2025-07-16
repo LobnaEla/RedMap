@@ -53,9 +53,14 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
         return stats
 
     stats["total"] = len(feed.entries)
+    
+    # Create structured directory for RSS data
+    rss_dir = os.path.join(data_dir, "raw_scraped_data", "rss")
+    os.makedirs(rss_dir, exist_ok=True)
+    
     output_file = f"raw_rss_certfr_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
 
-    with open(os.path.join(data_dir, output_file), "w", encoding="utf-8") as f:
+    with open(os.path.join(rss_dir, output_file), "w", encoding="utf-8") as f:
         for entry in feed.entries:
             doc = process_rss_entry(entry, processed_data)
             if not doc:

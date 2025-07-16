@@ -72,8 +72,13 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
         return stats
 
     stats["total"] = len(pulses)
+    
+    # Create structured directory for OTX data
+    otx_dir = os.path.join(data_dir, "raw_scraped_data", "otx")
+    os.makedirs(otx_dir, exist_ok=True)
+    
     output_file = os.path.join(
-        data_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+        otx_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
     )
 
     with open(output_file, "w", encoding="utf-8") as f:

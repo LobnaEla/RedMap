@@ -8,12 +8,13 @@ from airflow.operators.dummy import DummyOperator
 # Add the project root to Python path for imports
 sys.path.append('/opt/project')  # Path inside Docker container
 
-# Centralized path configuration
+# Centralized path configuration - Updated for organized structure
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
-METADATA_DIR = f"{BASE_PROJECT_PATH}/metadata"
-PROCESSED_DIR = f"{BASE_PROJECT_PATH}/processed"
-CHUNKS_DIR = f"{BASE_PROJECT_PATH}/chunks"
+METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"  # Moved under /data
+PROCESSED_DIR = f"{BASE_PROJECT_PATH}/data/processed"  # Moved under /data  
+CHUNKS_DIR = f"{BASE_PROJECT_PATH}/data/chunks"  # Moved under /data
+RAW_SCRAPED_DIR = f"{BASE_PROJECT_PATH}/data/raw_scraped_data"  # New organized raw data
 
 # Default arguments for the DAG
 default_args = {
@@ -43,7 +44,7 @@ dag = DAG(
 # ================================
 
 def extract_data():
-    """Extract text from various file formats"""
+    """Extract text from various file formats with intelligent handling"""
     try:
         from cti_pipeline.scripts.preprocess.core.processors.extraction import extract_with_result
         import glob
@@ -51,30 +52,46 @@ def extract_data():
         # Create output directory
         os.makedirs(PROCESSED_DIR, exist_ok=True)
         
-        # Process files from data directory
-        file_patterns = [
-            f"{DATA_DIR}/*.pdf",
-            f"{DATA_DIR}/*.html", 
-            f"{DATA_DIR}/*.json",
-            f"{DATA_DIR}/*.jsonl",
+        # Updated patterns to look in organized raw_scraped_data directory
+        structured_patterns = [
+            f"{RAW_SCRAPED_DIR}/*/*.json",
+            f"{RAW_SCRAPED_DIR}/*/*.jsonl"
+        ]
+        
+        unstructured_patterns = [
+            f"{RAW_SCRAPED_DIR}/*/*.pdf",
+            f"{RAW_SCRAPED_DIR}/*/*.html", 
             f"{BASE_PROJECT_PATH}/PDFs/*.pdf"
         ]
         
         extracted_files = []
         total_processed = 0
         
-        for pattern in file_patterns:
+        # Process all file patterns
+        all_patterns = structured_patterns + unstructured_patterns
+        
+        for pattern in all_patterns:
             files = glob.glob(pattern)
             for file_path in files:
                 try:
                     result = extract_with_result(file_path)
                     if result.success:
-                        # Save extracted text
-                        output_file = os.path.join(PROCESSED_DIR, f"extracted_{os.path.basename(file_path)}.txt")
+                        # Save extracted text with source type indicator
+                        base_name = os.path.basename(file_path)
+                        file_ext = os.path.splitext(file_path)[1].lower()
+                        
+                        # Mark structured sources for downstream optimization
+                        if file_ext in ['.json', '.jsonl']:
+                            output_file = os.path.join(PROCESSED_DIR, f"extracted_structured_{base_name}.txt")
+                        else:
+                            output_file = os.path.join(PROCESSED_DIR, f"extracted_{base_name}.txt")
+                        
                         with open(output_file, 'w', encoding='utf-8') as f:
                             f.write(result.text)
                         extracted_files.append(output_file)
                         total_processed += 1
+                        
+                        print(f"[Extract] Processed {file_path} -> {output_file}")
                 except Exception as e:
                     print(f"Failed to extract from {file_path}: {e}")
         
@@ -88,7 +105,7 @@ def extract_data():
         raise
 
 def clean_data():
-    """Clean extracted text data"""
+    """Clean extracted text data with optimizations for structured content"""
     try:
         from cti_pipeline.scripts.preprocess.core.processors.cleaning.cleaning import clean_text
         import glob
@@ -107,8 +124,20 @@ def clean_data():
                 with open(file_path, 'r', encoding='utf-8') as f:
                     text = f.read()
                 
-                # Clean the text
-                cleaned_text = clean_text(text)
+                # Check if this is structured content (lighter cleaning)
+                is_structured = "extracted_structured_" in os.path.basename(file_path)
+                
+                if is_structured:
+                    # Minimal cleaning for structured content to preserve format
+                    cleaned_text = text.strip()
+                    # Only remove excessive whitespace
+                    import re
+                    cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text)
+                    print(f"[Clean] Applied minimal cleaning to structured file: {file_path}")
+                else:
+                    # Full cleaning for unstructured content
+                    cleaned_text = clean_text(text)
+                    print(f"[Clean] Applied full cleaning to unstructured file: {file_path}")
                 
                 # Save cleaned text
                 output_file = os.path.join(cleaned_dir, f"cleaned_{os.path.basename(file_path)}")
@@ -130,7 +159,7 @@ def clean_data():
         raise
 
 def normalize_data():
-    """Normalize cleaned text data"""
+    """Normalize cleaned text data with optimizations for structured content"""
     try:
         from cti_pipeline.scripts.preprocess.core.processors.cleaning.normalization import normalize_text
         import glob
@@ -149,8 +178,21 @@ def normalize_data():
                 with open(file_path, 'r', encoding='utf-8') as f:
                     text = f.read()
                 
-                # Normalize the text
-                normalized_text = normalize_text(text)
+                # Check if this is structured content (lighter normalization)
+                is_structured = "cleaned_extracted_structured_" in os.path.basename(file_path)
+                
+                if is_structured:
+                    # Minimal normalization for structured content
+                    normalized_text = text.strip()
+                    # Only basic text normalization
+                    import re
+                    normalized_text = re.sub(r'\s+', ' ', normalized_text)
+                    normalized_text = re.sub(r'\n\s*\n', '\n', normalized_text)
+                    print(f"[Normalize] Applied minimal normalization to structured file: {file_path}")
+                else:
+                    # Full normalization for unstructured content
+                    normalized_text = normalize_text(text)
+                    print(f"[Normalize] Applied full normalization to unstructured file: {file_path}")
                 
                 # Save normalized text
                 output_file = os.path.join(normalized_dir, f"normalized_{os.path.basename(file_path)}")
@@ -213,9 +255,14 @@ def chunk_data():
                         "chunks": [
                             {
                                 "chunk_id": i,
-                                "text": chunk.text,
-                                "iocs": chunk.iocs,
-                                "metadata": chunk.metadata
+                                "text": chunk.get("chunk", ""),
+                                "iocs": chunk.get("ioc", ""),
+                                "type": chunk.get("type", ""),
+                                "metadata": {
+                                    "chunk_length": chunk.get("chunk_length", 0),
+                                    "record_id": chunk.get("record_id", i),
+                                    "ioc_count": chunk.get("ioc_count", 0)
+                                }
                             }
                             for i, chunk in enumerate(result.chunks)
                         ]
