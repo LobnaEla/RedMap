@@ -201,8 +201,9 @@ def clean_data():
         cleaned_dir = os.path.join(PROCESSED_DIR, "cleaned")
         os.makedirs(cleaned_dir, exist_ok=True)
 
-        # Process extracted files (including individual articles)
-        extracted_files = glob.glob(f"{PROCESSED_DIR}/extracted_*.txt") + glob.glob(f"{PROCESSED_DIR}/article_*.txt")
+        # Process extracted files from extracted subdirectory
+        extracted_dir = os.path.join(PROCESSED_DIR, "extracted")
+        extracted_files = glob.glob(f"{extracted_dir}/extracted_*.txt")
         cleaned_files = []
         total_processed = 0
 
@@ -213,7 +214,7 @@ def clean_data():
                 
                 # Check if this is structured content (lighter cleaning)
                 filename = os.path.basename(file_path)
-                is_structured = "extracted_structured_" in filename or filename.startswith("article_")
+                is_structured = "extracted_structured_" in filename or "extracted_article_" in filename
                 
                 if is_structured:
                     # Minimal cleaning for structured content (articles and structured files)
@@ -273,7 +274,7 @@ def normalize_data():
                 
                 # Check if this is structured content (lighter normalization)
                 filename = os.path.basename(file_path)
-                is_structured = "cleaned_extracted_structured_" in filename or "cleaned_article_" in filename
+                is_structured = "cleaned_extracted_structured_" in filename or "cleaned_extracted_article_" in filename
                 
                 if is_structured:
                     # Minimal normalization for structured content (articles and structured files)
