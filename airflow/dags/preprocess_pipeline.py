@@ -31,8 +31,8 @@ default_args = {
 dag = DAG(
     "preprocess_pipeline",
     default_args=default_args,
-    description="CTI Preprocessing Pipeline: Extract -> Clean -> Normalize -> Chunk",
-    schedule_interval=timedelta(hours=6),  # Run every 6 hours
+    description="CTI Preprocessing Pipeline: Extract -> Clean -> Normalize -> Chunk (Triggered by cti_pipeline DAG)",
+    schedule_interval=None, 
     catchup=False,
     is_paused_upon_creation=False,
     tags=["cti", "preprocessing", "extract", "clean", "normalize", "chunk"],
