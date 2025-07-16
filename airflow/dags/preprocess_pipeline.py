@@ -55,23 +55,19 @@ def extract_data():
         # Create output directory
         os.makedirs(PROCESSED_DIR, exist_ok=True)
 
-        # Process files from data directory
-        file_patterns = [
-            f"{DATA_DIR}/*.pdf",
-            f"{DATA_DIR}/*.html",
-            f"{DATA_DIR}/*.json",
-            f"{DATA_DIR}/*.jsonl",
-            f"{BASE_PROJECT_PATH}/PDFs/*.pdf",
-        
-        # Updated patterns to look in organized raw_scraped_data directory
+        # Combined patterns: both organized raw_scraped_data directory AND legacy data directory
         structured_patterns = [
             f"{RAW_SCRAPED_DIR}/*/*.json",
-            f"{RAW_SCRAPED_DIR}/*/*.jsonl"
+            f"{RAW_SCRAPED_DIR}/*/*.jsonl",
+            f"{DATA_DIR}/*.json",
+            f"{DATA_DIR}/*.jsonl"
         ]
-        
+
         unstructured_patterns = [
             f"{RAW_SCRAPED_DIR}/*/*.pdf",
-            f"{RAW_SCRAPED_DIR}/*/*.html", 
+            f"{RAW_SCRAPED_DIR}/*/*.html",
+            f"{DATA_DIR}/*.pdf",
+            f"{DATA_DIR}/*.html", 
             f"{BASE_PROJECT_PATH}/PDFs/*.pdf"
         ]
 
@@ -82,8 +78,6 @@ def extract_data():
         all_patterns = structured_patterns + unstructured_patterns
         
         for pattern in all_patterns:
-
-        for pattern in file_patterns:
             files = glob.glob(pattern)
             for file_path in files:
                 try:
@@ -100,12 +94,6 @@ def extract_data():
                             output_file = os.path.join(PROCESSED_DIR, f"extracted_{base_name}.txt")
                         
                         with open(output_file, 'w', encoding='utf-8') as f:
-                        # Save extracted text
-                        output_file = os.path.join(
-                            PROCESSED_DIR,
-                            f"extracted_{os.path.basename(file_path)}.txt",
-                        )
-                        with open(output_file, "w", encoding="utf-8") as f:
                             f.write(result.text)
                         extracted_files.append(output_file)
                         total_processed += 1
@@ -305,9 +293,6 @@ def chunk_data():
                                     "record_id": chunk.get("record_id", i),
                                     "ioc_count": chunk.get("ioc_count", 0)
                                 }
-                                "text": chunk.text,
-                                "iocs": chunk.iocs,
-                                "metadata": chunk.metadata,
                             }
                             for i, chunk in enumerate(result.chunks)
                         ],
