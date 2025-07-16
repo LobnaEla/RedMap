@@ -33,6 +33,7 @@ dag = DAG(
     description="Complete CTI Pipeline: Ingestion -> Preprocessing -> Chunking",
     schedule_interval=timedelta(hours=12),  # Run every 12 hours
     catchup=False,
+    is_paused_upon_creation=False,
     tags=["cti", "ingestion"],
     max_active_runs=1,  # Prevent concurrent runs
 )
@@ -219,7 +220,7 @@ trigger_preprocessing = TriggerDagRunOperator(
     >> [
         ingest_rss_task,
         ingest_otx_task,
-        ingest_twitter_task,  # Commented out
+        ingest_twitter_task, 
         ingest_blog_task,
         ingest_tuncert_task,
     ]
