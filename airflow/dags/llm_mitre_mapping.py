@@ -18,9 +18,10 @@ sys.path.append("/opt/project")
 
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
-METADATA_DIR = f"{BASE_PROJECT_PATH}/metadata"
-CHUNKS_DIR = f"{BASE_PROJECT_PATH}/chunks"
-LLM_RESULTS_DIR = f"{BASE_PROJECT_PATH}/llm_results"
+METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"
+PROCESSED_DIR = f"{BASE_PROJECT_PATH}/data/processed"
+CHUNKS_DIR = f"{BASE_PROJECT_PATH}/data/chunks"
+LLM_RESULTS_DIR = f"{BASE_PROJECT_PATH}/data/llm_results"
 MITRE_MAPPING_DIR = f"{BASE_PROJECT_PATH}/mitre_mappings"
 LOGS_DIR = f"{BASE_PROJECT_PATH}/logs"
 
