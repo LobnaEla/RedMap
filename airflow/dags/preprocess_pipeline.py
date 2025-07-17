@@ -4,6 +4,7 @@ import os
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 
 # Add the project root to Python path for imports
 sys.path.append("/opt/project")  # Path inside Docker container
@@ -352,6 +353,13 @@ end_task = PythonOperator(
     dag=dag,
 )
 
+# Trigger LLM mapping DAG after preprocessing
+trigger_llm_mapping = TriggerDagRunOperator(
+    task_id="trigger_llm_mapping",
+    trigger_dag_id="llm_mitre_mapping",
+    wait_for_completion=False,  # Don't wait for LLM mapping to complete
+    dag=dag,
+)
 # ================================
 # TASK DEPENDENCIES
 # ================================
@@ -365,4 +373,5 @@ end_task = PythonOperator(
     >> chunk_task
     >> validate_task
     >> end_task
+    >> trigger_llm_mapping
 )
