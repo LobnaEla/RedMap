@@ -22,7 +22,7 @@ METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"
 PROCESSED_DIR = f"{BASE_PROJECT_PATH}/data/processed"
 CHUNKS_DIR = f"{BASE_PROJECT_PATH}/data/chunks"
 LLM_RESULTS_DIR = f"{BASE_PROJECT_PATH}/data/llm_results"
-MITRE_MAPPING_DIR = f"{BASE_PROJECT_PATH}/mitre_mappings"
+MITRE_MAPPING_DIR = f"{BASE_PROJECT_PATH}/data/mitre_mappings"
 LOGS_DIR = f"{BASE_PROJECT_PATH}/logs"
 
 # ================================
@@ -42,7 +42,7 @@ dag = DAG(
     "llm_mitre_mapping",
     default_args=default_args,
     description="CTI to MITRE ATT&CK Mapping Pipeline using Claude Opus 4",
-    schedule_interval=timedelta(hours=8),
+    schedule_interval=None,
     catchup=False,
     is_paused_upon_creation=False,
     tags=["cti", "llm", "mitre", "mapping", "claude"],
