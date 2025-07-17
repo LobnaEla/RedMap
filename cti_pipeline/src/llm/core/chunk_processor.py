@@ -49,13 +49,13 @@ class ChunkProcessor:
 
         chunk_id = chunk.get("chunk_id", "unknown")
         text = chunk.get("text", "")
-        iocs = chunk.get("iocs", [])
+        iocs = chunk.get("iocs", "")
 
         if not text.strip():
             return self._error_result(chunk_id, "Empty text content")
 
-        if not isinstance(iocs, list):
-            return self._error_result(chunk_id, "IOCs must be a list")
+        if not isinstance(iocs, str):  # Changed from list to str
+            return self._error_result(chunk_id, "IOCs must be a string")
 
         try:
             # Traitement du chunk

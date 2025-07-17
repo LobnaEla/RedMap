@@ -42,6 +42,6 @@ Response Format:
     # Ajout des IOCs si disponibles
     if iocs:
         base_prompt += "\n\n## Indicateurs de Compromission (IOCs) associés:\n"
-        base_prompt += "\n".join(f"- {ioc}" for ioc in iocs)
+        base_prompt += "\n".join(iocs)
 
     return base_prompt.format(text=text)
