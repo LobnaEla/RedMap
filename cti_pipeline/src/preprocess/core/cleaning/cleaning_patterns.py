@@ -120,58 +120,7 @@ OCR_PATTERNS = [
 ]
 
 # Non-ASCII character patterns (emojis, special characters)
-NON_ASCII_PATTERNS = [
-    r'🤯',  # Specific problematic emojis
-    r'🚨',
-    r'💥',
-    r'🐳',
-    r'💣',
-    r'🌝',
-    r'📊',
-    r'🔁',
-    r'💀',
-    r'🔧',
-    r'📄',
-    r'🌍',
-    r'🔄',
-    r'🔐',
-    r'🎈',
-    r'📂',
-    r'📍',
-    r'🗺️',
-    r'💰',
-    r'👋',
-    r'😁',
-    r'🇮🇳',
-    r'👨‍💻',
-    r'🐕‍🦺',
-    r'💼',
-    r'😬',
-    r'🕵️‍♂️',
-    r'🧩',
-    r'🔒',
-    r'🛑',
-    r'📉',
-    r'🔥',
-    r'💼',
-    r'🔗',
-    r'🛡️',
-    r'📜',
-    r'⚙️',
-    r'🔐',
-    r'⚡',
-    r'💔',
-    r'☁️',
-    r'🔑',
-    r'📊',
-    r'💡',
-    r'🧐',
-    r'🔟',
-    r'🎓',
-    r'💻',
-    r'🙌',
-    # Remove the broad Unicode ranges that were causing issues
-]
+NON_ASCII_PATTERNS = r'[^\x00-\x7F]+'
 
 # Pattern compilation flags for different categories
 PATTERN_FLAGS = {
