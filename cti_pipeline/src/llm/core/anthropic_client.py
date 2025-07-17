@@ -25,13 +25,13 @@ class AnthropicClient:
             "max_retries": 3,
         }
 
-    def map_to_mitre(self, text: str, iocs: List[str], chunk_id: str) -> Dict:
+    def map_to_mitre(self, text: str, iocs: str, chunk_id: str) -> Dict:
         """
         Mappe un texte CTI aux techniques MITRE ATT&CK
 
         Args:
             text: Texte CTI à analyser
-            iocs: Liste des indicateurs de compromission
+            iocs: Indicateurs de compromission (chaîne de caractères)
             chunk_id: Identifiant unique du chunk
 
         Returns:
@@ -41,8 +41,8 @@ class AnthropicClient:
         if not text.strip():
             return self._create_error_result(chunk_id, "Empty text")
 
-        if not isinstance(iocs, list):
-            return self._create_error_result(chunk_id, "IOCs must be a list")
+        if not isinstance(iocs, str):
+            return self._create_error_result(chunk_id, "IOCs must be a string")
 
         if not chunk_id:
             chunk_id = "unknown"
@@ -107,7 +107,7 @@ class AnthropicClient:
             return []
 
     def _create_success_result(
-        self, chunk_id: str, text: str, iocs: List[str], techniques: List[str]
+        self, chunk_id: str, text: str, iocs: str, techniques: List[str]
     ) -> Dict:
         """Crée un résultat de mapping réussi"""
         return {

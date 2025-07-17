@@ -49,19 +49,19 @@ class ChunkProcessor:
 
         chunk_id = chunk.get("chunk_id", "unknown")
         text = chunk.get("text", "")
-        iocs = chunk.get("iocs", "")
+        iocs = chunk.get("iocs", "")  # Default to empty string
 
         if not text.strip():
             return self._error_result(chunk_id, "Empty text content")
 
-        if not isinstance(iocs, str):  # Changed from list to str
+        if not isinstance(iocs, str):  # Changed validation to check for string
             return self._error_result(chunk_id, "IOCs must be a string")
 
         try:
             # Traitement du chunk
             mapping = self.client.map_to_mitre(
                 text=text,
-                iocs=iocs,
+                iocs=iocs,  # Passing string IOCs
                 chunk_id=chunk_id,
             )
 
