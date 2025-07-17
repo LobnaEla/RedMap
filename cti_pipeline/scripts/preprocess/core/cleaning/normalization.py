@@ -15,12 +15,8 @@ import unicodedata
 import os
 import sys
 
-# Add the core directory to the path to import utils
-current_dir = os.path.dirname(os.path.abspath(__file__))
-core_dir = os.path.dirname(os.path.dirname(current_dir))
-sys.path.insert(0, core_dir)
-
-from utils.preservers import PreservationManager
+# Use relative import for utils
+from ..utils.preservers import PreservationManager
 
 class TextNormalizer:
     """

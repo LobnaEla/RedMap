@@ -10,11 +10,9 @@ from typing import List, Dict, Any, Optional
 
 # Add the project root to sys.path to allow for absolute imports
 # This makes the import robust, regardless of where the script is run from
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../../"))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../../"))
 if project_root not in sys.path:
     sys.path.append(project_root)
-    print(f"Project root set to: {project_root}")
-    print(f"Contents of project root: {os.listdir(project_root)}")
 
 try:
     # Import functions from entity_based_chunking package

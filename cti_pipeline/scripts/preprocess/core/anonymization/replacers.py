@@ -6,9 +6,8 @@ from typing import Dict, Any
 import sys
 import os
 
-# Add the scripts directory to the path to import utilities
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from utils.utilities import get_content_hash
+# Use relative import for utils
+from ..utils.utilities import get_content_hash
 
 class ReplacementManager:
     """Manages consistent replacement of anonymized content"""

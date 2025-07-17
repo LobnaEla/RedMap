@@ -21,7 +21,7 @@ x-airflow-common:
     AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
     # Python logging configuration
     PYTHONUNBUFFERED: '1'
-    _PIP_ADDITIONAL_REQUIREMENTS: ""
+    _PIP_ADDITIONAL_REQUIREMENTS: "groq>=0.4.0 nltk>=3.8 spacy>=3.4.0 python-dotenv>=0.19.0 pyyaml>=6.0 requests>=2.28.0"
     # API Keys for CTI Pipeline
     OTX_API_KEY: ${OTX_API_KEY}
     GROQ_API_KEY: ${GROQ_API_KEY}
@@ -121,7 +121,7 @@ services:
       # Pip cache optimization
       PIP_CACHE_DIR: "/root/.cache/pip"
       PIP_NO_CACHE_DIR: "false"
-      _PIP_ADDITIONAL_REQUIREMENTS: "feedparser==6.0.11 pypdf==5.7.0 beautifulsoup4==4.13.4 selenium==4.34.0"
+      _PIP_ADDITIONAL_REQUIREMENTS: "feedparser==6.0.11 pypdf==5.7.0 beautifulsoup4==4.13.4 selenium==4.34.0 groq>=0.4.0 nltk>=3.8 spacy>=3.4.0 python-dotenv>=0.19.0 pyyaml>=6.0 requests>=2.28.0"
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
@@ -191,6 +191,10 @@ services:
         mkdir -p /sources/logs /sources/dags /sources/plugins
         chown -R "$${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
         
+        echo "[INIT] Installing and setting up NLTK data..."
+        pip install groq>=0.4.0 nltk>=3.8 spacy>=3.4.0 python-dotenv>=0.19.0 pyyaml>=6.0 requests>=2.28.0
+        python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('averaged_perceptron_tagger')" || echo "NLTK data download failed, will retry later"
+        
         echo "[INIT] Starting Airflow initialization..."
         exec /entrypoint airflow version
     environment:
@@ -236,6 +240,31 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  # entity-chunking:
+  #   build:
+  #     context: ../entity_based_chunking
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - PYTHONDONTWRITEBYTECODE=1
+  #     - PYTHONPATH=/app
+  #     - GROQ_API_KEY=${GROQ_API_KEY}
+  #   volumes:
+  #     - ../entity_based_chunking:/app
+  #     - chunking-logs:/app/logs
+  #     - chunking-data:/app/data
+  #   ports:
+  #     - "8001:8000"
+  #   healthcheck:
+  #     test: ["CMD", "python", "-c", "import main; print('Service is healthy')"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   restart: always
+
 volumes:
   postgres-db-volume:
-  pip-cache-volume:  
+  pip-cache-volume:
+  # chunking-logs:
+  # chunking-data:  

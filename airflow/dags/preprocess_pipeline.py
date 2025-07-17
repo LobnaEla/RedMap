@@ -47,7 +47,7 @@ dag = DAG(
 def extract_data():
     """Extract text from various file formats with intelligent handling"""
     try:
-        from cti_pipeline.scripts.preprocess.core.processors.extraction import (
+        from cti_pipeline.scripts.preprocess.core.extraction import (
             extract_with_result,
         )
         import glob
@@ -192,7 +192,7 @@ def extract_data():
 def clean_data():
     """Clean extracted text data with optimizations for structured content"""
     try:
-        from cti_pipeline.scripts.preprocess.core.processors.cleaning.cleaning import (
+        from cti_pipeline.scripts.preprocess.core.cleaning import (
             clean_text,
         )
         import glob
@@ -253,7 +253,7 @@ def clean_data():
 def normalize_data():
     """Normalize cleaned text data with optimizations for structured content"""
     try:
-        from cti_pipeline.scripts.preprocess.core.processors.cleaning.normalization import (
+        from cti_pipeline.scripts.preprocess.core.cleaning import (
             normalize_text,
         )
         import glob
@@ -314,11 +314,8 @@ def normalize_data():
 def chunk_data():
     """Chunk normalized text data using IOC-based chunking"""
     try:
-        from cti_pipeline.scripts.preprocess.core.processors.chunking.chunker import (
+        from cti_pipeline.scripts.preprocess.core.chunking import (
             CTIChunker,
-        )
-        from cti_pipeline.scripts.preprocess.core.processors.chunking.config import (
-            ChunkingConfig,
         )
         import glob
         import json
@@ -326,9 +323,8 @@ def chunk_data():
         # Create output directory
         os.makedirs(CHUNKS_DIR, exist_ok=True)
 
-        # Initialize chunker with IOC-based strategy
-        config = ChunkingConfig(chunk_strategy="ioc_based")
-        chunker = CTIChunker(config)
+        # Initialize chunker (simplified without config)
+        chunker = CTIChunker()
 
         # Process normalized files
         normalized_files = glob.glob(f"{PROCESSED_DIR}/normalized/normalized_*.txt")
@@ -342,18 +338,18 @@ def chunk_data():
                     text = f.read()
 
                 # Chunk the text
-                result = chunker.chunk(text)
+                chunks = chunker.chunk(text)
 
-                if result.success:
+                if chunks:
                     # Save chunks as JSON
                     base_name = os.path.splitext(os.path.basename(file_path))[0]
                     output_file = os.path.join(CHUNKS_DIR, f"chunks_{base_name}.json")
 
                     chunk_data = {
                         "original_file": file_path,
-                        "processing_time": result.processing_time,
-                        "strategy_used": result.strategy_used,
-                        "total_chunks": len(result.chunks),
+                        "processing_time": "N/A",
+                        "strategy_used": "ioc_based",
+                        "total_chunks": len(chunks),
                         "chunks": [
                             {
                                 "chunk_id": i,
@@ -361,12 +357,12 @@ def chunk_data():
                                 "iocs": chunk.get("ioc", ""),
                                 "type": chunk.get("type", ""),
                                 "metadata": {
-                                    "chunk_length": chunk.get("chunk_length", 0),
-                                    "record_id": chunk.get("record_id", i),
-                                    "ioc_count": chunk.get("ioc_count", 0)
+                                    "chunk_length": len(chunk.get("chunk", "")),
+                                    "record_id": i,
+                                    "ioc_count": 1 if chunk.get("ioc") else 0
                                 }
                             }
-                            for i, chunk in enumerate(result.chunks)
+                            for i, chunk in enumerate(chunks)
                         ],
                     }
 
@@ -374,10 +370,10 @@ def chunk_data():
                         json.dump(chunk_data, f, indent=2, ensure_ascii=False)
 
                     chunk_files.append(output_file)
-                    total_chunks += len(result.chunks)
+                    total_chunks += len(chunks)
                     total_processed += 1
                 else:
-                    print(f"Failed to chunk {file_path}: {result.errors}")
+                    print(f"No chunks generated for {file_path}")
 
             except Exception as e:
                 print(f"Failed to process {file_path}: {e}")
