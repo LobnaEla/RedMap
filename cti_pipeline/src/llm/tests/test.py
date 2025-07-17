@@ -10,7 +10,7 @@ from cti_pipeline.src.llm.core.anthropic_client import AnthropicClient
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Changed from INFO to DEBUG
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler("llm_test.log", encoding="utf-8"),
@@ -73,19 +73,21 @@ def test_chunk_processor(sample_chunk, filename):
 
 
 def main():
+    start_time = time.time()
     try:
-        logger.debug("Starting test execution...")
+        logger.info("🚀 Starting test execution...")
         # Sample chunk data - Updated IOCs to string
         sample_chunk = {
             "chunk_id": "test_123",
             "text": "Attackers used PowerShell to download and execute malware",
-            "iocs": "192.168.1.100, malware.ps1",  # Changed from list to string
+            "iocs": "192.168.1.100, malware.ps1",
         }
 
         # Load chunk files
         chunk_files = load_chunk_files(CHUNKS_DIR)
         logger.debug(f"✅ Successfully loaded {len(chunk_files)} chunk files")
-        chunk_file = chunk_files[10]
+        chunk_file = chunk_files[0]
+
         logger.debug(f"Selected chunk file: {chunk_file}")
 
         try:
@@ -94,62 +96,41 @@ def main():
                 logger.debug("✅ Successfully loaded chunk data")
 
             filename = os.path.basename(chunk_file)
-            chunks = chunk_data.get("chunks", [])
-            logger.debug(f"✅ Found {len(chunks)} chunks in {filename}")
+            # Get only the first chunk
+            chunk = chunk_data.get("chunks", [])[0]
+            chunk_id = chunk.get("chunk_id", "unknown")
 
-            for chunk_idx, chunk in enumerate(chunks, 1):
-                chunk_id = chunk.get("chunk_id", "unknown")
+            # Detailed chunk logging
+            logger.debug("\n" + "=" * 50)
+            logger.debug("Processing single chunk:")
+            logger.debug(f"  ID: {chunk_id}")
+            logger.debug(f"  Text: {chunk.get('text', '')[:500]}...")
+            logger.debug(f"  IOCs: {chunk.get('iocs', '')}")
+            logger.debug(f"  Length: {len(chunk.get('text', ''))} characters")
+            logger.debug("=" * 50 + "\n")
 
-                # Add detailed chunk content logging
-                logger.debug("\n" + "=" * 50)
-                logger.debug(f"Processing chunk {chunk_idx}/{len(chunks)}")
-                logger.debug("=" * 50)
-                logger.debug("Chunk Details:")
-                logger.debug(f"  ID: {chunk_id}")
-                logger.debug(f"  Text: {chunk.get('text', '')[:500]}...")
-                # Updated IOCs logging to handle string
-                logger.debug(f"  IOCs: {chunk.get('iocs', '')}")
-                logger.debug(f"  Length: {len(chunk.get('text', ''))} characters")
-                logger.debug("=" * 50 + "\n")
+            # Process the chunk
+            logger.debug(f"🔄 Sending chunk to LLM processor")
+            mapping = test_chunk_processor(chunk, filename)
 
-                # Validation du chunk
-                if not isinstance(chunk, dict):
-                    error_msg = "Invalid chunk format: not a dictionary"
-                    logger.warning(f"❌ Chunk {chunk_id}: {error_msg}")
-                    continue
-
-                if "text" not in chunk or not chunk["text"].strip():
-                    error_msg = "Empty text content in chunk"
-                    logger.warning(f"❌ Chunk {chunk_id}: {error_msg}")
-                    continue
-
-                logger.debug(f"✅ Chunk {chunk_id} validation successful")
-
-                # Traitement du chunk
-                logger.debug(f"🔄 Sending chunk {chunk_id} to LLM processor")
-                mapping = test_chunk_processor(chunk, filename)
-
-                if mapping["success"]:
-                    logger.debug(f"✅ Successfully processed chunk {chunk_id}")
-                    logger.debug(
-                        f"🎯 MITRE techniques found: {mapping.get('mitre_techniques', [])}"
-                    )
-                else:
-                    logger.warning(
-                        f"❌ Failed to process chunk {chunk_id}: {mapping.get('error', 'Unknown error')}"
-                    )
-
-                logger.debug("⏳ Waiting 500ms before next chunk...")
-                time.sleep(0.5)
+            if mapping["success"]:
+                techniques = mapping.get("mitre_techniques", [])
+                processing_time = time.time() - start_time
+                logger.info(
+                    f"✅ Found {len(techniques)} MITRE techniques in {processing_time:.2f}s"
+                )
+                logger.info(f"🎯 Techniques: {techniques}")
+            else:
+                logger.error(
+                    f"❌ Processing failed: {mapping.get('error', 'Unknown error')}"
+                )
 
         except Exception as e:
-            logger.error(f"❌ Error processing chunks: {str(e)}")
+            logger.error(f"❌ Error processing chunk: {str(e)}")
             return
 
     except Exception as e:
         logger.error(f"❌ Test failed: {str(e)}", exc_info=True)
-    finally:
-        logger.info("✅ Test run completed")
 
 
 if __name__ == "__main__":
