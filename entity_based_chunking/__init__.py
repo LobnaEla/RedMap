@@ -33,7 +33,7 @@ from .main import (
 
 # Import core classes for advanced usage
 from .chunking.processor import CTIProcessor
-from .chunking.groq_client import GroqClient
+from .chunking.llm_client import LLMClient
 from .chunking.text_chunker import TextChunker
 from .utils.config import load_config, validate_config
 from .utils.ioc_validator import IOCValidator
@@ -52,7 +52,7 @@ __all__ = [
     
     # Core classes
     "CTIProcessor",
-    "GroqClient",
+    "LLMClient",
     "TextChunker",
     "IOCValidator",
     

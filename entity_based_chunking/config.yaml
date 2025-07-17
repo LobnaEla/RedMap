@@ -1,8 +1,29 @@
 # Enhanced Configuration file
 
-groq:
-  api_url: "https://api.groq.com/openai/v1/chat/completions"
-  model: "llama3-70b-8192"
+# LLM provider configuration
+llm:
+  provider: "groq"  # Options: "groq", "openai", "openrouter"
+  
+  # Provider-specific configurations
+  groq:
+    base_url: "https://api.groq.com/openai/v1"
+    model: "llama3-70b-8192"
+    api_key_env: "GROQ_API_KEY"
+  
+  openai:
+    base_url: "https://api.openai.com/v1"
+    model: "gpt-4"
+    api_key_env: "OPENAI_API_KEY"
+  
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    model: "nvidia/llama-3.1-nemotron-ultra-253b-v1:free"
+    api_key_env: "OPENROUTER_API_KEY"
+    extra_headers:
+      HTTP-Referer: ""  # Optional
+      X-Title: ""  # Optional
+  
+  # Common settings
   temperature: 0.1
   max_retries: 3
   retry_delay: 1
