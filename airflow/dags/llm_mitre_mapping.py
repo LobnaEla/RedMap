@@ -1,3 +1,4 @@
+from pathlib import Path
 import sys
 import os
 import glob
@@ -9,11 +10,15 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.models import Variable
+from dotenv import load_dotenv
+from airflow.models import Variable
+import logging
 
 
 # ================================
 # PATH CONFIGURATION
 # ================================
+
 sys.path.append("/opt/project")
 
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
@@ -24,6 +29,68 @@ CHUNKS_DIR = f"{BASE_PROJECT_PATH}/data/chunks"
 LLM_RESULTS_DIR = f"{BASE_PROJECT_PATH}/data/llm_results"
 MITRE_MAPPING_DIR = f"{BASE_PROJECT_PATH}/data/mitre_mappings"
 LOGS_DIR = f"{BASE_PROJECT_PATH}/logs"
+
+COMPREHENSIVE_MAPPING_FILE = "comprehensive_mitre_mappings.json"
+STATS_FILE = "mitre_mapping_statistics.json"
+
+ANTHROPIC_API_KEY = Variable.get("ANTHROPIC_API_KEY", default_var=None)
+
+if not ANTHROPIC_API_KEY:
+    raise ValueError("ANTHROPIC_API_KEY not set in Airflow Variables")
+
+# ================================
+# DEBUG CONFIGURATION
+# ================================
+DEBUG = Variable.get("LLM_DEBUG", default_var="True").lower() == "true"
+
+
+def setup_logger():
+    """Configure logging for the DAG"""
+    # Create logs directory if it doesn't exist
+    Path(LOGS_DIR).mkdir(parents=True, exist_ok=True)
+
+    # Get or create logger
+    logger = logging.getLogger("llm_mitre_mapping")
+
+    # Remove existing handlers to avoid duplicates
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
+
+    # Create handlers with timestamps in name
+    console_handler = logging.StreamHandler()
+    log_file = (
+        Path(LOGS_DIR) / f'llm_mapping_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+    )
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+
+    # Create formatter
+    log_format = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Set formatters
+    console_handler.setFormatter(log_format)
+    file_handler.setFormatter(log_format)
+
+    # Set levels
+    console_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.DEBUG)
+
+    # Add handlers
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    logger.info(f"Logging initialized. Log file: {log_file}")
+
+    return logger
+
+
+# Initialize logger
+logger = setup_logger()
+logger.info("LLM MITRE Mapping DAG initialized")
 
 # ================================
 # DAG DEFINITION
@@ -49,28 +116,37 @@ dag = DAG(
     max_active_runs=1,
 )
 
+logger.info(f"DAG '{dag.dag_id}' configured with tags: {dag.tags}")
+
 
 # ================================
 # LOADING AND SAVING FUNCTIONS
 # ================================
 
 
-def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
-    """
-    Sauvegarde les résultats du traitement dans les répertoires appropriés
-
-    Args:
-        mappings: Liste des résultats de mapping
-        stats: Statistiques du traitement
-        paths: Configuration des chemins
-    """
+def load_chunk_files(chunks_dir: str) -> List[str]:
+    """Charge les fichiers de chunks depuis le répertoire"""
     try:
+        chunk_files = glob.glob(os.path.join(chunks_dir, "chunks_*.json"))
+        if not chunk_files:
+            raise FileNotFoundError(f"No chunk files found in {chunks_dir}")
+        return chunk_files
+
+    except Exception as e:
+        raise RuntimeError(f"Error loading chunk files: {str(e)}")
+
+
+def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
+    """Sauvegarde les résultats du traitement dans les répertoires appropriés"""
+    try:
+        logger.debug("Creating output directories if they don't exist")
         os.makedirs(LLM_RESULTS_DIR, exist_ok=True)
         os.makedirs(MITRE_MAPPING_DIR, exist_ok=True)
 
         # Fichier complet
+        logger.debug("Saving comprehensive mapping file")
         comprehensive_path = os.path.join(
-            paths["mitre_mappings"], "comprehensive_mitre_mappings.json"
+            paths["mitre_mappings"], COMPREHENSIVE_MAPPING_FILE
         )
         with open(comprehensive_path, "w", encoding="utf-8") as f:
             json.dump(
@@ -87,8 +163,11 @@ def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
                 indent=2,
                 ensure_ascii=False,
             )
+        logger.info(f"Saved comprehensive results to {comprehensive_path}")
 
         # Fichiers individuels pour les chunks
+        logger.debug("Saving individual chunk results")
+        successful_saves = 0
         for mapping in mappings:
             if mapping.get("success", False):
                 file_path = os.path.join(
@@ -96,48 +175,49 @@ def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
                 )
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(mapping, f, indent=2, ensure_ascii=False)
+                successful_saves += 1
+
+        logger.info(f"Saved {successful_saves} individual chunk results")
 
         # Logs d'erreurs
         errors = [m for m in mappings if not m.get("success", True)]
         if errors:
+            logger.warning(f"Found {len(errors)} errors to log")
             error_path = os.path.join(paths["logs"], "processing_errors.json")
             with open(error_path, "w", encoding="utf-8") as f:
                 json.dump(errors, f, indent=2, ensure_ascii=False)
+            logger.info(f"Saved error log to {error_path}")
+
     except Exception as e:
+        logger.error("Failed to save results", exc_info=True)
         raise RuntimeError(f"Error saving processing results: {str(e)}")
-
-
-def load_chunk_files(chunks_dir: str) -> List[str]:
-    """Charge les fichiers de chunks depuis le répertoire"""
-    import glob
-
-    try:
-        chunk_files = glob.glob(os.path.join(chunks_dir, "chunks_*.json"))
-        if not chunk_files:
-            raise FileNotFoundError(f"No chunk files found in {chunks_dir}")
-        return chunk_files
-
-    except Exception as e:
-        raise RuntimeError(f"Error loading chunk files: {str(e)}")
 
 
 # ================================
 # CORE PROCESSING FUNCTION
 # ================================
+
+
 def process_all_chunks():
     """Traite tous les chunks avec le modèle LLM"""
     from cti_pipeline.src.llm.core.chunk_processor import ChunkProcessor
 
     try:
+        logger.info("Starting chunk processing pipeline")
+
         # Initialisation du processeur
-        processor = ChunkProcessor()
+        logger.debug("Initializing ChunkProcessor with API key")
+        processor = ChunkProcessor(ANTHROPIC_API_KEY)
 
         # Chargement des fichiers
+        logger.debug(f"Looking for chunk files in: {CHUNKS_DIR}")
         chunk_files = glob.glob(os.path.join(CHUNKS_DIR, "chunks_*.json"))
+
         if not chunk_files:
+            logger.error("No chunk files found!")
             raise FileNotFoundError("No chunk files found in chunks directory")
 
-        print(f"Found {len(chunk_files)} chunk files to process")
+        logger.info(f"Found {len(chunk_files)} chunk files to process")
 
         # Statistiques de traitement
         stats = {
@@ -150,23 +230,33 @@ def process_all_chunks():
         all_mappings = []
 
         # Traitement fichier par fichier
-        for chunk_file in chunk_files:
+        for file_idx, chunk_file in enumerate(chunk_files, 1):
+            logger.debug(f"Processing file {file_idx}/{len(chunk_files)}: {chunk_file}")
+
             try:
                 with open(chunk_file, "r", encoding="utf-8") as f:
                     chunk_data = json.load(f)
 
                 filename = os.path.basename(chunk_file)
                 chunks = chunk_data.get("chunks", [])
+                logger.debug(f"Found {len(chunks)} chunks in {filename}")
 
                 # Traitement chunk par chunk
-                for chunk in chunks:
+                for chunk_idx, chunk in enumerate(chunks, 1):
                     stats["total_chunks"] += 1
+                    chunk_id = chunk.get("chunk_id", "unknown")
+
+                    logger.debug(
+                        f"Processing chunk {chunk_idx}/{len(chunks)} (ID: {chunk_id})"
+                    )
 
                     # Validation du chunk
                     if not isinstance(chunk, dict):
+                        error_msg = "Invalid chunk format: not a dictionary"
+                        logger.warning(f"Chunk {chunk_id}: {error_msg}")
                         mapping = {
                             "chunk_id": "unknown",
-                            "error": "Invalid chunk format: not a dictionary",
+                            "error": error_msg,
                             "success": False,
                             "timestamp": datetime.now().isoformat(),
                         }
@@ -175,9 +265,11 @@ def process_all_chunks():
                         continue
 
                     if "text" not in chunk or not chunk["text"].strip():
+                        error_msg = "Empty text content in chunk"
+                        logger.warning(f"Chunk {chunk_id}: {error_msg}")
                         mapping = {
-                            "chunk_id": chunk.get("chunk_id", "unknown"),
-                            "error": "Empty text content in chunk",
+                            "chunk_id": chunk_id,
+                            "error": error_msg,
                             "success": False,
                             "timestamp": datetime.now().isoformat(),
                         }
@@ -186,12 +278,20 @@ def process_all_chunks():
                         continue
 
                     # Traitement du chunk
+                    logger.debug(f"Sending chunk {chunk_id} to LLM processor")
                     mapping = processor.process_chunk(chunk, filename)
                     mapping["source_file"] = filename
 
                     if mapping["success"]:
+                        logger.debug(f"Successfully processed chunk {chunk_id}")
+                        logger.debug(
+                            f"MITRE techniques found: {mapping.get('mitre_techniques', [])}"
+                        )
                         stats["successful_mappings"] += 1
                     else:
+                        logger.warning(
+                            f"Failed to process chunk {chunk_id}: {mapping.get('error', 'Unknown error')}"
+                        )
                         stats["failed_mappings"] += 1
 
                     all_mappings.append(mapping)
@@ -199,20 +299,32 @@ def process_all_chunks():
                     # Délai entre les requêtes
                     time.sleep(0.5)  # 500ms
 
+                # Log progress after each file
+                success_rate = (
+                    stats["successful_mappings"] / stats["total_chunks"]
+                ) * 100
+                logger.info(f"Progress: {file_idx}/{len(chunk_files)} files processed")
+                logger.info(f"Current success rate: {success_rate:.2f}%")
+
                 # Délai entre les fichiers
                 time.sleep(2)  # 2s
 
             except Exception as e:
-                print(f"Error processing {chunk_file}: {str(e)}")
+                logger.error(
+                    f"Error processing file {chunk_file}: {str(e)}", exc_info=True
+                )
                 continue
 
-        # Calcul du taux de succès
+        # Final statistics
         stats["success_rate"] = (
             stats["successful_mappings"] / stats["total_chunks"]
             if stats["total_chunks"] > 0
             else 0
         )
         stats["end_time"] = datetime.now().isoformat()
+
+        logger.info("Processing completed. Saving results...")
+        logger.info(f"Final statistics: {json.dumps(stats, indent=2)}")
 
         # Sauvegarde des résultats
         save_processing_results(
@@ -225,9 +337,11 @@ def process_all_chunks():
             },
         )
 
+        logger.info("Results saved successfully")
         return {"status": "success", "processed_files": len(chunk_files), **stats}
 
     except Exception as e:
+        logger.error("Pipeline failed with error", exc_info=True)
         return {
             "status": "error",
             "message": str(e),
@@ -242,9 +356,7 @@ def generate_mitre_statistics():
     """Generate statistics and analysis of MITRE mappings"""
     try:
         # Load comprehensive results
-        comprehensive_file = os.path.join(
-            MITRE_MAPPING_DIR, "comprehensive_mitre_mappings.json"
-        )
+        comprehensive_file = os.path.join(MITRE_MAPPING_DIR, COMPREHENSIVE_MAPPING_FILE)
         if not os.path.exists(comprehensive_file):
             raise FileNotFoundError("Comprehensive MITRE mappings file not found")
 
@@ -283,7 +395,7 @@ def generate_mitre_statistics():
         }
 
         # Save statistics
-        stats_file = os.path.join(MITRE_MAPPING_DIR, "mitre_mapping_statistics.json")
+        stats_file = os.path.join(MITRE_MAPPING_DIR, STATS_FILE)
         with open(stats_file, "w", encoding="utf-8") as f:
             json.dump(statistics, f, indent=2, ensure_ascii=False)
 
@@ -328,10 +440,10 @@ def validate_llm_results():
         # Check files existence
         validation_results = {
             "comprehensive_file_exists": os.path.exists(
-                os.path.join(MITRE_MAPPING_DIR, "comprehensive_mitre_mappings.json")
+                os.path.join(MITRE_MAPPING_DIR, COMPREHENSIVE_MAPPING_FILE)
             ),
             "statistics_file_exists": os.path.exists(
-                os.path.join(MITRE_MAPPING_DIR, "mitre_mapping_statistics.json")
+                os.path.join(MITRE_MAPPING_DIR, STATS_FILE)
             ),
             "llm_results_count": len(glob.glob(f"{LLM_RESULTS_DIR}/*.json")),
             "processing_logs_count": len(glob.glob(f"{LOGS_DIR}/*.json")),

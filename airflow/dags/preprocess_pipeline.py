@@ -9,13 +9,13 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 # Add the project root to Python path for imports
 sys.path.append("/opt/project")  # Path inside Docker container
 
-# Centralized path configuration 
+# Centralized path configuration
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
-METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"  
-PROCESSED_DIR = f"{BASE_PROJECT_PATH}/data/processed" 
-CHUNKS_DIR = f"{BASE_PROJECT_PATH}/data/chunks" 
-RAW_SCRAPED_DIR = f"{BASE_PROJECT_PATH}/data/raw_scraped_data"  
+METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"
+PROCESSED_DIR = f"{BASE_PROJECT_PATH}/data/processed"
+CHUNKS_DIR = f"{BASE_PROJECT_PATH}/data/chunks"
+RAW_SCRAPED_DIR = f"{BASE_PROJECT_PATH}/data/raw_scraped_data"
 
 # Default arguments for the DAG
 default_args = {
@@ -33,7 +33,7 @@ dag = DAG(
     "preprocess_pipeline",
     default_args=default_args,
     description="CTI Preprocessing Pipeline: Extract -> Clean -> Normalize -> Chunk (Triggered by cti_pipeline DAG)",
-    schedule_interval=None, 
+    schedule_interval=None,
     catchup=False,
     is_paused_upon_creation=False,
     tags=["cti", "preprocessing", "extract", "clean", "normalize", "chunk"],
@@ -61,56 +61,66 @@ def extract_data():
         extracted_dir = os.path.join(PROCESSED_DIR, "extracted")
         os.makedirs(extracted_dir, exist_ok=True)
 
-        # Focus on specific directories: 
+        # Focus on specific directories:
         structured_patterns = [
             f"{RAW_SCRAPED_DIR}/blogs/*.json",
-            f"{RAW_SCRAPED_DIR}/blogs/*.jsonl"
+            f"{RAW_SCRAPED_DIR}/blogs/*.jsonl",
         ]
 
         unstructured_patterns = [
             f"{BASE_PROJECT_PATH}/PDFs/*.pdf",
-            f"{RAW_SCRAPED_DIR}/pdfs/*.pdf"
+            f"{RAW_SCRAPED_DIR}/pdfs/*.pdf",
         ]
 
         extracted_files = []
         total_processed = 0
-        
+
         # Process all file patterns
         all_patterns = structured_patterns + unstructured_patterns
-        
+
         for pattern in all_patterns:
             files = glob.glob(pattern)
             for file_path in files:
                 try:
                     file_ext = os.path.splitext(file_path)[1].lower()
                     base_name = os.path.basename(file_path)
-                    
-                    # Handle JSONL files specially 
-                    if file_ext == '.jsonl':
+
+                    # Handle JSONL files specially
+                    if file_ext == ".jsonl":
                         # Create metadata directory
                         os.makedirs(METADATA_DIR, exist_ok=True)
-                        
+
                         metadata_entries = []
-                        
-                        with open(file_path, 'r', encoding='utf-8') as f:
+
+                        with open(file_path, "r", encoding="utf-8") as f:
                             for line_num, line in enumerate(f, 1):
                                 try:
                                     entry = json.loads(line.strip())
-                                    
+
                                     # Generate unique filename from URL hash
                                     url = entry.get("url", "")
-                                    url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
-                                    timestamp = entry.get("timestamp", "").replace(":", "-").replace("T", "_")
+                                    url_hash = hashlib.md5(url.encode()).hexdigest()[
+                                        :12
+                                    ]
+                                    timestamp = (
+                                        entry.get("timestamp", "")
+                                        .replace(":", "-")
+                                        .replace("T", "_")
+                                    )
                                     source = entry.get("source", "unknown")
-                                    
+
                                     # Create unique filename
                                     content_filename = f"extracted_article_{source}_{timestamp}_{url_hash}.txt"
-                                    content_filepath = os.path.join(extracted_dir, content_filename)
-                                    
+                                    content_filepath = os.path.join(
+                                        extracted_dir, content_filename
+                                    )
+
                                     # Save content as separate .txt file
-                                    with open(content_filepath, 'w', encoding='utf-8') as content_file:
+                                    with open(
+                                        content_filepath, "w", encoding="utf-8"
+                                    ) as content_file:
                                         content_file.write(entry.get("content", ""))
-                                    
+
                                     # Prepare metadata entry
                                     metadata_entry = {
                                         "content_file": content_filename,
@@ -121,41 +131,59 @@ def extract_data():
                                         "original_file": file_path,
                                         "line_number": line_num,
                                         "extraction_time": datetime.now().isoformat(),
-                                        "file_type": "structured_blog"
+                                        "file_type": "structured_blog",
                                     }
                                     metadata_entries.append(metadata_entry)
                                     extracted_files.append(content_filepath)
                                     total_processed += 1
-                                    
+
                                 except json.JSONDecodeError as e:
-                                    print(f"Failed to parse line {line_num} in {file_path}: {e}")
-                        
+                                    print(
+                                        f"Failed to parse line {line_num} in {file_path}: {e}"
+                                    )
+
                         # Save metadata for this JSONL file
                         metadata_filename = f"metadata_{base_name}.json"
-                        metadata_filepath = os.path.join(METADATA_DIR, metadata_filename)
-                        with open(metadata_filepath, 'w', encoding='utf-8') as meta_file:
-                            json.dump({
-                                "source_file": file_path,
-                                "processing_time": datetime.now().isoformat(),
-                                "total_articles": len(metadata_entries),
-                                "articles": metadata_entries
-                            }, meta_file, indent=2, ensure_ascii=False)
-                        
-                        print(f"[Extract] Processed JSONL {file_path} -> {len(metadata_entries)} articles + metadata")
-                        
+                        metadata_filepath = os.path.join(
+                            METADATA_DIR, metadata_filename
+                        )
+                        with open(
+                            metadata_filepath, "w", encoding="utf-8"
+                        ) as meta_file:
+                            json.dump(
+                                {
+                                    "source_file": file_path,
+                                    "processing_time": datetime.now().isoformat(),
+                                    "total_articles": len(metadata_entries),
+                                    "articles": metadata_entries,
+                                },
+                                meta_file,
+                                indent=2,
+                                ensure_ascii=False,
+                            )
+
+                        print(
+                            f"[Extract] Processed JSONL {file_path} -> {len(metadata_entries)} articles + metadata"
+                        )
+
                     else:
                         # Handle other file types (PDF, JSON, etc.) with existing extraction
                         result = extract_with_result(file_path)
                         if result.success:
                             # Save extracted text with source type indicator
-                            if file_ext in ['.json']:
-                                output_file = os.path.join(PROCESSED_DIR, f"extracted_structured_{base_name}.txt")
+                            if file_ext in [".json"]:
+                                output_file = os.path.join(
+                                    PROCESSED_DIR,
+                                    f"extracted_structured_{base_name}.txt",
+                                )
                             else:
-                                output_file = os.path.join(PROCESSED_DIR, f"extracted_{base_name}.txt")
-                            
-                            with open(output_file, 'w', encoding='utf-8') as f:
+                                output_file = os.path.join(
+                                    PROCESSED_DIR, f"extracted_{base_name}.txt"
+                                )
+
+                            with open(output_file, "w", encoding="utf-8") as f:
                                 f.write(result.text)
-                            
+
                             # Create metadata for non-JSONL files
                             os.makedirs(METADATA_DIR, exist_ok=True)
                             metadata_entry = {
@@ -163,20 +191,33 @@ def extract_data():
                                 "content_filepath": output_file,
                                 "original_file": file_path,
                                 "extraction_time": datetime.now().isoformat(),
-                                "file_type": "unstructured_pdf" if file_ext == '.pdf' else "structured_json",
-                                "extraction_success": True
+                                "file_type": (
+                                    "unstructured_pdf"
+                                    if file_ext == ".pdf"
+                                    else "structured_json"
+                                ),
+                                "extraction_success": True,
                             }
-                            
+
                             metadata_filename = f"metadata_{base_name}.json"
-                            metadata_filepath = os.path.join(METADATA_DIR, metadata_filename)
-                            with open(metadata_filepath, 'w', encoding='utf-8') as meta_file:
-                                json.dump(metadata_entry, meta_file, indent=2, ensure_ascii=False)
-                            
+                            metadata_filepath = os.path.join(
+                                METADATA_DIR, metadata_filename
+                            )
+                            with open(
+                                metadata_filepath, "w", encoding="utf-8"
+                            ) as meta_file:
+                                json.dump(
+                                    metadata_entry,
+                                    meta_file,
+                                    indent=2,
+                                    ensure_ascii=False,
+                                )
+
                             extracted_files.append(output_file)
                             total_processed += 1
-                            
+
                             print(f"[Extract] Processed {file_path} -> {output_file}")
-                            
+
                 except Exception as e:
                     print(f"Failed to extract from {file_path}: {e}")
 
@@ -212,22 +253,30 @@ def clean_data():
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     text = f.read()
-                
+
                 # Check if this is structured content (lighter cleaning)
                 filename = os.path.basename(file_path)
-                is_structured = "extracted_structured_" in filename or "extracted_article_" in filename
-                
+                is_structured = (
+                    "extracted_structured_" in filename
+                    or "extracted_article_" in filename
+                )
+
                 if is_structured:
                     # Minimal cleaning for structured content (articles and structured files)
                     cleaned_text = text.strip()
                     # Only remove excessive whitespace within content
                     import re
-                    cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text)
-                    print(f"[Clean] Applied minimal cleaning to structured file: {file_path}")
+
+                    cleaned_text = re.sub(r"\n\s*\n\s*\n", "\n\n", cleaned_text)
+                    print(
+                        f"[Clean] Applied minimal cleaning to structured file: {file_path}"
+                    )
                 else:
                     # Full cleaning for unstructured content (PDFs)
                     cleaned_text = clean_text(text)
-                    print(f"[Clean] Applied full cleaning to unstructured file: {file_path}")
+                    print(
+                        f"[Clean] Applied full cleaning to unstructured file: {file_path}"
+                    )
 
                 # Save cleaned text
                 output_file = os.path.join(
@@ -272,23 +321,31 @@ def normalize_data():
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     text = f.read()
-                
+
                 # Check if this is structured content (lighter normalization)
                 filename = os.path.basename(file_path)
-                is_structured = "cleaned_extracted_structured_" in filename or "cleaned_extracted_article_" in filename
-                
+                is_structured = (
+                    "cleaned_extracted_structured_" in filename
+                    or "cleaned_extracted_article_" in filename
+                )
+
                 if is_structured:
                     # Minimal normalization for structured content (articles and structured files)
                     normalized_text = text.strip()
                     # Only basic text normalization within content
                     import re
-                    normalized_text = re.sub(r'\s+', ' ', normalized_text)
-                    normalized_text = re.sub(r'\n\s*\n', '\n', normalized_text)
-                    print(f"[Normalize] Applied minimal normalization to structured file: {file_path}")
+
+                    normalized_text = re.sub(r"\s+", " ", normalized_text)
+                    normalized_text = re.sub(r"\n\s*\n", "\n", normalized_text)
+                    print(
+                        f"[Normalize] Applied minimal normalization to structured file: {file_path}"
+                    )
                 else:
                     # Full normalization for unstructured content (PDFs)
                     normalized_text = normalize_text(text)
-                    print(f"[Normalize] Applied full normalization to unstructured file: {file_path}")
+                    print(
+                        f"[Normalize] Applied full normalization to unstructured file: {file_path}"
+                    )
 
                 # Save normalized text
                 output_file = os.path.join(
@@ -360,8 +417,8 @@ def chunk_data():
                                 "metadata": {
                                     "chunk_length": len(chunk.get("chunk", "")),
                                     "record_id": i,
-                                    "ioc_count": 1 if chunk.get("ioc") else 0
-                                }
+                                    "ioc_count": 1 if chunk.get("ioc") else 0,
+                                },
                             }
                             for i, chunk in enumerate(chunks)
                         ],
