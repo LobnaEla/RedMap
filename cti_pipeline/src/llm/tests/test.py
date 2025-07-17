@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
-API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 if not API_KEY:
     logger.error("ANTHROPIC_API_KEY not found in .env file")
@@ -35,7 +34,7 @@ def test_chunk_processor():
     }
 
     # Initialize processor
-    processor = ChunkProcessor(api_key=API_KEY)
+    processor = ChunkProcessor()
 
     # Process the chunk
     result = processor.process_chunk(sample_chunk, "test_file.json")

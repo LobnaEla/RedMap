@@ -15,7 +15,9 @@ class ChunkProcessor:
         Args:
             api_key: Clé API Anthropic (optionnelle)
         """
-        self.api_key = api_key
+        # Use provided api_key or fallback to environment variable
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY not configured")
 
