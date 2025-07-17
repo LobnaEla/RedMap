@@ -47,7 +47,7 @@ dag = DAG(
 def extract_data():
     """Extract text from various file formats with intelligent handling"""
     try:
-        from cti_pipeline.scripts.preprocess.core.extraction import (
+        from cti_pipeline.src.preprocess.core.extraction import (
             extract_with_result,
         )
         import glob
@@ -192,7 +192,7 @@ def extract_data():
 def clean_data():
     """Clean extracted text data with optimizations for structured content"""
     try:
-        from cti_pipeline.scripts.preprocess.core.cleaning import (
+        from cti_pipeline.src.preprocess.core.cleaning import (
             clean_text,
         )
         import glob
@@ -253,7 +253,7 @@ def clean_data():
 def normalize_data():
     """Normalize cleaned text data with optimizations for structured content"""
     try:
-        from cti_pipeline.scripts.preprocess.core.cleaning import (
+        from cti_pipeline.src.preprocess.core.cleaning import (
             normalize_text,
         )
         import glob
@@ -314,7 +314,7 @@ def normalize_data():
 def chunk_data():
     """Chunk normalized text data using IOC-based chunking"""
     try:
-        from cti_pipeline.scripts.preprocess.core.chunking import (
+        from cti_pipeline.src.preprocess.core.chunking import (
             CTIChunker,
         )
         import glob

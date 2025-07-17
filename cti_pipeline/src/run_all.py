@@ -9,17 +9,17 @@ from dotenv import load_dotenv
 dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'config', '.env'))
 load_dotenv(dotenv_path)
 
-from cti_pipeline.scripts.Ingestion.ingest_rss import ingest_certfr_rss
-from cti_pipeline.scripts.Ingestion.ingest_otx import ingest_otx_pulses
-from cti_pipeline.scripts.Ingestion.ingest_twitter_users import ingest_all_twitter_users
-from cti_pipeline.scripts.Ingestion.scraper_blog import ingest_all_blog
-# from cti_pipeline.scripts.preprocessing.ocr_client import extract_text
-from cti_pipeline.scripts.Ingestion.ingest_tuncert import ingest_tuncert_vulnerabilities
+from cti_pipeline.src.ingestion.ingest_rss import ingest_certfr_rss
+from cti_pipeline.src.ingestion.ingest_otx import ingest_otx_pulses
+from cti_pipeline.src.ingestion.ingest_twitter_users import ingest_all_twitter_users
+from cti_pipeline.src.ingestion.scraper_blog import ingest_all_blog
+# from cti_pipeline.src.preprocessing.ocr_client import extract_text
+from cti_pipeline.src.ingestion.ingest_tuncert import ingest_tuncert_vulnerabilities
 from cti_pipeline.blog_sources import BLOG_SOURCES
 
-# from cti_pipeline.scripts.preprocessing.cti_preprocessing import extract_iocs_and_ttps_from_file, save_result_to_json, export_all_iocs_to_json
+# from cti_pipeline.src.preprocessing.cti_preprocessing import extract_iocs_and_ttps_from_file, save_result_to_json, export_all_iocs_to_json
 
-from cti_pipeline.scripts.utilities import (
+from cti_pipeline.src.utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,

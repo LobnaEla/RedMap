@@ -46,7 +46,7 @@ dag = DAG(
 def ingest_rss_feeds():
     """Ingest data from RSS feeds (CERT-FR)"""
     try:
-        from cti_pipeline.scripts.ingestion.ingest_rss import ingest_certfr_rss
+        from cti_pipeline.src.ingestion.ingest_rss import ingest_certfr_rss
 
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
@@ -60,7 +60,7 @@ def ingest_rss_feeds():
 def ingest_otx_pulses():
     """Ingest data from OTX pulses"""
     try:
-        from cti_pipeline.scripts.ingestion.ingest_otx import ingest_otx_pulses
+        from cti_pipeline.src.ingestion.ingest_otx import ingest_otx_pulses
 
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
@@ -73,7 +73,7 @@ def ingest_otx_pulses():
 def ingest_twitter_users():
     """Ingest data from Twitter users"""
     try:
-        from cti_pipeline.scripts.ingestion.ingest_twitter_users import (
+        from cti_pipeline.src.ingestion.ingest_twitter_users import (
             ingest_all_twitter_users,
         )
 
@@ -94,7 +94,7 @@ def ingest_twitter_users():
 def ingest_blogs():
     """Ingest data from blog sources"""
     try:
-        from cti_pipeline.scripts.ingestion.scraper_blog import ingest_all_blog
+        from cti_pipeline.src.ingestion.scraper_blog import ingest_all_blog
         from cti_pipeline.blog_sources import BLOG_SOURCES
 
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -109,7 +109,7 @@ def ingest_blogs():
 def ingest_tuncert():
     """Ingest data from TUNCERT vulnerabilities"""
     try:
-        from cti_pipeline.scripts.ingestion.ingest_tuncert import (
+        from cti_pipeline.src.ingestion.ingest_tuncert import (
             ingest_tuncert_vulnerabilities,
         )
 

@@ -5,7 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from datetime import datetime
 import time, json, os
 
-from cti_pipeline.scripts.utilities import (
+from cti_pipeline.src.utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,
@@ -173,7 +173,7 @@ def ingest_all_twitter_users(
 
 
 if __name__ == "__main__":
-    from cti_pipeline.scripts.utilities import DATA_DIR, METADATA_DIR
+    from cti_pipeline.src.utilities import DATA_DIR, METADATA_DIR
     twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
     stats = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
     print(f"[+] Processed {stats['processed']} new tweets from {stats['users']} users.")

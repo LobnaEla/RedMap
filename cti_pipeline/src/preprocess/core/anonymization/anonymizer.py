@@ -4,8 +4,8 @@ Main anonymization logic
 
 from typing import Dict, Any, List
 from .config import AnonymizationConfig
-from ...utils.patterns import PatternManager
-from ...utils.preservers import PreservationManager
+from ..utils.patterns import PatternManager
+from ..utils.preservers import PreservationManager
 from .replacers import ReplacementManager
 
 class TextAnonymizer:

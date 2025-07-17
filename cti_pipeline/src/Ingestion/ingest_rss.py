@@ -3,7 +3,7 @@ import os
 import feedparser
 from datetime import datetime
 from typing import Dict, List, Optional
-from cti_pipeline.scripts.utilities import (
+from cti_pipeline.src.utilities import (
     load_processed_items,
     save_processed_items,
     is_duplicate,

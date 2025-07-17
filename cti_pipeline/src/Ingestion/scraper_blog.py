@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urljoin
 
-from cti_pipeline.scripts.utilities import (
+from cti_pipeline.src.utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,

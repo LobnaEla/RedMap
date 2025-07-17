@@ -10,8 +10,8 @@ This module provides a modular, configurable anonymization system that:
 
 from .config import AnonymizationConfig
 from .anonymizer import TextAnonymizer
-from ...utils.patterns import PatternManager
-from ...utils.preservers import PreservationManager
+from ..utils.patterns import PatternManager
+from ..utils.preservers import PreservationManager
 from .replacers import ReplacementManager
 
 # Convenience functions
