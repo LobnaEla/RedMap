@@ -9,10 +9,10 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 # Add the project root to Python path for imports
 sys.path.append("/opt/project")  # Path inside Docker container
 
-# Centralized path configuration
+# Centralized path configuration 
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
-METADATA_DIR = f"{BASE_PROJECT_PATH}/metadata"
+METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"  
 PDF_DIR = f"{BASE_PROJECT_PATH}/PDFs"
 
 # Default arguments for the DAG
@@ -33,6 +33,7 @@ dag = DAG(
     description="Complete CTI Pipeline: Ingestion -> Preprocessing -> Chunking",
     schedule_interval=timedelta(hours=12),  # Run every 12 hours
     catchup=False,
+    is_paused_upon_creation=False,
     tags=["cti", "ingestion"],
     max_active_runs=1,  # Prevent concurrent runs
 )
@@ -45,7 +46,7 @@ dag = DAG(
 def ingest_rss_feeds():
     """Ingest data from RSS feeds (CERT-FR)"""
     try:
-        from cti_pipeline.scripts.Ingestion.ingest_rss import ingest_certfr_rss
+        from cti_pipeline.src.ingestion.ingest_rss import ingest_certfr_rss
 
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
@@ -59,7 +60,7 @@ def ingest_rss_feeds():
 def ingest_otx_pulses():
     """Ingest data from OTX pulses"""
     try:
-        from cti_pipeline.scripts.Ingestion.ingest_otx import ingest_otx_pulses
+        from cti_pipeline.src.ingestion.ingest_otx import ingest_otx_pulses
 
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
@@ -72,7 +73,7 @@ def ingest_otx_pulses():
 def ingest_twitter_users():
     """Ingest data from Twitter users"""
     try:
-        from cti_pipeline.scripts.Ingestion.ingest_twitter_users import (
+        from cti_pipeline.src.ingestion.ingest_twitter_users import (
             ingest_all_twitter_users,
         )
 
@@ -93,7 +94,7 @@ def ingest_twitter_users():
 def ingest_blogs():
     """Ingest data from blog sources"""
     try:
-        from cti_pipeline.scripts.Ingestion.scraper_blog import ingest_all_blog
+        from cti_pipeline.src.ingestion.scraper_blog import ingest_all_blog
         from cti_pipeline.blog_sources import BLOG_SOURCES
 
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -108,7 +109,7 @@ def ingest_blogs():
 def ingest_tuncert():
     """Ingest data from TUNCERT vulnerabilities"""
     try:
-        from cti_pipeline.scripts.Ingestion.ingest_tuncert import (
+        from cti_pipeline.src.ingestion.ingest_tuncert import (
             ingest_tuncert_vulnerabilities,
         )
 
@@ -219,7 +220,7 @@ trigger_preprocessing = TriggerDagRunOperator(
     >> [
         ingest_rss_task,
         ingest_otx_task,
-        ingest_twitter_task,  # Commented out
+        ingest_twitter_task, 
         ingest_blog_task,
         ingest_tuncert_task,
     ]

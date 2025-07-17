@@ -21,11 +21,11 @@ x-airflow-common:
     AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
     # Python logging configuration
     PYTHONUNBUFFERED: '1'
-    _PIP_ADDITIONAL_REQUIREMENTS: ""
     # API Keys for CTI Pipeline
     OTX_API_KEY: ${OTX_API_KEY}
     GROQ_API_KEY: ${GROQ_API_KEY}
     OPENAI_API_KEY: ${OPENAI_API_KEY}
+    OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -122,7 +122,8 @@ services:
       # Pip cache optimization
       PIP_CACHE_DIR: "/root/.cache/pip"
       PIP_NO_CACHE_DIR: "false"
-      _PIP_ADDITIONAL_REQUIREMENTS: "feedparser==6.0.11 pypdf==5.7.0 beautifulsoup4==4.13.4 selenium==4.34.0"
+      _PIP_ADDITIONAL_REQUIREMENTS: "feedparser==6.0.11 pypdf==5.7.0 beautifulsoup4==4.13.4 selenium==4.34.0 numpy==1.26.4 nltk==3.8.1 spacy==3.7.4 python-dotenv==1.0.1 pyyaml==6.0.1 requests>=2.32.3 openai==1.30.1"
+
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
@@ -237,6 +238,31 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  # entity-chunking:
+  #   build:
+  #     context: ../entity_based_chunking
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - PYTHONDONTWRITEBYTECODE=1
+  #     - PYTHONPATH=/app
+  #     - GROQ_API_KEY=${GROQ_API_KEY}
+  #   volumes:
+  #     - ../entity_based_chunking:/app
+  #     - chunking-logs:/app/logs
+  #     - chunking-data:/app/data
+  #   ports:
+  #     - "8001:8000"
+  #   healthcheck:
+  #     test: ["CMD", "python", "-c", "import main; print('Service is healthy')"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   restart: always
+
 volumes:
   postgres-db-volume:
-  pip-cache-volume:  
+  pip-cache-volume:
+  # chunking-logs:
+  # chunking-data:  
