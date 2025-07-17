@@ -10,6 +10,17 @@ This module handles the cleaning step of the preprocessing pipeline:
 
 import re
 import html
+from .cleaning_patterns import (
+    HTML_PATTERNS,
+    BOILERPLATE_PATTERNS,
+    AD_PATTERNS,
+    NAV_PATTERNS,
+    BUTTON_PATTERNS,
+    OCR_PATTERNS,
+    NON_ASCII_PATTERNS,
+    NAV_TERMS,
+    NAV_PREFIXES
+)
 
 class TextCleaner:
     """
@@ -17,49 +28,14 @@ class TextCleaner:
     """
     
     def __init__(self):
-        # HTML/Web content patterns to remove
-        self.html_patterns = [
-            r'<[^>]+>',  # HTML tags
-            r'&[a-zA-Z0-9#]+;',  # HTML entities
-            r'javascript:[^"\']*',  # JavaScript URLs
-            r'onclick="[^"]*"',  # JavaScript events
-            r'style="[^"]*"',  # Inline styles
-            r'class="[^"]*"',  # CSS classes
-        ]
-        
-        # Boilerplate patterns commonly found in CTI documents
-        self.boilerplate_patterns = [
-            r'This document is TLP:[A-Z]+.*?(?=\n\n|\.$)',
-            r'Classification:\s*[A-Z\s]+.*?(?=\n\n|\.$)',
-            r'Distribution:\s*[A-Z\s]+.*?(?=\n\n|\.$)',
-            r'Page\s+\d+\s+of\s+\d+',
-            r'Table\s+of\s+Contents.*?(?=\n\n|\w)',
-            r'All\s+rights\s+reserved.*?(?=\n\n|\.$)',
-            r'©\s*\d{4}.*?(?=\n\n|\.$)',
-            r'Copyright\s*\d{4}.*?(?=\n\n|\.$)',
-        ]
-        
-        # Advertisement patterns
-        self.ad_patterns = [
-            r'Advertisement.*?(?=\n\n|\.$)',
-            r'Sponsored\s+by.*?(?=\n\n|\.$)',
-            r'Click\s+here.*?(?=\n\n|\.$)',
-            r'Subscribe\s+to.*?(?=\n\n|\.$)',
-            r'Follow\s+us.*?(?=\n\n|\.$)',
-            r'Like\s+us.*?(?=\n\n|\.$)',
-            r'Share\s+this.*?(?=\n\n|\.$)',
-        ]
-        
-        # OCR artifacts and noise
-        self.ocr_patterns = [
-            r'[|]{2,}',  # Multiple pipes
-            r'[=]{3,}',  # Multiple equals
-            r'[~]{3,}',  # Multiple tildes
-            r'[_]{3,}',  # Multiple underscores
-            r'\.{4,}',   # Multiple dots
-            r'\s+\.\s+',  # Floating dots
-            r'\s+,\s+',   # Floating commas
-        ]
+        # Import patterns from cleaning_patterns module
+        self.html_patterns = HTML_PATTERNS
+        self.boilerplate_patterns = BOILERPLATE_PATTERNS
+        self.ad_patterns = AD_PATTERNS
+        self.nav_patterns = NAV_PATTERNS
+        self.button_patterns = BUTTON_PATTERNS
+        self.ocr_patterns = OCR_PATTERNS
+        self.non_ascii_patterns = NON_ASCII_PATTERNS
         
         # Compile patterns for better performance
         self._compile_patterns()
@@ -71,7 +47,12 @@ class TextCleaner:
                                             for pattern in self.boilerplate_patterns]
         self.compiled_ad_patterns = [re.compile(pattern, re.IGNORECASE | re.DOTALL) 
                                    for pattern in self.ad_patterns]
+        self.compiled_nav_patterns = [re.compile(pattern, re.IGNORECASE | re.MULTILINE) 
+                                    for pattern in self.nav_patterns]
+        self.compiled_button_patterns = [re.compile(pattern, re.IGNORECASE | re.DOTALL) 
+                                       for pattern in self.button_patterns]
         self.compiled_ocr_patterns = [re.compile(pattern) for pattern in self.ocr_patterns]
+        self.compiled_non_ascii_patterns = [re.compile(pattern) for pattern in self.non_ascii_patterns]
     
     def remove_html(self, text: str) -> str:
         """Remove HTML tags and entities"""
@@ -117,6 +98,65 @@ class TextCleaner:
             print(f"[Clean] Error removing ads: {e}")
             return text
     
+    def remove_navigation(self, text: str) -> str:
+        """Remove navigation elements"""
+        try:
+            # First apply regex patterns
+            for pattern in self.compiled_nav_patterns:
+                text = pattern.sub('', text)
+            
+            # Then apply line-by-line cleaning for better accuracy
+            text = self._remove_nav_lines(text)
+            
+            return text
+            
+        except Exception as e:
+            print(f"[Clean] Error removing navigation: {e}")
+            return text
+    
+    def _remove_nav_lines(self, text: str) -> str:
+        """Remove navigation lines using line-by-line processing"""
+        try:
+            lines = text.split('\n')
+            cleaned_lines = []
+            
+            for line in lines:
+                line_stripped = line.strip()
+                line_lower = line_stripped.lower()
+                
+                # Skip empty lines (keep them)
+                if not line_stripped:
+                    cleaned_lines.append(line)
+                    continue
+                
+                # Skip if line matches navigation terms exactly
+                if line_lower in NAV_TERMS:
+                    continue
+                
+                # Skip if line starts with common navigation patterns
+                if any(line_lower.startswith(prefix) for prefix in NAV_PREFIXES):
+                    continue
+                
+                # Keep the line
+                cleaned_lines.append(line)
+            
+            return '\n'.join(cleaned_lines)
+            
+        except Exception as e:
+            print(f"[Clean] Error in line-by-line navigation removal: {e}")
+            return text
+    
+    def remove_buttons(self, text: str) -> str:
+        """Remove button and action elements"""
+        try:
+            for pattern in self.compiled_button_patterns:
+                text = pattern.sub('', text)
+            return text
+            
+        except Exception as e:
+            print(f"[Clean] Error removing buttons: {e}")
+            return text
+    
     def fix_ocr_artifacts(self, text: str) -> str:
         """Fix OCR artifacts and noise"""
         try:
@@ -126,6 +166,17 @@ class TextCleaner:
             
         except Exception as e:
             print(f"[Clean] Error fixing OCR artifacts: {e}")
+            return text
+    
+    def remove_non_ascii(self, text: str) -> str:
+        """Remove non-ASCII characters including emojis"""
+        try:
+            for pattern in self.compiled_non_ascii_patterns:
+                text = pattern.sub(' ', text)
+            return text
+            
+        except Exception as e:
+            print(f"[Clean] Error removing non-ASCII characters: {e}")
             return text
     
     def clean_whitespace(self, text: str) -> str:
@@ -142,21 +193,26 @@ class TextCleaner:
             print(f"[Clean] Error cleaning whitespace: {e}")
             return text
     
-    def remove_short_lines(self, text: str, min_length: int = 10) -> str:
-        """Remove lines that are too short to be meaningful"""
-        try:
-            lines = text.split('\n')
-            cleaned_lines = []
+    # def remove_short_lines(self, text: str, min_length: int = 5) -> str:
+    #     """Remove lines that are too short to be meaningful"""
+    #     try:
+    #         lines = text.split('\n')
+    #         cleaned_lines = []
             
-            for line in lines:
-                if len(line.strip()) >= min_length or line.strip() == '':
-                    cleaned_lines.append(line)
+    #         for line in lines:
+    #             line_stripped = line.strip()
+    #             # Keep empty lines and lines with minimum content
+    #             if line_stripped == '' or len(line_stripped) >= min_length:
+    #                 cleaned_lines.append(line)
+    #             else:
+    #                 # Skip very short lines that are likely noise
+    #                 print(f"[Clean] Removing short line: '{line_stripped}'")
             
-            return '\n'.join(cleaned_lines)
+    #         return '\n'.join(cleaned_lines)
             
-        except Exception as e:
-            print(f"[Clean] Error removing short lines: {e}")
-            return text
+    #     except Exception as e:
+    #         print(f"[Clean] Error removing short lines: {e}")
+    #         return text
     
     def clean(self, text: str) -> str:
         """
@@ -171,9 +227,11 @@ class TextCleaner:
             text = self.remove_html(text)
             text = self.remove_boilerplate(text)
             text = self.remove_ads(text)
+            text = self.remove_navigation(text)
+            text = self.remove_buttons(text)
+            text = self.remove_non_ascii(text)
             text = self.fix_ocr_artifacts(text)
-            text = self.clean_whitespace(text)
-            text = self.remove_short_lines(text)
+            text = self.clean_whitespace(text)  # Final whitespace cleanup
             
             final_length = len(text)
             print(f"[Clean] Text cleaning completed. Length: {original_length} -> {final_length}")
