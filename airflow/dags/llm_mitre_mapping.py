@@ -210,8 +210,7 @@ def process_all_chunks():
         processor = ChunkProcessor(ANTHROPIC_API_KEY)
 
         # Chargement des fichiers
-        logger.debug(f"Looking for chunk files in: {CHUNKS_DIR}")
-        chunk_files = glob.glob(os.path.join(CHUNKS_DIR, "chunks_*.json"))
+        chunk_files = load_chunk_files(CHUNKS_DIR)
 
         if not chunk_files:
             logger.error("No chunk files found!")
