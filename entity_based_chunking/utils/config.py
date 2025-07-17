@@ -23,22 +23,36 @@ def load_config(config_path: str = "config.yaml") -> dict:
 
 def validate_config(config: dict) -> None:
     """Validate required configuration parameters."""
-    required_keys = {
-        "groq": ["api_url", "model"],
-        "prompts": ["ioc_extraction"]
-    }
-    
-    for section, keys in required_keys.items():
+    # Check for required top-level sections
+    required_sections = ["llm", "prompts"]
+    for section in required_sections:
         if section not in config:
             raise ValueError(f"Missing configuration section: {section}")
-        
-        for key in keys:
-            if key not in config[section]:
-                raise ValueError(f"Missing configuration key: {section}.{key}")
+    
+    # Validate LLM configuration
+    llm_config = config["llm"]
+    if "provider" not in llm_config:
+        raise ValueError("Missing configuration key: llm.provider")
+    
+    provider = llm_config["provider"]
+    if provider not in llm_config:
+        raise ValueError(f"Missing configuration for provider: {provider}")
+    
+    # Validate provider-specific configuration
+    provider_config = llm_config[provider]
+    required_provider_keys = ["base_url", "model", "api_key_env"]
+    for key in required_provider_keys:
+        if key not in provider_config:
+            raise ValueError(f"Missing configuration key: llm.{provider}.{key}")
+    
+    # Validate prompts section
+    if "ioc_extraction" not in config["prompts"]:
+        raise ValueError("Missing configuration key: prompts.ioc_extraction")
     
     # Validate API key availability
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key_env = provider_config["api_key_env"]
+    api_key = os.getenv(api_key_env)
     if not api_key:
-        raise ValueError("GROQ_API_KEY environment variable not set")
+        raise ValueError(f"{api_key_env} environment variable not set")
     
     logger.debug("Configuration validation passed")

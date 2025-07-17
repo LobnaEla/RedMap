@@ -58,6 +58,29 @@ class CTIChunker:
         
         print("[Chunker] CTIChunker initialized.")
 
+    def _get_api_key_for_provider(self) -> Optional[str]:
+        """
+        Get the appropriate API key based on the configured provider.
+        
+        Returns:
+            The API key for the current provider, or None if not found.
+        """
+        if not self.config or 'llm' not in self.config:
+            print("[Chunker] Warning: No LLM config found, falling back to GROQ_API_KEY")
+            return os.environ.get("GROQ_API_KEY")
+        
+        provider = self.config['llm'].get('provider', 'groq')
+        provider_config = self.config['llm'].get(provider, {})
+        api_key_env = provider_config.get('api_key_env', 'GROQ_API_KEY')
+        
+        api_key = os.environ.get(api_key_env)
+        if not api_key:
+            print(f"[Chunker] Warning: {api_key_env} not found in environment")
+        else:
+            print(f"[Chunker] Found API key for provider '{provider}': {api_key[:10]}...")
+        
+        return api_key
+
     def chunk(self, text: str, window: int = 2) -> List[Dict[str, Any]]:
         """
         Main chunking method that processes text and returns IOC-based chunks.
@@ -76,8 +99,10 @@ class CTIChunker:
         print(f"[Chunker] Starting chunking with window size: {window}")
         
         try:
-            # Use the high-level function directly
-            chunks = process_cti_text(text, config=self.config, window=window)
+            # Get the correct API key based on configured provider
+            api_key = self._get_api_key_for_provider()
+            
+            chunks = process_cti_text(text, config=self.config, window=window, api_key=api_key)
             print(f"[Chunker] Chunking completed. Found {len(chunks)} chunks.")
             return chunks
         except Exception as e:
@@ -95,8 +120,9 @@ class CTIChunker:
             A list of dictionaries, each representing a found IOC.
         """
         try:
-            # Use the high-level function directly
-            return extract_iocs_from_module(text, config=self.config)
+            # Get the correct API key based on configured provider
+            api_key = self._get_api_key_for_provider()
+            return extract_iocs_from_module(text, config=self.config, api_key=api_key)
         except Exception as e:
             print(f"[Chunker] IOC extraction failed: {e}")
             return []

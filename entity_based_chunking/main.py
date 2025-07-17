@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def process_cti_text(text: str, config: Optional[Dict] = None, window: int = 2) -> List[Dict[str, Any]]:
+def process_cti_text(text: str, config: Optional[Dict] = None, window: int = 2, api_key: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Process CTI text and return IOC-based chunks.
     
@@ -29,6 +29,7 @@ def process_cti_text(text: str, config: Optional[Dict] = None, window: int = 2) 
         text: CTI report text to process
         config: Configuration dictionary (will load from config.yaml if None)
         window: Context window size around each IOC
+        api_key: Optional API key (will use environment variable if None)
         
     Returns:
         List of chunks with IOC information
@@ -43,7 +44,7 @@ def process_cti_text(text: str, config: Optional[Dict] = None, window: int = 2) 
             validate_config(config)
         
         # Initialize processor
-        processor = CTIProcessor(config=config)
+        processor = CTIProcessor(api_key=api_key, config=config)
         
         # Process the report with IOC-based chunking
         results = processor.process_report(text, window=window)
@@ -85,13 +86,14 @@ def process_cti_file(file_path: Union[str, Path], config: Optional[Dict] = None,
     return process_cti_text(text, config, window)
 
 
-def extract_iocs_only(text: str, config: Optional[Dict] = None) -> List[Dict[str, str]]:
+def extract_iocs_only(text: str, config: Optional[Dict] = None, api_key: Optional[str] = None) -> List[Dict[str, str]]:
     """
     Extract only IOCs from text without chunking.
     
     Args:
         text: CTI report text to process
         config: Configuration dictionary (will load from config.yaml if None)
+        api_key: Optional API key (will use environment variable if None)
         
     Returns:
         List of IOC dictionaries with 'ioc' and 'type' keys
@@ -106,7 +108,7 @@ def extract_iocs_only(text: str, config: Optional[Dict] = None) -> List[Dict[str
             validate_config(config)
         
         # Initialize processor
-        processor = CTIProcessor(config=config)
+        processor = CTIProcessor(api_key=api_key, config=config)
         
         # Extract IOCs only
         iocs = processor.get_iocs_only(text)
