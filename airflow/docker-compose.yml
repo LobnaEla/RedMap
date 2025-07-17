@@ -31,7 +31,6 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-    - ../cti_pipeline:/opt/airflow/cti_pipeline
     - ../:/opt/project  
     - pip-cache-volume:/root/.cache/pip  
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
@@ -238,28 +237,28 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-  # entity-chunking:
-  #   build:
-  #     context: ../entity_based_chunking
-  #     dockerfile: Dockerfile
-  #   environment:
-  #     - PYTHONUNBUFFERED=1
-  #     - PYTHONDONTWRITEBYTECODE=1
-  #     - PYTHONPATH=/app
-  #     - GROQ_API_KEY=${GROQ_API_KEY}
-  #   volumes:
-  #     - ../entity_based_chunking:/app
-  #     - chunking-logs:/app/logs
-  #     - chunking-data:/app/data
-  #   ports:
-  #     - "8001:8000"
-  #   healthcheck:
-  #     test: ["CMD", "python", "-c", "import main; print('Service is healthy')"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #     start_period: 30s
-  #   restart: always
+# entity-chunking:
+#   build:
+#     context: ../entity_based_chunking
+#     dockerfile: Dockerfile
+#   environment:
+#     - PYTHONUNBUFFERED=1
+#     - PYTHONDONTWRITEBYTECODE=1
+#     - PYTHONPATH=/app
+#     - GROQ_API_KEY=${GROQ_API_KEY}
+#   volumes:
+#     - ../entity_based_chunking:/app
+#     - chunking-logs:/app/logs
+#     - chunking-data:/app/data
+#   ports:
+#     - "8001:8000"
+#   healthcheck:
+#     test: ["CMD", "python", "-c", "import main; print('Service is healthy')"]
+#     interval: 30s
+#     timeout: 10s
+#     retries: 5
+#     start_period: 30s
+#   restart: always
 
 volumes:
   postgres-db-volume:

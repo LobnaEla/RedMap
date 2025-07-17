@@ -8,7 +8,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.models import Variable
-from cti_pipeline.scripts.llm.core.file_utils import save_processing_results
+from cti_pipeline.src.llm.core.file_utils import save_processing_results
 
 
 ANTHROPIC_API_KEY = Variable.get("ANTHROPIC_API_KEY")
@@ -55,7 +55,7 @@ dag = DAG(
 # ================================
 def process_all_chunks():
     """Traite tous les chunks avec le modèle LLM"""
-    from cti_pipeline.scripts.llm.core.chunk_processor import ChunkProcessor
+    from cti_pipeline.src.llm.core.chunk_processor import ChunkProcessor
 
     try:
         # Initialisation du processeur
