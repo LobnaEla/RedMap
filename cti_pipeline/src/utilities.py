@@ -7,26 +7,26 @@ import re
 
 
 # Base data directory
-BASE_DATA_DIR = "/opt/project/cti_pipeline/data/"
+BASE_DATA_DIR = "cti_pipeline/data/"
 
 # Organized subdirectories under /data
-DATA_DIR = BASE_DATA_DIR  
+DATA_DIR = BASE_DATA_DIR
 METADATA_DIR = os.path.join(BASE_DATA_DIR, "metadata")
-PDF_DIR = "/opt/project/cti_pipeline/PDFs/" 
-PROCESSED_DIR = os.path.join(BASE_DATA_DIR, "processed") 
+PDF_DIR = "cti_pipeline/PDFs/"
+PROCESSED_DIR = os.path.join(BASE_DATA_DIR, "processed")
 CHUNKS_DIR = os.path.join(BASE_DATA_DIR, "chunks")
 RAW_SCRAPED_DIR = os.path.join(BASE_DATA_DIR, "raw_scraped_data")
 
 # Create all required directories
 directories_to_create = [
     BASE_DATA_DIR,
-    METADATA_DIR, 
+    METADATA_DIR,
     PDF_DIR,
     PROCESSED_DIR,
     CHUNKS_DIR,
     RAW_SCRAPED_DIR,
     os.path.join(RAW_SCRAPED_DIR, "rss"),
-    os.path.join(RAW_SCRAPED_DIR, "otx"), 
+    os.path.join(RAW_SCRAPED_DIR, "otx"),
     os.path.join(RAW_SCRAPED_DIR, "twitter"),
     os.path.join(RAW_SCRAPED_DIR, "blogs"),
     os.path.join(RAW_SCRAPED_DIR, "tuncert"),

@@ -44,7 +44,6 @@ CTI_KEYWORDS = [
 ]
 
 
-
 def extract_article_links(
     index_url: str, domain_filter: Optional[str] = None
 ) -> List[str]:
@@ -173,7 +172,7 @@ def _save_articles(articles: List[Dict], blog_name: str, output_dir: str):
     # Create structured directory for blog data
     blogs_dir = os.path.join(output_dir, "raw_scraped_data", "blogs")
     os.makedirs(blogs_dir, exist_ok=True)
-    
+
     filename = f"blog_{blog_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
     with open(os.path.join(blogs_dir, filename), "w", encoding="utf-8") as f:
         for article in articles:
@@ -190,5 +189,9 @@ def ingest_all_blog(blog_sources: List[Dict], data_dir: str, metadata_dir: str):
 
 
 if __name__ == "__main__":
-    ingest_all_blog(BLOG_SOURCES, DATA_DIR, METADATA_DIR)
-    print("[✔] Blog scraping completed.")
+    try:
+        ingest_all_blog(BLOG_SOURCES, DATA_DIR, METADATA_DIR)
+        print("[OK] Blog scraping completed.")
+    except Exception as e:
+        print(f"[ERROR] An error occurred during blog ingestion: {str(e)}")
+        raise

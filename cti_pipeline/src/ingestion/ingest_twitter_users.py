@@ -142,7 +142,8 @@ def save_twitter_data(tweets: List[Dict], username: str, data_dir: str):
     os.makedirs(twitter_dir, exist_ok=True)
 
     output_file = os.path.join(
-        twitter_dir, f"twitter_{username}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+        twitter_dir,
+        f"twitter_{username}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl",
     )
     with open(output_file, "w", encoding="utf-8") as f:
         for tweet in tweets:
@@ -174,6 +175,13 @@ def ingest_all_twitter_users(
 
 if __name__ == "__main__":
     from cti_pipeline.src.utilities import DATA_DIR, METADATA_DIR
-    twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
-    stats = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
-    print(f"[+] Processed {stats['processed']} new tweets from {stats['users']} users.")
+
+    try:
+        twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
+        stats = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
+        print(
+            f"[OK] Processed {stats['processed']} new tweets from {stats['users']} users."
+        )
+    except Exception as e:
+        print(f"[ERROR] An error occurred during Twitter ingestion: {str(e)}")
+        raise

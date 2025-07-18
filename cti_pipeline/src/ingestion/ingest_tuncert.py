@@ -33,7 +33,6 @@ session.verify = True  # Ou le chemin vers votre certificat .pem
 import sys
 
 
-
 requests.packages.urllib3.disable_warnings(
     InsecureRequestWarning
 )  # Désactive uniquement les warnings SSL
@@ -74,8 +73,6 @@ def fetch_vulnerability_list():
         soup = BeautifulSoup(response.text, "html.parser")
         vuln_links = []
         tables = soup.find_all("table", class_="views-table")
-
-
 
         for table in tables:
             tbody = table.find("tbody")
@@ -211,11 +208,11 @@ def extract_section_by_label(content, label):
 
 def ingest_tuncert_vulnerabilities(data_dir, metadata_dir):
     processed_data = load_processed_items("tuncert")
-    
+
     # Create structured directory for TUNCERT data
     tuncert_dir = os.path.join(data_dir, "raw_scraped_data", "tuncert")
     os.makedirs(tuncert_dir, exist_ok=True)
-    
+
     output_file = os.path.join(
         tuncert_dir, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
     )
@@ -257,4 +254,8 @@ def ingest_tuncert_vulnerabilities(data_dir, metadata_dir):
 
 if __name__ == "__main__":
     debug_mode = "--debug" in sys.argv
-    count = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
+    try:
+        count = ingest_tuncert_vulnerabilities(DATA_DIR, METADATA_DIR)
+        print(f"[OK] Processed {count} TUNCERT vulnerabilities.")
+    except Exception as e:
+        print(f"[ERROR] An error occurred during TUNCERT ingestion: {str(e)}")

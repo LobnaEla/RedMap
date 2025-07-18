@@ -1,5 +1,6 @@
 import os
 import json
+from dotenv import load_dotenv
 from datetime import datetime
 import requests
 from typing import Dict, List, Optional
@@ -15,6 +16,7 @@ from cti_pipeline.src.utilities import (
 
 
 # Load environment variables
+load_dotenv()
 OTX_API_KEY = os.getenv("OTX_API_KEY")
 OTX_API_URL = "https://otx.alienvault.com/api/v1/pulses/subscribed"
 
@@ -72,11 +74,11 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
         return stats
 
     stats["total"] = len(pulses)
-    
+
     # Create structured directory for OTX data
     otx_dir = os.path.join(data_dir, "raw_scraped_data", "otx")
     os.makedirs(otx_dir, exist_ok=True)
-    
+
     output_file = os.path.join(
         otx_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
     )
@@ -99,6 +101,10 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
 
 
 if __name__ == "__main__":
-    results = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
-    print(f"Results: {results}")
-    print("[✔] OTX pulse ingestion completed.")
+    try:
+        results = ingest_otx_pulses(DATA_DIR, METADATA_DIR)
+        print(f"Results: {results}")
+        print("[OK] OTX pulse ingestion completed.")
+    except Exception as e:
+        print(f"[ERROR] OTX pulse ingestion failed: {str(e)}")
+        raise

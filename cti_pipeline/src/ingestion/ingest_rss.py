@@ -53,11 +53,11 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
         return stats
 
     stats["total"] = len(feed.entries)
-    
+
     # Create structured directory for RSS data
     rss_dir = os.path.join(data_dir, "raw_scraped_data", "rss")
     os.makedirs(rss_dir, exist_ok=True)
-    
+
     output_file = f"raw_rss_certfr_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
 
     with open(os.path.join(rss_dir, output_file), "w", encoding="utf-8") as f:
@@ -81,5 +81,9 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
 
 
 if __name__ == "__main__":
-    results = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
-    print("[✔] RSS feed ingestion completed.")
+    try:
+        results = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
+        print("[OK] RSS feed ingestion completed.")
+    except Exception as e:
+        print(f"[ERROR] RSS feed ingestion failed: {str(e)}")
+        raise
