@@ -1,4 +1,5 @@
 cti_pipeline/config/.env
+cti_pipeline/logs
 .venv
 **/data/
 __pycache__/
