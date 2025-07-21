@@ -9,10 +9,10 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 # Add the project root to Python path for imports
 sys.path.append("/opt/project")  # Path inside Docker container
 
-# Centralized path configuration 
+# Centralized path configuration
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
-METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"  
+METADATA_DIR = f"{BASE_PROJECT_PATH}/data/metadata"
 PDF_DIR = f"{BASE_PROJECT_PATH}/PDFs"
 
 # Default arguments for the DAG
@@ -220,7 +220,7 @@ trigger_preprocessing = TriggerDagRunOperator(
     >> [
         ingest_rss_task,
         ingest_otx_task,
-        ingest_twitter_task, 
+        ingest_twitter_task,
         ingest_blog_task,
         ingest_tuncert_task,
     ]

@@ -33,26 +33,42 @@ chunking:
 
 prompts:
   ioc_extraction: |
+    prompts:
+  ioc_extraction: |
     You are a cybersecurity analyst specializing in IOC extraction.
     Analyze the provided text and extract all Indicators of Compromise (IOCs).
-    Return the results in a JSON array, where each object includes:
+    Return the results as a JSON array, where each object includes:
     {
       "ioc": "<indicator_value>",
       "type": "<indicator_type>"
     }
 
     Include, but do not limit to, the following types:
-    - Network-based: IP addresses, domains, URLs, email addresses
-    - Host-based: file paths, filenames, file extensions, process names, registry keys
-    - File-related: file hashes (MD5, SHA-1, SHA-256, SHA-512)
-    - Email-related: email addresses, email subjects, malicious attachment names
-    - Cryptocurrency: Bitcoin addresses, Ethereum addresses, wallet IDs
-    - TTPs: MITRE ATT&CK technique IDs (T####.###)
-    - CVE: CVE identifiers (CVE-YYYY-####)
+    - ipv4
+    - ipv6
+    - domain
+    - url
+    - email
+    - file_path
+    - filename
+    - file_extension
+    - process_name
+    - registry_key
+    - hash_md5
+    - hash_sha1
+    - hash_sha256
+    - hash_sha512
+    - email_subject
+    - attachment_name
+    - bitcoin_address
+    - ethereum_address
+    - wallet_id
+    - mitre_technique_id
+    - cve_id
 
-    Normalize any obfuscated indicators (e.g., hxxp → http, [.] → ., [@] → @).
-    Do not include duplicates. Only extract IOCs that are explicitly mentioned.
-    Focus on actionable indicators that can be used for threat hunting.
+    Normalize obfuscated indicators (e.g., hxxp → http, [.] → ., [@] → @).
+    Do not include duplicates. Only extract IOCs explicitly mentioned in the text.
+   
 
 logging:
   level: "INFO"
