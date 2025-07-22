@@ -7,30 +7,30 @@ import requests
 from typing import Dict, List, Pattern
 
 
-def fetch_malware_names_from_malpedia() -> List[str]:
-    """
-    Fetch malware names from Malpedia to avoid manual list updates.
-    Auto-loads current malware family names for preservation during anonymization.
-    """
-    try:
-        url = "https://malpedia.caad.fkie.fraunhofer.de/families/"
-        response = requests.get(url, timeout=10)
-        if response.status_code != 200:
-            print(f"[Pattern Util] Failed to fetch malware names from Malpedia: HTTP {response.status_code}")
-            return []
+# def fetch_malware_names_from_malpedia() -> List[str]:
+#     """
+#     Fetch malware names from Malpedia to avoid manual list updates.
+#     Auto-loads current malware family names for preservation during anonymization.
+#     """
+#     try:
+#         url = "https://malpedia.caad.fkie.fraunhofer.de/families/"
+#         response = requests.get(url, timeout=10)
+#         if response.status_code != 200:
+#             print(f"[Pattern Util] Failed to fetch malware names from Malpedia: HTTP {response.status_code}")
+#             return []
 
-        # Extract malware names from <a href="/details/xyz">xyz</a>
-        pattern = re.compile(r'<a href="/details/[^"]+">([^<]+)</a>')
-        names = pattern.findall(response.text)
+#         # Extract malware names from <a href="/details/xyz">xyz</a>
+#         pattern = re.compile(r'<a href="/details/[^"]+">([^<]+)</a>')
+#         names = pattern.findall(response.text)
         
-        # Clean and deduplicate
-        names = list(set(name.strip() for name in names if name.strip()))
-        print(f"[Pattern Util] Successfully fetched {len(names)} malware names from Malpedia")
-        return names
+#         # Clean and deduplicate
+#         names = list(set(name.strip() for name in names if name.strip()))
+#         print(f"[Pattern Util] Successfully fetched {len(names)} malware names from Malpedia")
+#         return names
         
-    except Exception as e:
-        print(f"[Pattern Util] Error fetching malware names from Malpedia: {e}")
-        return []
+#     except Exception as e:
+#         print(f"[Pattern Util] Error fetching malware names from Malpedia: {e}")
+#         return []
 
 class PatternManager:
     """Manages regex patterns for anonymization"""
@@ -67,16 +67,16 @@ class PatternManager:
         self.compiled_patterns: Dict[str, Pattern] = {}
         self.malware_names: List[str] = []
         self._compile_patterns()
-        self._load_malware_names()
+        # self._load_malware_names()
     
-    def _load_malware_names(self):
-        """Load malware names from various sources"""
-        malpedia_names = fetch_malware_names_from_malpedia()
-        self.malware_names = malpedia_names
+    # def _load_malware_names(self):
+    #     """Load malware names from various sources"""
+    #     malpedia_names = fetch_malware_names_from_malpedia()
+    #     self.malware_names = malpedia_names
     
-    def get_malware_names(self) -> List[str]:
-        """Get list of known malware names"""
-        return self.malware_names
+    # def get_malware_names(self) -> List[str]:
+    #     """Get list of known malware names"""
+    #     return self.malware_names
     
     def _compile_patterns(self):
         """Compile regex patterns for better performance"""

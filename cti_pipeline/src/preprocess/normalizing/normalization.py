@@ -15,8 +15,11 @@ import unicodedata
 import os
 import sys
 
-# Use relative import for utils
-from ..utils.preservers import PreservationManager
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+from shared.preservers import PreservationManager
 
 class TextNormalizer:
     """
@@ -31,10 +34,10 @@ class TextNormalizer:
             (r'\b(\d{4})[/\-\.](\d{1,2})[/\-\.](\d{1,2})\b', r'\1-\2-\3'),  # YYYY/MM/DD -> YYYY-MM-DD
         ]
         
-        # Time patterns to normalize
+        # Time patterns to normalize (order matters - more specific patterns first)
         self.time_patterns = [
-            (r'\b(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)\b', r'\1:\2:\3 \4'),  # Normalize AM/PM
-            (r'\b(\d{1,2}):(\d{2})\s*(AM|PM)\b', r'\1:\2:00 \3'),  # Add seconds
+            # Only match times that don't already have seconds - look for space or end after minutes
+            (r'\b(\d{1,2}):(\d{2})(\s+(?:AM|PM))\b', r'\1:\2:00\3'),
         ]
         
         # Punctuation normalization
@@ -46,17 +49,17 @@ class TextNormalizer:
             (r'[«»]', '"'),  # Normalize guillemets
         ]
         
-        # Common text artifacts to fix
+        # Common text artifacts to fix (order matters)
         self.artifact_patterns = [
-            (r'\s+', ' '),  # Multiple spaces to single space
-            (r'\n\s*\n', '\n\n'),  # Multiple newlines to double newline
-            (r'\t', ' '),  # Tabs to spaces
             (r'\r\n', '\n'),  # Windows line endings to Unix
             (r'\r', '\n'),  # Old Mac line endings to Unix
+            (r'\n\s*\n', '\n\n'),  # Multiple newlines to double newline
+            (r'\t+', '  '),  # Multiple tabs to double spaces
+            (r'   +', ' '),  # Three or more spaces to single space
         ]
         
         # Case normalization for important terms
-        self.preservation_manager = PreservationManager()
+        self.preservation_manager = PreservationManager() if PreservationManager else None
         
         # Compile patterns for better performance
         self._compile_patterns()
@@ -75,7 +78,11 @@ class TextNormalizer:
     def fix_encoding(self, text: str) -> str:
         """Fix text encoding issues"""
         try:
-            # Replace common problematic characters
+            # Ensure UTF-8 encoding
+            if isinstance(text, bytes):
+                text = text.decode('utf-8', errors='replace')
+            
+            # Replace common problematic multi-byte characters that result from encoding issues
             replacements = {
                 '\u00c2\u00a0': ' ',  # Non-breaking space
                 '\u00c2\u00ab': '"',  # Left guillemet
@@ -90,10 +97,6 @@ class TextNormalizer:
             for bad_char, good_char in replacements.items():
                 text = text.replace(bad_char, good_char)
             
-            # Ensure UTF-8 encoding
-            if isinstance(text, bytes):
-                text = text.decode('utf-8', errors='replace')
-            
             return text
             
         except Exception as e:
@@ -103,10 +106,15 @@ class TextNormalizer:
     def normalize_unicode(self, text: str) -> str:
         """Normalize Unicode characters to consistent form"""
         try:
+            # Normalize to NFC form (canonical decomposition followed by canonical composition)
             normalized = unicodedata.normalize('NFC', text)
+            
+            # Remove invisible characters (zero-width spaces, direction marks, etc.)
             normalized = re.sub(r'[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]', '', normalized)
-            normalized = normalized.replace('\u00a0', ' ')
-            normalized = re.sub(r'[\u2000-\u200a\u2028\u2029\u3000]', ' ', normalized)
+            
+            # Normalize various types of spaces to regular spaces (avoid overlap with encoding fixes)
+            normalized = normalized.replace('\u00a0', ' ')  # Non-breaking space
+            normalized = re.sub(r'[\u2000-\u200a\u2028\u2029\u3000]', ' ', normalized)  # Various Unicode spaces
             
             return normalized
             
@@ -127,8 +135,19 @@ class TextNormalizer:
     def normalize_times(self, text: str) -> str:
         """Normalize time formats"""
         try:
-            for pattern, replacement in self.compiled_time_patterns:
-                text = pattern.sub(replacement, text)
+            # Pattern to match times with AM/PM
+            time_pattern = re.compile(r'\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(AM|PM)\b', re.IGNORECASE)
+            
+            def replace_time(match):
+                hour, minute, seconds, ampm = match.groups()
+                if seconds is None:
+                    # Add seconds if not present
+                    return f"{hour}:{minute}:00 {ampm}"
+                else:
+                    # Keep existing seconds
+                    return f"{hour}:{minute}:{seconds} {ampm}"
+            
+            text = time_pattern.sub(replace_time, text)
             return text
         except Exception as e:
             print(f"[Normalize] Error normalizing times: {e}")
@@ -190,16 +209,16 @@ class TextNormalizer:
         """
         try:
             def preserve_match(match):
-                token = match.group(0)
-                if self.preservation_manager and self.preservation_manager.is_ioc(token):
-                    return token  # Don't modify recognized IOCs
-                return f"http://{token}"  # Normalize only non-IOC "www" patterns
+                full_match = match.group(0)
+                if self.preservation_manager and self.preservation_manager.is_ioc(full_match):
+                    return full_match  # Don't modify recognized IOCs
+                return f"http://{full_match}"  # Normalize only non-IOC "www" patterns
 
             # Fix malformed IPs with leading zeroes
             text = re.sub(r'\b0{2,}(\d+)\.0{2,}(\d+)\.0{2,}(\d+)\.0{2,}(\d+)\b', r'\1.\2.\3.\4', text)
 
             # Normalize www.* to http://www.* unless recognized as an IOC
-            text = re.sub(r'\bwww\.([a-zA-Z0-9.-]+)', preserve_match, text)
+            text = re.sub(r'\bwww\.[a-zA-Z0-9.-]+', preserve_match, text)
 
             return text
 

@@ -33,7 +33,7 @@ from typing import Dict, Any
 from pathlib import Path
 
 # Core components (simplified structure)
-from .utils import *
+from .shared import *
 
 # Main preprocessing components (moved to core/)
 from .extraction import TextExtractor, ExtractionResult, extract_text_from_file, extract_with_result

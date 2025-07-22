@@ -14,6 +14,7 @@ class PreservationManager:
         self.agency_names = self._load_agency_names()
         self.facility_types = self._load_facility_types()
         self.classification_terms = self._load_classification_terms()
+        self.custom_preserve_patterns = set() 
         self.pattern_manager = PatternManager()
     
     def _load_technical_terms(self) -> Set[str]:
