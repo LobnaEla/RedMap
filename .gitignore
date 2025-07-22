@@ -1,5 +1,6 @@
 cti_pipeline/config/.env
 cti_pipeline/logs
+cti_pipeline/PDFs/
 .venv
 **/data/
 __pycache__/

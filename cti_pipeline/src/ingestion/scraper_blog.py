@@ -16,7 +16,7 @@ from cti_pipeline.src.utilities import (
     PDF_DIR,
 )
 
-from cti_pipeline.blog_sources import BLOG_SOURCES
+from cti_pipeline.config.blog_sources import BLOG_SOURCES
 
 # Remove hardcoded DATA_DIR since it will be passed as parameter
 

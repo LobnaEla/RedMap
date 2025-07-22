@@ -15,7 +15,7 @@ from cti_pipeline.src.ingestion.ingest_twitter_users import ingest_all_twitter_u
 from cti_pipeline.src.ingestion.scraper_blog import ingest_all_blog
 # from cti_pipeline.src.preprocessing.ocr_client import extract_text
 from cti_pipeline.src.ingestion.ingest_tuncert import ingest_tuncert_vulnerabilities
-from cti_pipeline.blog_sources import BLOG_SOURCES
+from cti_pipeline.config.blog_sources import BLOG_SOURCES
 
 # from cti_pipeline.src.preprocessing.cti_preprocessing import extract_iocs_and_ttps_from_file, save_result_to_json, export_all_iocs_to_json
 

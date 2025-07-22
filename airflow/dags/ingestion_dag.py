@@ -95,7 +95,7 @@ def ingest_blogs():
     """Ingest data from blog sources"""
     try:
         from cti_pipeline.src.ingestion.scraper_blog import ingest_all_blog
-        from cti_pipeline.blog_sources import BLOG_SOURCES
+        from cti_pipeline.config.blog_sources import BLOG_SOURCES
 
         os.makedirs(DATA_DIR, exist_ok=True)
         os.makedirs(METADATA_DIR, exist_ok=True)
