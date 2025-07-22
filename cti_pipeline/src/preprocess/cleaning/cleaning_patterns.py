@@ -120,7 +120,16 @@ OCR_PATTERNS = [
 ]
 
 # Non-ASCII character patterns (emojis, special characters)
-NON_ASCII_PATTERNS = r'[^\x00-\x7F]+'
+NON_ASCII_PATTERNS = [
+    r'[^\x00-\x7F]+',  # Non-ASCII characters
+    r'[\u2600-\u26FF]',  # Miscellaneous Symbols (emojis)
+    r'[\u2700-\u27BF]',  # Dingbats
+    r'[\uFE00-\uFE0F]',  # Variation Selectors
+    r'[\U0001F600-\U0001F64F]',  # Emoticons
+    r'[\U0001F300-\U0001F5FF]',  # Misc Symbols and Pictographs
+    r'[\U0001F680-\U0001F6FF]',  # Transport and Map
+    r'[\U0001F1E0-\U0001F1FF]',  # Regional indicator symbols
+]
 
 # Pattern compilation flags for different categories
 PATTERN_FLAGS = {
