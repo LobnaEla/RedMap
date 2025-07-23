@@ -26,9 +26,6 @@ except ImportError:
         spec.loader.exec_module(base_module)
         BaseExtraction = base_module.BaseExtraction
 
-from pypdf import PdfReader
-
-
 class PDFExtraction(BaseExtraction):
     """
     PDF-specific text extraction class.
@@ -49,6 +46,7 @@ class PDFExtraction(BaseExtraction):
     def _extract_pdf(self, file_path: str) -> str:
         """Extract text from PDF file using pypdf"""
         try:
+            from pypdf import PdfReader
             with open(file_path, "rb") as f:
                 reader = PdfReader(f)
                 text_content = ""
@@ -66,7 +64,7 @@ class PDFExtraction(BaseExtraction):
 
 
 # Convenience function for direct usage
-def extract_pdf_text(file_path: str) -> str:
+def extract_pdf_from_file(file_path: str) -> str:
     """Extract text from a PDF file"""
     extractor = PDFExtraction()
     result = extractor.extract_from_file(file_path)

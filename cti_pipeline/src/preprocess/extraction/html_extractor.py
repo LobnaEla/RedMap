@@ -65,7 +65,7 @@ class HTMLExtraction(BaseExtraction):
 
 
 # Convenience function for direct usage
-def extract_html_text(file_path: str) -> str:
+def extract_html_from_file(file_path: str) -> str:
     """Extract text from an HTML file"""
     extractor = HTMLExtraction()
     result = extractor.extract_from_file(file_path)

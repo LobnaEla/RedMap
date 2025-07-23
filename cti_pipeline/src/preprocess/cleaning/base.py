@@ -102,6 +102,6 @@ class BaseCleaning():
             return text
 
 # Convenience function for direct usage
-def clean_text(text: str) -> str:
+def clean_base_text(text: str) -> str:
     cleaner = BaseCleaning()
     return cleaner.clean(text)

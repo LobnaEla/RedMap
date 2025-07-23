@@ -61,7 +61,7 @@ class TXTExtraction(BaseExtraction):
 
 
 # Convenience function for direct usage
-def extract_txt_text(file_path: str) -> str:
+def extract_text_from_file(file_path: str) -> str:
     """Extract text from a TXT file"""
     extractor = TXTExtraction()
     result = extractor.extract_from_file(file_path)

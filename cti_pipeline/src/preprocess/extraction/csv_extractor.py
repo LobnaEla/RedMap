@@ -64,7 +64,7 @@ class CSVExtraction(BaseExtraction):
 
 
 # Convenience function for direct usage
-def extract_csv_text(file_path: str) -> str:
+def extract_csv_from_file(file_path: str) -> str:
     """Extract text from a CSV file"""
     extractor = CSVExtraction()
     result = extractor.extract_from_file(file_path)

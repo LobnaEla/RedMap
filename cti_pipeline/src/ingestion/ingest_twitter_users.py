@@ -152,11 +152,11 @@ def save_twitter_data(tweets: List[Dict], username: str, data_dir: str):
 
 
 def ingest_all_twitter_users(
-    users: List[str], 
     data_dir: str, 
     metadata_dir: str = "cti_pipeline/data/metadata"
 ) -> Dict[str, int]:
     """Point d'entrée principal pour l'ingestion Twitter"""
+    users = ["vxunderground", "CERT_FR", "CISACyber"]
     stats = {"processed": 0, "users": len(users)}
     processed_data = load_processed_items("twitter")
 

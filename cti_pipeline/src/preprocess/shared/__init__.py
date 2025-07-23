@@ -9,6 +9,5 @@ from .preservers import PreservationManager
 
 __all__ = [
     'ErrorHandler',
-    'MetricsCollector',
     'PreservationManager'
 ]

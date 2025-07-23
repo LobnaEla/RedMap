@@ -36,12 +36,12 @@ Usage Examples:
 from .shared import *
 
 # Main preprocessing components (moved to core/)
-from .extraction import TextExtractor, ExtractionResult, extract_text_from_file, extract_with_result
+from .extraction import extract_text
 
 # Individual processing components (moved to core/)
-from .cleaning import TextCleaner, TextNormalizer, clean_text, normalize_text
+from .cleaning import clean_text
+from .normalizing import normalize_text
 from .chunking import CTIChunker
-from .router import route_pipeline
 
 # Convenience functions for quick usage
 # from .preprocessing import (
@@ -59,17 +59,11 @@ __version__ = "2.0.0"
 
 __all__ = [
     # Error handling (from utils)
-    'ErrorHandler', 'MetricsCollector',
+    'ErrorHandler'
     
     # Extraction
-    'TextExtractor', 'ExtractionResult', 'extract_text_from_file', 'extract_with_result',
-    
-    # Individual components
-    'TextCleaner', 'TextNormalizer', 'CTIChunker',
-    
-    # Convenience functions
-    'clean_text', 'normalize_text',
-    'quick_extract_text', 'quick_clean_text', 'quick_chunk_text'
+    'extract_text',
 
-    'route_pipeline'
+    # Individual components
+    'clean_text', 'normalize_text', 'CTIChunker',
 ]
