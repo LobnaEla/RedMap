@@ -140,5 +140,12 @@ trigger_llm_mapping = TriggerDagRunOperator(
     dag=dag,
 )
 
+trigger_rag_mapping = TriggerDagRunOperator(
+    task_id="trigger_rag_mapping",
+    trigger_dag_id="rag_dag",
+    wait_for_completion=False,
+    dag=dag,
+)
+
 # === DAG Flow ===
-start_task >> extract_task >> clean_task >> normalize_task >> validate_task >> end_task >> trigger_llm_mapping
+start_task >> extract_task >> clean_task >> normalize_task >> validate_task >> end_task >> trigger_llm_mapping >> trigger_rag_mapping
