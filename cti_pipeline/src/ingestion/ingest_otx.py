@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 from typing import Dict, List, Optional
 
-from cti_pipeline.src.utilities import (
+from ..utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,

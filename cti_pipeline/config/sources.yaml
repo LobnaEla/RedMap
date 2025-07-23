@@ -1,0 +1,20 @@
+sources:
+  - name: otx
+    module: src.ingestion.ingest_otx
+    function: ingest_otx_pulses  
+
+  - name: rss
+    module: src.ingestion.ingest_rss
+    function: ingest_certfr_rss
+
+  - name: tuncert
+    module: src.ingestion.ingest_tuncert
+    function: ingest_tuncert_vulnerabilities
+
+  - name: twitter
+    module: src.ingestion.ingest_twitter_users
+    function: ingest_all_twitter_users
+
+  - name: blog
+    module: src.ingestion.scraper_blog
+    function: ingest_all_blog

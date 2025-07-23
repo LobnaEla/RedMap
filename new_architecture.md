@@ -1,39 +1,90 @@
 cti_pipeline/
-└── preprocess/
-    
-    # Cleaning Step
-    cleaning/
-    ├── __init__.py
-    ├── base.py                      # BaseCleaning class with shared logic
-    ├── html_cleaning.py              # HTMLCleaning inherits from BaseCleaning
-    └── pdf_cleaning.py               # PDFCleaning inherits from BaseCleaning
-
-    # Extraction Step
-    extraction/
-    ├── __init__.py
-    ├── base.py                      # BaseExtraction class
-    └── html_extraction.py           # HTMLExtraction inherits from BaseExtraction
-
-    # Normalization Step
-    normalization/
-    ├── __init__.py
-    └── normalize_generic.py        # Generic normalization step
-
-    # Chunking Step
-    chunking/
-    ├── __init__.py
-    └── chunk_by_sentences.py       # Chunking by sentence logic
-
-    # Preprocess Utilities
-    utils/
-    ├── __init__.py
-    ├── error_handling.py           # Error handling logic
-    └── metrics.py                  # Time/performance logging, etc.
-
-    # Preprocess Orchestration
-    registry.py                                   # Maps string names to class/function
-    runner.py                                     # Executes the preprocessing pipeline from config
-    validator.py                                  # Optional: validates pipeline config (YAML schema)
+├── config/
+│   ├── blog_sources.py
+│   ├── pipelines.yaml
+│   ├── sources.yaml
+│   └── .env.example
+├── data/
+├── logs/
+├── PDFs/
+├── samples/
+├── src/
+│   ├── ingestion/
+│   │   ├── __init__.py
+│   │   ├── ingest_otx.py
+│   │   ├── ingest_rss.py
+│   │   ├── ingest_tuncert.py
+│   │   ├── ingest_twitter_users.py
+│   │   └── scraper_blog.py
+│   ├── llm/
+│   │   ├── __init__.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── anthropic_client.py
+│   │   │   ├── chunk_processor.py
+│   │   │   ├── config.py
+│   │   │   ├── file_utils.py
+│   │   │   └── prompt_utils.py
+│   │   ├── tests/
+│   │   │   ├── __main__.py
+│   │   │   └── test.py
+│   │   └── .env.example
+│   ├── preprocess/
+│   │   ├── __init__.py
+│   │   ├── chunking/
+│   │   │   ├── __init__.py
+│   │   │   └── chunker.py
+│   │   ├── cleaning/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── cleaning_patterns.py
+│   │   │   ├── html_cleaner.py
+│   │   │   ├── json_cleaner.py
+│   │   │   ├── ocr_cleaner.py
+│   │   │   ├── pdf_cleaner.py
+│   │   │   └── tests/
+│   │   │       ├── __init__.py
+│   │   │       ├── run_tests.py
+│   │   │       ├── test_base_cleaning.py
+│   │   │       ├── test_html_cleaning.py
+│   │   │       ├── test_json_cleaning.py
+│   │   │       ├── test_ocr_cleaning.py
+│   │   │       └── test_pdf_cleaning.py
+│   │   ├── extraction/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── csv_extractor.py
+│   │   │   ├── html_extractor.py
+│   │   │   ├── json_extractor.py
+│   │   │   ├── pdf_extractor.py
+│   │   │   ├── txt_extractor.py
+│   │   │   └── tests/
+│   │   │       ├── __init__.py
+│   │   │       ├── run_tests.py
+│   │   │       ├── test_base_extraction.py
+│   │   │       ├── test_csv_extraction.py
+│   │   │       ├── test_html_extraction.py
+│   │   │       ├── test_json_extraction.py
+│   │   │       ├── test_pdf_extraction.py
+│   │   │       └── test_txt_extraction.py
+│   │   ├── normalizing/
+│   │   │   ├── __init__.py
+│   │   │   ├── normalization.py
+│   │   │   └── tests/
+│   │   │       ├── __init__.py
+│   │   │       ├── debug_tests.py
+│   │   │       ├── run_tests.py
+│   │   │       └── test_normalization.py
+│   │   ├── shared/
+│   │   │   ├── __init__.py
+│   │   │   ├── error_handling.py
+│   │   │   ├── patterns.py
+│   │   │   ├── preservers.py
+│   │   │   └── utilities.py
+│   ├── run_all.py
+│   ├── utilities.py
+│   └── __init__.py
+└── __init__.py
 
 airflow/
 ├── dags/

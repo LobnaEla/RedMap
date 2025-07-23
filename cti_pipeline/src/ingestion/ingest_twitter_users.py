@@ -5,7 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from datetime import datetime
 import time, json, os
 
-from cti_pipeline.src.utilities import (
+from ..utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,
@@ -152,7 +152,9 @@ def save_twitter_data(tweets: List[Dict], username: str, data_dir: str):
 
 
 def ingest_all_twitter_users(
-    users: List[str], data_dir: str, metadata_dir: str
+    users: List[str], 
+    data_dir: str, 
+    metadata_dir: str = "cti_pipeline/data/metadata"
 ) -> Dict[str, int]:
     """Point d'entrée principal pour l'ingestion Twitter"""
     stats = {"processed": 0, "users": len(users)}
@@ -174,7 +176,7 @@ def ingest_all_twitter_users(
 
 
 if __name__ == "__main__":
-    from cti_pipeline.src.utilities import DATA_DIR, METADATA_DIR
+    from src.utilities import DATA_DIR, METADATA_DIR
 
     try:
         twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]

@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urljoin
 
-from cti_pipeline.src.utilities import (
+from ..utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,
@@ -16,7 +16,11 @@ from cti_pipeline.src.utilities import (
     PDF_DIR,
 )
 
-from cti_pipeline.config.blog_sources import BLOG_SOURCES
+try : 
+    from config.blog_sources import BLOG_SOURCES
+    print(f"[DEBUG] BLOG_SOURCES = {BLOG_SOURCES} (type: {type(BLOG_SOURCES)})")
+except ImportError:
+    print("[ERROR] BLOG_SOURCES not found. Ensure config/blog_sources.py exists.")
 
 # Remove hardcoded DATA_DIR since it will be passed as parameter
 
@@ -180,10 +184,14 @@ def _save_articles(articles: List[Dict], blog_name: str, output_dir: str):
             f.write("\n")
 
 
-def ingest_all_blog(blog_sources: List[Dict], data_dir: str, metadata_dir: str):
+def ingest_all_blog(
+        data_dir: str, 
+        metadata_dir: str = "cti_pipeline/data/metadata"
+) -> int:
+    blog_sources= BLOG_SOURCES
     total_processed = 0
     for blog in blog_sources:
-        count = process_blog_source(blog, DATA_DIR, METADATA_DIR)
+        count = process_blog_source(blog, data_dir, metadata_dir)
         total_processed += count
     return total_processed
 
