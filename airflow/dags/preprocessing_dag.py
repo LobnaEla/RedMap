@@ -5,7 +5,6 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from datetime import datetime, timedelta
 import sys
 import os
-import glob
 
 sys.path.append("/opt/project")
 
@@ -19,15 +18,12 @@ CLEAN_DIR = os.path.join(PROCESSED_DIR, "cleaned")
 NORMALIZE_DIR = os.path.join(PROCESSED_DIR, "normalized")
 CHUNKS_DIR = os.path.join(DATA_DIR, "chunks")
 
-# === Import Preprocessing Functions ===
-from cti_pipeline.src.preprocess import (
-    extract_text,
-    clean_text,
-    normalize_text,
-)
 
 # === Define Task Functions ===
 def extract_all_files():
+    from cti_pipeline.src.preprocess.core.extract import extract_text
+    import glob
+
     os.makedirs(EXTRACT_DIR, exist_ok=True)
     raw_files = glob.glob(f"{RAW_DIR}/**/*.*", recursive=True)
     for file_path in raw_files:
@@ -43,6 +39,9 @@ def extract_all_files():
             print(f"[Extract] Failed for {file_path}: {e}")
 
 def clean_all_files():
+    from cti_pipeline.src.preprocess.core.clean import clean_text
+    import glob
+
     os.makedirs(CLEAN_DIR, exist_ok=True)
     extracted_files = glob.glob(f"{EXTRACT_DIR}/extracted_*.txt")
     for file_path in extracted_files:
@@ -62,6 +61,9 @@ def clean_all_files():
             print(f"[Clean] Failed for {file_path}: {e}")
 
 def normalize_all_files():
+    from cti_pipeline.src.preprocess.core.normalize import normalize_text
+    import glob
+
     os.makedirs(NORMALIZE_DIR, exist_ok=True)
     cleaned_files = glob.glob(f"{CLEAN_DIR}/cleaned_*.txt")
     
@@ -82,6 +84,84 @@ def normalize_all_files():
         
         except Exception as e:
             print(f"[Normalize] Failed for {file_path}: {e}")
+
+
+def chunk_data():
+    """Chunk normalized text data using IOC-based chunking"""
+    try:
+        from cti_pipeline.src.preprocess.core.chunking import (
+            CTIChunker,
+        )
+        import glob
+        import json
+
+        # Create output directory
+        os.makedirs(CHUNKS_DIR, exist_ok=True)
+
+        # Initialize chunker 
+        chunker = CTIChunker()
+
+        # Process normalized files
+        normalized_files = glob.glob(f"{PROCESSED_DIR}/normalized/normalized_*.txt")
+        chunk_files = []
+        total_processed = 0
+        total_chunks = 0
+
+        for file_path in normalized_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    text = f.read()
+
+                # Chunk the text
+                chunks = chunker.chunk(text)
+
+                if chunks:
+                    # Save chunks as JSON
+                    base_name = os.path.splitext(os.path.basename(file_path))[0]
+                    output_file = os.path.join(CHUNKS_DIR, f"chunks_{base_name}.json")
+
+                    chunk_data = {
+                        "original_file": file_path,
+                        "processing_time": "N/A",
+                        "strategy_used": "ioc_based",
+                        "total_chunks": len(chunks),
+                        "chunks": [
+                            {
+                                "chunk_id": i,
+                                "text": chunk.get("chunk", ""),
+                                "iocs": chunk.get("ioc", ""),
+                                "type": chunk.get("type", ""),
+                                "metadata": {
+                                    "chunk_length": len(chunk.get("chunk", "")),
+                                    "record_id": i,
+                                    "ioc_count": 1 if chunk.get("ioc") else 0,
+                                },
+                            }
+                            for i, chunk in enumerate(chunks)
+                        ],
+                    }
+
+                    with open(output_file, "w", encoding="utf-8") as f:
+                        json.dump(chunk_data, f, indent=2, ensure_ascii=False)
+
+                    chunk_files.append(output_file)
+                    total_chunks += len(chunks)
+                    total_processed += 1
+                else:
+                    print(f"No chunks generated for {file_path}")
+
+            except Exception as e:
+                print(f"Failed to process {file_path}: {e}")
+
+        return {
+            "step": "chunk",
+            "files_processed": total_processed,
+            "total_chunks": total_chunks,
+            "output_files": chunk_files,
+            "status": "success",
+        }
+    except Exception as e:
+        raise
 
 def validate_preprocessing():
     extracted = glob.glob(f"{EXTRACT_DIR}/extracted_*.txt")
@@ -128,6 +208,7 @@ start_task = DummyOperator(task_id="start_preprocessing", dag=dag)
 extract_task = PythonOperator(task_id="extract_data", python_callable=extract_all_files, dag=dag)
 clean_task = PythonOperator(task_id="clean_text", python_callable=clean_all_files, dag=dag)
 normalize_task = PythonOperator(task_id="normalize_text", python_callable=normalize_all_files, dag=dag)
+chunk_task = PythonOperator(task_id="chunk_data", python_callable=chunk_data, dag=dag)
 
 validate_task = PythonOperator(task_id="validate_preprocessing", python_callable=validate_preprocessing, dag=dag)
 
@@ -148,4 +229,4 @@ trigger_rag_mapping = TriggerDagRunOperator(
 )
 
 # === DAG Flow ===
-start_task >> extract_task >> clean_task >> normalize_task >> validate_task >> end_task >> trigger_llm_mapping >> trigger_rag_mapping
+start_task >> extract_task >> clean_task >> normalize_task >> chunk_task >> validate_task >> end_task >> trigger_llm_mapping >> trigger_rag_mapping
