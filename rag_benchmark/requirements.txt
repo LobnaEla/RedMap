@@ -1,0 +1,7 @@
+pandas
+numpy
+sentence-transformers
+faiss-cpu
+hnswlib
+annoy
+scikit-learn
