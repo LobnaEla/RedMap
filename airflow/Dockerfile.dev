@@ -1,0 +1,26 @@
+FROM apache/airflow:2.11.0
+
+USER root
+
+# Copy pre-downloaded spaCy model wheel for better caching
+RUN mkdir -p /home/airflow/spacy_models
+COPY build-assets/en_core_web_sm-3.7.1-py3-none-any.whl /home/airflow/spacy_models/
+
+# Copy and extract pre-downloaded chromedriver
+COPY build-assets/chromedriver-linux64.zip /tmp/chromedriver.zip
+RUN cd /tmp && \
+    unzip chromedriver.zip && \
+    mv chromedriver-linux64/chromedriver /usr/bin/chromedriver && \
+    chmod +x /usr/bin/chromedriver && \
+    rm -rf chromedriver.zip chromedriver-linux64
+
+# Copy and install pre-downloaded Chrome browser
+COPY build-assets/google-chrome-stable_current_amd64.deb /tmp/chrome.deb
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && apt install -y /tmp/chrome.deb \
+    && rm /tmp/chrome.deb \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow

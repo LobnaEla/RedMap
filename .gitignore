@@ -29,3 +29,4 @@ cti_pipeline/src/preprocess/tests/test/
 cti_pipeline/processed
 
 cti-to-mitre-llm/mitre-ttp-mapping/
+airflow/build-assets/*
