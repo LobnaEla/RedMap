@@ -5,6 +5,7 @@ from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from datetime import datetime, timedelta
 import sys
 import os
+import glob
 
 sys.path.append("/opt/project")
 
@@ -21,7 +22,7 @@ CHUNKS_DIR = os.path.join(DATA_DIR, "chunks")
 
 # === Define Task Functions ===
 def extract_all_files():
-    from cti_pipeline.src.preprocess.core.extract import extract_text
+    from cti_pipeline.src.preprocess import extract_text
     import glob
 
     os.makedirs(EXTRACT_DIR, exist_ok=True)
@@ -39,7 +40,7 @@ def extract_all_files():
             print(f"[Extract] Failed for {file_path}: {e}")
 
 def clean_all_files():
-    from cti_pipeline.src.preprocess.core.clean import clean_text
+    from cti_pipeline.src.preprocess import clean_text
     import glob
 
     os.makedirs(CLEAN_DIR, exist_ok=True)
@@ -61,7 +62,7 @@ def clean_all_files():
             print(f"[Clean] Failed for {file_path}: {e}")
 
 def normalize_all_files():
-    from cti_pipeline.src.preprocess.core.normalize import normalize_text
+    from cti_pipeline.src.preprocess import normalize_text
     import glob
 
     os.makedirs(NORMALIZE_DIR, exist_ok=True)
@@ -89,7 +90,7 @@ def normalize_all_files():
 def chunk_data():
     """Chunk normalized text data using IOC-based chunking"""
     try:
-        from cti_pipeline.src.preprocess.core.chunking import (
+        from cti_pipeline.src.preprocess import (
             CTIChunker,
         )
         import glob
