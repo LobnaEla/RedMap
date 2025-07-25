@@ -5,7 +5,7 @@ from datetime import datetime
 import requests
 from typing import Dict, List, Optional
 
-from cti_pipeline.src.utilities import (
+from ..utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,
@@ -41,6 +41,13 @@ def process_otx_pulse(pulse: Dict, processed_data: Dict) -> Optional[Dict]:
     """Processes a single OTX pulse, skipping duplicates"""
     content_str = json.dumps(pulse, sort_keys=True)
     pulse_id = pulse.get("id")
+    pulse_title = pulse.get("title")
+    pulse_description = pulse.get("description")
+
+    # Skip if both title and description are missing or empty
+    if not pulse_title and not pulse_description.strip():
+        print(f"[SKIPPED] Pulse {pulse_id} has no title and no description.")
+        return None
 
     if is_duplicate(content_str, pulse_id, processed_data, content_type="generic"):
         print(f"[DUPLICATE] Pulse {pulse_id} already processed, skipping.")

@@ -1,1 +1,1 @@
-from cti_pipeline.blog_sources import BLOG_SOURCES
+from cti_pipeline.config.blog_sources import BLOG_SOURCES

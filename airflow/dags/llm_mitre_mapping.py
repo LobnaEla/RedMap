@@ -1,4 +1,3 @@
-from pathlib import Path
 import sys
 import os
 import glob
@@ -6,19 +5,22 @@ import json
 import time
 from typing import List, Dict
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.models import Variable
-from dotenv import load_dotenv
-from airflow.models import Variable
-
 
 # ================================
 # PATH CONFIGURATION
 # ================================
 
 sys.path.append("/opt/project")
+import importlib.util
+shared_spec = importlib.util.spec_from_file_location("shared", "/opt/project/airflow/scripts/shared.py")
+shared = importlib.util.module_from_spec(shared_spec)
+shared_spec.loader.exec_module(shared)
+load_chunk_files = shared.load_chunk_files
 
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = f"{BASE_PROJECT_PATH}/data"
@@ -32,11 +34,12 @@ LOGS_DIR = f"{BASE_PROJECT_PATH}/logs"
 COMPREHENSIVE_MAPPING_FILE = "comprehensive_mitre_mappings.json"
 STATS_FILE = "mitre_mapping_statistics.json"
 
+load_dotenv()
 ANTHROPIC_API_KEY = Variable.get("ANTHROPIC_API_KEY", default_var=None)
+print(f"Using ANTHROPIC_API_KEY: {ANTHROPIC_API_KEY is not None}")
 
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not set in Airflow Variables")
-
 
 # ================================
 # DAG DEFINITION
@@ -63,31 +66,18 @@ dag = DAG(
 )
 
 # ================================
-# LOADING AND SAVING FUNCTIONS
+# SAVING FUNCTIONS
 # ================================
-
-
-def load_chunk_files(chunks_dir: str) -> List[str]:
-    """Charge les fichiers de chunks depuis le répertoire"""
-    try:
-        chunk_files = glob.glob(os.path.join(chunks_dir, "chunks_*.json"))
-        if not chunk_files:
-            raise FileNotFoundError(f"No chunk files found in {chunks_dir}")
-        return chunk_files
-
-    except Exception as e:
-        raise RuntimeError(f"Error loading chunk files: {str(e)}")
-
 
 def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
     """Sauvegarde les résultats du traitement dans les répertoires appropriés"""
     try:
-        logger.debug("Creating output directories if they don't exist")
+        print("Creating output directories if they don't exist")
         os.makedirs(LLM_RESULTS_DIR, exist_ok=True)
         os.makedirs(MITRE_MAPPING_DIR, exist_ok=True)
 
         # Fichier complet
-        logger.debug("Saving comprehensive mapping file")
+        print("Saving comprehensive mapping file")
         comprehensive_path = os.path.join(
             paths["mitre_mappings"], COMPREHENSIVE_MAPPING_FILE
         )
@@ -106,10 +96,10 @@ def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
                 indent=2,
                 ensure_ascii=False,
             )
-        logger.info(f"Saved comprehensive results to {comprehensive_path}")
+        print(f"Saved comprehensive results to {comprehensive_path}")
 
         # Fichiers individuels pour les chunks
-        logger.debug("Saving individual chunk results")
+        print("Saving individual chunk results")
         successful_saves = 0
         for mapping in mappings:
             if mapping.get("success", False):
@@ -120,19 +110,19 @@ def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
                     json.dump(mapping, f, indent=2, ensure_ascii=False)
                 successful_saves += 1
 
-        logger.info(f"Saved {successful_saves} individual chunk results")
+        print(f"Saved {successful_saves} individual chunk results")
 
         # Logs d'erreurs
         errors = [m for m in mappings if not m.get("success", True)]
         if errors:
-            logger.warning(f"Found {len(errors)} errors to log")
+            print(f"Found {len(errors)} errors to log")
             error_path = os.path.join(paths["logs"], "processing_errors.json")
             with open(error_path, "w", encoding="utf-8") as f:
                 json.dump(errors, f, indent=2, ensure_ascii=False)
-            logger.info(f"Saved error log to {error_path}")
+            print(f"Saved error log to {error_path}")
 
     except Exception as e:
-        logger.error("Failed to save results", exc_info=True)
+        print("Failed to save results", exc_info=True)
         raise RuntimeError(f"Error saving processing results: {str(e)}")
 
 
@@ -282,7 +272,7 @@ def process_all_chunks():
             },
         )
 
-        logger.info("Results saved successfully")
+        print("Results saved successfully")
         return {"status": "success", "processed_files": len(chunk_files), **stats}
 
     except Exception as e:

@@ -1,0 +1,19 @@
+pipelines:
+  otx:
+    enabled: true
+    schedule: "@daily"
+
+  rss:
+    enabled: true
+    schedule: "0 * * * *"  # every hour
+
+  twitter:
+    enabled: false  # can be skipped
+
+  tuncert:
+    enabled: true
+    schedule: "0 8 * * *"
+
+  blog:
+    enabled: true
+    schedule: "@weekly"
