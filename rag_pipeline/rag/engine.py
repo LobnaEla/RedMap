@@ -4,8 +4,8 @@ RAG Engine for MITRE ATT&CK technique retrieval
 import logging
 from typing import List, Optional
 
-from ..embeddings.base import BaseEmbedder
-from ..vectorstore.base import BaseVectorStore, SearchResult
+from embeddings import BaseEmbedder
+from vectorstore import BaseVectorStore, SearchResult
 
 logger = logging.getLogger(__name__)
 

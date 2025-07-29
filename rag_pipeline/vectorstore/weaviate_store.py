@@ -5,8 +5,7 @@ import logging
 from typing import List, Dict, Any, Optional
 import numpy as np
 import weaviate
-import weaviate.classes as wvc
-from weaviate.classes.data import DataObject
+from weaviate.collections.classes.config import Configure
 
 from .base import BaseVectorStore, SearchResult
 
@@ -18,7 +17,7 @@ class WeaviateVectorStore(BaseVectorStore):
     
     def __init__(
         self, 
-        url: str = "http://localhost:8080",
+        url: str = "http://localhost:5000",
         class_name: str = "MitreTechnique"
     ):
         """
@@ -35,7 +34,7 @@ class WeaviateVectorStore(BaseVectorStore):
             # Connect using v4 client
             self.client = weaviate.connect_to_local(
                 host="localhost",
-                port=8080
+                port=5000
             )
             logger.info(f"Connected to Weaviate at {url}")
             
@@ -49,15 +48,14 @@ class WeaviateVectorStore(BaseVectorStore):
     def _ensure_schema(self) -> None:
         """Ensure the MITRE technique schema exists"""
         try:
-            # Check if collection exists using v4 API
             if not self.client.collections.exists(self.class_name):
                 logger.info(f"Creating Weaviate collection: {self.class_name}")
                 
-                # Create collection using v4 API with proper vector configuration
                 collection = self.client.collections.create(
-                    name=self.class_name
+                    name=self.class_name,
+                    vector_config=Configure.Vectors.self_provided(),
                 )
-                logger.info(f"Collection {self.class_name} created successfully")
+                logger.info(f"Collection {self.class_name} created successfully with vector configuration")
             else:
                 logger.debug(f"Collection {self.class_name} already exists")
         except Exception as e:
@@ -70,7 +68,7 @@ class WeaviateVectorStore(BaseVectorStore):
         embeddings: np.ndarray, 
         metadata: List[Dict[str, Any]]
     ) -> None:
-        if len(ids) != len(metadata) or embeddings.shape[0] != len(ids):
+        if len(ids) != len(metadata) or len(embeddings) != len(ids):
             raise ValueError("Length mismatch between ids, embeddings, and metadata")
 
         logger.info(f"Adding {len(ids)} documents to Weaviate")
@@ -86,21 +84,48 @@ class WeaviateVectorStore(BaseVectorStore):
                         logger.warning(f"Skipping {doc_id}, invalid embedding")
                         continue
 
+                    # Remove 'embedding' key if present in meta
+                    if 'embedding' in meta:
+                        del meta['embedding']
+                    def safe_list(val):
+                        # Convert numpy arrays, None, or single values to list of strings
+                        if val is None:
+                            return []
+                        if isinstance(val, np.ndarray):
+                            return [str(x) for x in val.tolist()]
+                        if isinstance(val, (list, tuple)):
+                            return [str(x) for x in val]
+                        return [str(val)]
+
+                    def safe_str(val):
+                        if val is None:
+                            return ""
+                        if isinstance(val, (list, tuple, np.ndarray)):
+                            return ", ".join([str(x) for x in val])
+                        return str(val)
+
                     properties = {
-                        "technique_id": meta.get("id", doc_id),
-                        "name": meta.get("name", ""),
-                        "description": meta.get("description", ""),
-                        "url": meta.get("url", ""),
-                        "platforms": meta.get("platforms", []),
-                        "kill_chain_phases": meta.get("kill_chain_phases", []),
-                        "data_sources": meta.get("data_sources", []),
-                        "detection": meta.get("detection", "")
+                        "technique_id": safe_str(meta.get("id", doc_id)),
+                        "name": safe_str(meta.get("name", "")),
+                        "description": safe_str(meta.get("description", "")),
+                        "url": safe_str(meta.get("url", "")),
+                        "platforms": safe_list(meta.get("platforms", [])),
+                        "kill_chain_phases": safe_list(meta.get("kill_chain_phases", [])),
+                        "data_sources": safe_list(meta.get("data_sources", [])),
+                        "detection": safe_str(meta.get("detection", ""))
                     }
                     
+                    # Ensure embedding is a list for Weaviate
+                    if hasattr(embedding, 'tolist'):
+                        vector_data = embedding.tolist()
+                    elif isinstance(embedding, list):
+                        vector_data = embedding
+                    else:
+                        vector_data = list(embedding)
                     batch.add_object(
                         collection=self.class_name,
                         properties=properties,
-                        vector=embedding.tolist()
+                        vector=vector_data
                     )
             
             logger.info("All objects inserted successfully using dynamic batch.")
@@ -129,46 +154,38 @@ class WeaviateVectorStore(BaseVectorStore):
         """
         try:
             collection = self.client.collections.get(self.class_name)
-            
-            # Perform vector search using v4 API with target_vector
+            # Print the query embedding for debugging
+            logger.info(f"Query embedding (first 10 values): {query_embedding[:10] if hasattr(query_embedding, '__getitem__') else query_embedding}")
+            # Ensure query_embedding is a list of floats
+            if isinstance(query_embedding, np.ndarray):
+                query_vector = query_embedding.tolist()
+            elif isinstance(query_embedding, list):
+                query_vector = query_embedding
+            else:
+                raise ValueError("query_embedding must be a numpy array or a list")
+            # Always use score_threshold=None for debugging
             response = collection.query.near_vector(
-                near_vector=query_embedding.tolist(),
+                near_vector=query_vector,
                 limit=top_k,
-                target_vector="default",
                 return_metadata=weaviate.classes.query.MetadataQuery(score=True, distance=True)
             )
-            
             logger.debug(f"Raw Weaviate response: {len(response.objects)} objects returned")
-            
             results = []
             for i, obj in enumerate(response.objects):
-                # Convert distance to similarity (v4 returns distance, where 0 = perfect match)
-                # We convert distance to similarity: similarity = 1 - distance
                 distance = obj.metadata.distance if obj.metadata.distance is not None else 1.0
-                similarity = max(0.0, 1.0 - distance)  # Ensure similarity is non-negative
-                
+                similarity = max(0.0, 1.0 - distance)
                 logger.debug(f"Object {i}: distance={distance}, similarity={similarity}, score_threshold={score_threshold}")
-                
-                # Apply score threshold if specified
-                if score_threshold and similarity < score_threshold:
-                    logger.debug(f"Filtering out object {i} due to low similarity ({similarity} < {score_threshold})")
-                    continue
-                
-                # Create SearchResult with proper metadata mapping
+                # Do not filter by score_threshold for debugging
                 metadata = dict(obj.properties)
-                metadata["id"] = obj.properties.get("technique_id", "")  # Add id field for compatibility
-                
+                metadata["id"] = obj.properties.get("technique_id", "")
                 result = SearchResult(
                     id=obj.properties.get("technique_id", ""),
                     score=similarity,
                     metadata=metadata
                 )
                 results.append(result)
-            
             logger.debug(f"Returning {len(results)} results after filtering")
-            
             return results
-            
         except Exception as e:
             logger.error(f"Search failed: {e}")
             return []
