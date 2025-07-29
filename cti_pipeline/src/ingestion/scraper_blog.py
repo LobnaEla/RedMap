@@ -17,7 +17,7 @@ from ..utilities import (
 )
 
 try:
-    from ...config.blog_sources import BLOG_SOURCES
+    from config.blog_sources import BLOG_SOURCES
 
     print(f"[DEBUG] BLOG_SOURCES = {BLOG_SOURCES} (type: {type(BLOG_SOURCES)})")
 except ImportError:

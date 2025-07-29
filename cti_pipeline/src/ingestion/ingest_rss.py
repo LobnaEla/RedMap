@@ -11,7 +11,7 @@ from ..utilities import (
     DATA_DIR,
     METADATA_DIR,
 )
-from ...config.rss_sources import RSS_SOURCES
+from config.rss_sources import RSS_SOURCES
 
 
 def get_source_by_name(name: str) -> Optional[Dict]:
