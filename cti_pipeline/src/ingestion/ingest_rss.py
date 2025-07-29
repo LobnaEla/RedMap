@@ -11,20 +11,26 @@ from ..utilities import (
     DATA_DIR,
     METADATA_DIR,
 )
+from ...config.rss_sources import RSS_SOURCES
 
 
-CERT_FR_RSS_URL = "https://www.cert.ssi.gouv.fr/feed/"
+def get_source_by_name(name: str) -> Optional[Dict]:
+    """Returns a specific RSS source by name"""
+    return next((source for source in RSS_SOURCES if source["name"] == name), None)
 
 
-def fetch_rss_feed() -> Optional[feedparser.FeedParserDict]:
-    """Fetches and parses the CERT-FR RSS feed"""
+def fetch_rss_feed(rss_url: str) -> Optional[feedparser.FeedParserDict]:
+    """Fetches and parses an RSS feed from the given URL"""
     try:
-        return feedparser.parse(CERT_FR_RSS_URL)
+        return feedparser.parse(rss_url)
     except Exception as e:
+        print(f"Error fetching RSS feed from {rss_url}: {str(e)}")
         return None
 
 
-def process_rss_entry(entry: Dict, processed_data: Dict) -> Optional[Dict]:
+def process_rss_entry(
+    entry: Dict, processed_data: Dict, source_config: Dict
+) -> Optional[Dict]:
     """Processes single RSS entry with duplicate check"""
     content = entry.get("summary", "")
     url = entry.link
@@ -33,7 +39,9 @@ def process_rss_entry(entry: Dict, processed_data: Dict) -> Optional[Dict]:
         return None
 
     return {
-        "source": "CERT-FR RSS",
+        "source": source_config.get("description", source_config["name"]),
+        "source_name": source_config["name"],
+        "source_type": source_config.get("source_type", "rss_feed"),
         "type": "rss_bulletin",
         "title": entry.title,
         "link": url,
@@ -43,13 +51,20 @@ def process_rss_entry(entry: Dict, processed_data: Dict) -> Optional[Dict]:
     }
 
 
-def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
-    """Main RSS ingestion function with state management"""
-    stats = {"processed": 0, "total": 0}
-    processed_data = load_processed_items("rss_certfr")
-    feed = fetch_rss_feed()
+def ingest_single_rss_source(
+    source_config: Dict, data_dir: str, metadata_dir: str
+) -> Dict[str, int]:
+    """Ingest RSS data from a single source"""
+    stats = {"processed": 0, "total": 0, "source": source_config["name"]}
+
+    # Load processed items for this specific source
+    processed_data = load_processed_items(f"rss_{source_config['name']}")
+
+    # Fetch the RSS feed
+    feed = fetch_rss_feed(source_config["url"])
 
     if not feed or not feed.entries:
+        print(f"No entries found for RSS source: {source_config['name']}")
         return stats
 
     stats["total"] = len(feed.entries)
@@ -58,11 +73,11 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
     rss_dir = os.path.join(data_dir, "raw_scraped_data", "rss")
     os.makedirs(rss_dir, exist_ok=True)
 
-    output_file = f"raw_rss_certfr_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+    output_file = f"raw_rss_{source_config['name']}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
 
     with open(os.path.join(rss_dir, output_file), "w", encoding="utf-8") as f:
         for entry in feed.entries:
-            doc = process_rss_entry(entry, processed_data)
+            doc = process_rss_entry(entry, processed_data, source_config)
             if not doc:
                 continue
 
@@ -76,14 +91,70 @@ def ingest_certfr_rss(data_dir: str, metadata_dir: str) -> Dict[str, int]:
             processed_data.setdefault("urls", []).append(doc["link"])
             stats["processed"] += 1
 
-    save_processed_items("rss_certfr", processed_data)
+    # Save processed items for this specific source
+    save_processed_items(f"rss_{source_config['name']}", processed_data)
     return stats
 
 
+def ingest_rss(
+    data_dir: str = DATA_DIR,
+    metadata_dir: str = METADATA_DIR,
+) -> Dict:
+    """
+    Main RSS ingestion function for Airflow DAG
+
+    Args:
+        data_dir: Directory to store scraped data (defaults to DATA_DIR from utilities)
+        metadata_dir: Directory to store metadata (defaults to METADATA_DIR from utilities)
+
+    Returns:
+        Dict with ingestion statistics and results
+    """
+    all_stats = {
+        "sources": [],
+        "total_processed": 0,
+        "total_entries": 0,
+        "success": True,
+        "errors": [],
+    }
+
+    # If no specific sources provided, use all sources
+    sources_to_process = RSS_SOURCES
+
+    # Process each RSS source
+    for source_config in sources_to_process:
+        try:
+            stats = ingest_single_rss_source(source_config, data_dir, metadata_dir)
+            all_stats["sources"].append(stats)
+            all_stats["total_processed"] += stats["processed"]
+            all_stats["total_entries"] += stats["total"]
+            print(
+                f"✓ {source_config['name']}: {stats['processed']}/{stats['total']} entries processed"
+            )
+        except Exception as e:
+            error_stats = {
+                "processed": 0,
+                "total": 0,
+                "source": source_config["name"],
+                "error": str(e),
+            }
+            all_stats["sources"].append(error_stats)
+            all_stats["errors"].append(f"{source_config['name']}: {str(e)}")
+            all_stats["success"] = False
+            print(f"✗ {source_config['name']}: Error - {str(e)}")
+
+    return all_stats
+
+
 if __name__ == "__main__":
+    print("Starting RSS ingestion...")
+
     try:
-        results = ingest_certfr_rss(DATA_DIR, METADATA_DIR)
-        print("[OK] RSS feed ingestion completed.")
+        results = ingest_rss()
+        print(
+            f"RSS ingestion completed: {results['total_processed']}/{results['total_entries']} entries processed"
+        )
     except Exception as e:
-        print(f"[ERROR] RSS feed ingestion failed: {str(e)}")
-        raise
+        print(f"RSS ingestion failed: {str(e)}")
+
+    print("Done.")

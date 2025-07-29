@@ -5,7 +5,7 @@ sources:
 
   - name: rss
     module: src.ingestion.ingest_rss
-    function: ingest_certfr_rss
+    function: ingest_rss
 
   - name: tuncert
     module: src.ingestion.ingest_tuncert

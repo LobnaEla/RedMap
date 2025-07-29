@@ -152,8 +152,7 @@ def save_twitter_data(tweets: List[Dict], username: str, data_dir: str):
 
 
 def ingest_all_twitter_users(
-    data_dir: str, 
-    metadata_dir: str = "cti_pipeline/data/metadata"
+    data_dir: str, metadata_dir: str = "cti_pipeline/data/metadata"
 ) -> Dict[str, int]:
     """Point d'entrée principal pour l'ingestion Twitter"""
     users = ["vxunderground", "CERT_FR", "CISACyber"]
@@ -179,8 +178,7 @@ if __name__ == "__main__":
     from src.utilities import DATA_DIR, METADATA_DIR
 
     try:
-        twitter_users = ["vxunderground", "CERT_FR", "CISACyber"]
-        stats = ingest_all_twitter_users(twitter_users, DATA_DIR, METADATA_DIR)
+        stats = ingest_all_twitter_users(DATA_DIR, METADATA_DIR)
         print(
             f"[OK] Processed {stats['processed']} new tweets from {stats['users']} users."
         )
