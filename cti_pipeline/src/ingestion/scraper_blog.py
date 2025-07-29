@@ -16,8 +16,9 @@ from ..utilities import (
     PDF_DIR,
 )
 
-try : 
+try:
     from config.blog_sources import BLOG_SOURCES
+
     print(f"[DEBUG] BLOG_SOURCES = {BLOG_SOURCES} (type: {type(BLOG_SOURCES)})")
 except ImportError:
     print("[ERROR] BLOG_SOURCES not found. Ensure config/blog_sources.py exists.")
@@ -185,10 +186,9 @@ def _save_articles(articles: List[Dict], blog_name: str, output_dir: str):
 
 
 def ingest_all_blog(
-        data_dir: str, 
-        metadata_dir: str = "cti_pipeline/data/metadata"
+    data_dir: str, metadata_dir: str = "cti_pipeline/data/metadata"
 ) -> int:
-    blog_sources= BLOG_SOURCES
+    blog_sources = BLOG_SOURCES
     total_processed = 0
     for blog in blog_sources:
         count = process_blog_source(blog, data_dir, metadata_dir)
