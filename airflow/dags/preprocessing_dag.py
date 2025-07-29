@@ -205,7 +205,7 @@ dag = DAG(
     catchup=False,
     is_paused_upon_creation=False,
     tags=["cti", "preprocessing"],
-    max_active_runs=1,
+    max_active_runs=10,
 )
 
 # === Define Tasks ===
