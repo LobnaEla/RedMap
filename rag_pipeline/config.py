@@ -19,7 +19,7 @@ class Config:
     embedding_batch_size: int = 32
     
     # Weaviate
-    weaviate_url: str = "http://localhost:8080"
+    weaviate_url: str = "http://localhost:5000"
     weaviate_class_name: str = "MitreTechnique"
     
     # Retrieval
