@@ -15,9 +15,19 @@ from embeddings import HuggingFaceEmbedder
 from vectorstore import WeaviateVectorStore, WeaviateSchema
 from rag import RAGEngine
 from config import Config
+from fastapi.middleware.cors import CORSMiddleware
 
 # FastAPI app
 app = FastAPI(title="MITRE Technique RAG API")
+
+# Allow all origins for development (⚠️ adjust for prod)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global objects
 config = Config()
@@ -59,4 +69,4 @@ def query_techniques(request: QueryRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

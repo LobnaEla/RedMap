@@ -32,6 +32,14 @@ services:
   #   depends_on:
   #     - weaviate
 
+  rag_api:
+    build:
+      context: .  
+    ports:
+      - "8000:8000"
+    depends_on:
+      - weaviate  
+
 volumes:
   weaviate_data:
     driver: local
