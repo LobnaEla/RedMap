@@ -30,11 +30,13 @@ default_args = {
     "retry_delay": timedelta(minutes=10),
 }
 
+
 # === Load Ingestion Config ===
 def load_sources_config():
     sources_yaml_path = os.path.join(CONFIG_PATH, "sources.yaml")
     with open(sources_yaml_path, "r") as f:
         return yaml.safe_load(f)["sources"]
+
 
 # === Dynamic Task Factory ===
 def make_ingest_callable(module_path, function_name):
@@ -44,7 +46,9 @@ def make_ingest_callable(module_path, function_name):
         module = importlib.import_module(module_path)
         func = getattr(module, function_name)
         return func(data_dir=DATA_DIR, metadata_dir=METADATA_DIR)
+
     return _callable
+
 
 # === DAG Definition ===
 dag = DAG(
@@ -82,9 +86,11 @@ for source in sources:
     )
     ingestion_tasks.append(task)
 
+
 # Validation
 def validate_ingestion():
     return "Ingestion validation successful"
+
 
 validate_task = PythonOperator(
     task_id="validate_ingestion",
@@ -92,9 +98,11 @@ validate_task = PythonOperator(
     dag=dag,
 )
 
+
 # Pipeline End
 def pipeline_completion():
     return "Pipeline completed"
+
 
 end_task = PythonOperator(
     task_id="pipeline_completion",
