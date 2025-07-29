@@ -224,7 +224,7 @@ trigger_llm_mapping = TriggerDagRunOperator(
 
 trigger_rag_mapping = TriggerDagRunOperator(
     task_id="trigger_rag_mapping",
-    trigger_dag_id="rag_dag",
+    trigger_dag_id="rag_pipeline",
     wait_for_completion=False,
     dag=dag,
 )
