@@ -17,7 +17,7 @@ class WeaviateVectorStore(BaseVectorStore):
     
     def __init__(
         self, 
-        url: str = "http://localhost:5000",
+        url: str = "http://weaviate:5000",
         class_name: str = "MitreTechnique"
     ):
         """
@@ -33,7 +33,7 @@ class WeaviateVectorStore(BaseVectorStore):
         try:
             # Connect using v4 client
             self.client = weaviate.connect_to_local(
-                host="localhost",
+                host="weaviate",
                 port=5000
             )
             logger.info(f"Connected to Weaviate at {url}")

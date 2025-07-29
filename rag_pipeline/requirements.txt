@@ -1,5 +1,9 @@
-# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+torch==2.2.1+cpu
+torchvision==0.17.1+cpu
+torchaudio==2.2.1+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy<2.0
 sentence-transformers>=2.2.2
-weaviate-client>=4.4.0
+weaviate-client==4.16.0
 fastapi
 uvicorn
