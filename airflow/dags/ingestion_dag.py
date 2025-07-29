@@ -3,6 +3,7 @@ import sys
 import os
 import importlib
 import yaml
+import requests
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
@@ -18,6 +19,9 @@ CONFIG_PATH = os.path.join(BASE_PROJECT_PATH, "config")
 DATA_DIR = os.path.join(BASE_PROJECT_PATH, "data")
 METADATA_DIR = os.path.join(DATA_DIR, "metadata")
 PDF_DIR = os.path.join(BASE_PROJECT_PATH, "PDFs")
+
+# === N8N Configuration ===
+N8N_BASE_URL = "http://n8n:5678"
 
 # === Default DAG Arguments ===
 default_args = {
@@ -50,73 +54,123 @@ def make_ingest_callable(module_path, function_name):
     return _callable
 
 
-# === DAG Definition ===
-dag = DAG(
-    dag_id="cti_pipeline",
-    default_args=default_args,
-    description="CTI Ingestion Pipeline",
-    schedule_interval=timedelta(hours=12),
-    catchup=False,
-    is_paused_upon_creation=False,
-    max_active_runs=1,
-    tags=["cti", "ingestion"],
-)
+# === Validation Function (per source) ===
+def make_validate_callable(source_name):
+    def _validate(**kwargs):
+        # Your validation logic here - adapt as needed
+        print(f"Validating ingestion for {source_name}")
+        return f"Ingestion validation successful for {source_name}"
 
-# === DAG Tasks ===
+    return _validate
 
-# Start
-start_task = DummyOperator(
-    task_id="start_pipeline",
-    dag=dag,
-)
 
-# Ingestion Tasks
+# === Pipeline Completion (per source) ===
+def make_completion_callable(source_name):
+    def _complete(**kwargs):
+        return f"Pipeline completed for {source_name}"
+
+    return _complete
+
+
+# === N8N Trigger Function ===
+def make_n8n_trigger_callable(source_name):
+    def _trigger(**kwargs):
+        payload = {
+            "source_name": source_name,
+            "data_dir": DATA_DIR,
+            "metadata_dir": METADATA_DIR,
+            "timestamp": datetime.now().isoformat(),
+            "status": "ready_for_preprocessing",
+        }
+
+        try:
+            webhook_url = f"{N8N_BASE_URL}/webhook/process-source"
+            response = requests.post(
+                webhook_url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                print(f"{source_name} sent to n8n for preprocessing")
+                return {
+                    "source": source_name,
+                    "n8n_trigger": "success",
+                    "response": response.json() if response.content else "OK",
+                }
+            else:
+                print(f"n8n trigger failed for {source_name}: {response.status_code}")
+                return {
+                    "source": source_name,
+                    "n8n_trigger": "failed",
+                    "error": f"HTTP {response.status_code}",
+                }
+
+        except Exception as e:
+            print(f"N8N trigger failed for {source_name}: {str(e)}")
+            raise e
+
+    return _trigger
+
+
+# === Individual DAGs for Each Source ===
 sources = load_sources_config()
-ingestion_tasks = []
 
 for source in sources:
     source_name = source["name"]
     module_path = source["module"]
     function_name = source["function"]
 
-    task = PythonOperator(
+    # Create individual DAG for this source
+    source_dag = DAG(
+        dag_id=f"cti_pipeline_{source_name}",
+        default_args=default_args,
+        description=f"CTI Ingestion Pipeline for {source_name}",
+        schedule_interval=timedelta(hours=12),
+        catchup=False,
+        is_paused_upon_creation=False,
+        max_active_runs=1,
+        tags=["cti", "ingestion", source_name],
+    )
+
+    # === DAG Tasks ===
+    # Start
+    start_task = DummyOperator(
+        task_id="start_pipeline",
+        dag=source_dag,
+    )
+
+    # Ingestion Task
+    ingestion_task = PythonOperator(
         task_id=f"ingest_{source_name}",
         python_callable=make_ingest_callable(module_path, function_name),
-        dag=dag,
+        dag=source_dag,
     )
-    ingestion_tasks.append(task)
 
+    # Validation
+    validate_task = PythonOperator(
+        task_id="validate_ingestion",
+        python_callable=make_validate_callable(source_name),
+        dag=source_dag,
+    )
 
-# Validation
-def validate_ingestion():
-    return "Ingestion validation successful"
+    # Pipeline End
+    end_task = PythonOperator(
+        task_id="pipeline_completion",
+        python_callable=make_completion_callable(source_name),
+        dag=source_dag,
+    )
 
+    # Trigger Preprocessing via N8N
+    trigger_preprocessing = PythonOperator(
+        task_id="trigger_preprocessing",
+        python_callable=make_n8n_trigger_callable(source_name),
+        dag=source_dag,
+    )
 
-validate_task = PythonOperator(
-    task_id="validate_ingestion",
-    python_callable=validate_ingestion,
-    dag=dag,
-)
+    # === Task Dependencies ===
+    start_task >> ingestion_task >> validate_task >> end_task >> trigger_preprocessing
 
-
-# Pipeline End
-def pipeline_completion():
-    return "Pipeline completed"
-
-
-end_task = PythonOperator(
-    task_id="pipeline_completion",
-    python_callable=pipeline_completion,
-    dag=dag,
-)
-
-# Trigger Next DAG
-trigger_preprocessing = TriggerDagRunOperator(
-    task_id="trigger_preprocessing_dag",
-    trigger_dag_id="preprocess_pipeline",
-    wait_for_completion=False,
-    dag=dag,
-)
-
-# === Task Dependencies ===
-start_task >> ingestion_tasks >> validate_task >> end_task >> trigger_preprocessing
+    # Register the DAG in globals
+    globals()[f"cti_pipeline_{source_name}"] = source_dag

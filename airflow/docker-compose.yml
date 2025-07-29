@@ -90,6 +90,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - default
 
   airflow-scheduler:
     <<: *airflow-common
@@ -237,6 +239,38 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+  
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - default
+
+  n8n-postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: n8n
+      POSTGRES_DB: n8n
+    volumes:
+      - n8n_postgres_data:/var/lib/postgresql/data
+    restart: always
+
+
 
 # entity-chunking:
 #   build:
@@ -263,6 +297,12 @@ services:
 
 volumes:
   postgres-db-volume:
+  n8n_data:
+  n8n_postgres_data:
   pip-local-volume:   # for dev/testing purposes remove in production
-  # chunking-logs:
-  # chunking-data:  
+# chunking-logs:
+# chunking-data:  
+
+networks:
+  default:
+    driver: bridge

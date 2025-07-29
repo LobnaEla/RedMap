@@ -39,6 +39,7 @@ def extract_all_files():
         except Exception as e:
             print(f"[Extract] Failed for {file_path}: {e}")
 
+
 def clean_all_files():
     from cti_pipeline.src.preprocess import clean_text
     import glob
@@ -54,12 +55,13 @@ def clean_all_files():
                 clean_name = base_name.replace("extracted_", "cleaned_", 1)
             else:
                 clean_name = f"cleaned_{base_name}"
-            
+
             output_file = os.path.join(CLEAN_DIR, clean_name)
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(cleaned)
         except Exception as e:
             print(f"[Clean] Failed for {file_path}: {e}")
+
 
 def normalize_all_files():
     from cti_pipeline.src.preprocess import normalize_text
@@ -67,22 +69,22 @@ def normalize_all_files():
 
     os.makedirs(NORMALIZE_DIR, exist_ok=True)
     cleaned_files = glob.glob(f"{CLEAN_DIR}/cleaned_*.txt")
-    
+
     for file_path in cleaned_files:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             normalized = normalize_text(content)  # Pass content, not file path
-            
+
             base_name = os.path.basename(file_path)
             # Replace 'cleaned_' with 'normalized_' only at the beginning
             normalized_name = base_name.replace("cleaned_", "normalized_", 1)
-            
+
             output_file = os.path.join(NORMALIZE_DIR, normalized_name)
             with open(output_file, "w", encoding="utf-8") as f_out:
                 f_out.write(normalized)
-        
+
         except Exception as e:
             print(f"[Normalize] Failed for {file_path}: {e}")
 
@@ -99,7 +101,7 @@ def chunk_data():
         # Create output directory
         os.makedirs(CHUNKS_DIR, exist_ok=True)
 
-        # Initialize chunker 
+        # Initialize chunker
         chunker = CTIChunker()
 
         # Process normalized files
@@ -164,6 +166,7 @@ def chunk_data():
     except Exception as e:
         raise
 
+
 def validate_preprocessing():
     extracted = glob.glob(f"{EXTRACT_DIR}/extracted_*.txt")
     cleaned = glob.glob(f"{CLEAN_DIR}/cleaned_*.txt")
@@ -175,11 +178,13 @@ def validate_preprocessing():
         "extracted": len(extracted),
         "cleaned": len(cleaned),
         "normalized": len(normalized),
-        "status": "Validation passed"
+        "status": "Validation passed",
     }
+
 
 def preprocessing_completion():
     return "Preprocessing pipeline finished successfully."
+
 
 # === DAG Arguments ===
 default_args = {
@@ -206,14 +211,26 @@ dag = DAG(
 # === Define Tasks ===
 start_task = DummyOperator(task_id="start_preprocessing", dag=dag)
 
-extract_task = PythonOperator(task_id="extract_data", python_callable=extract_all_files, dag=dag)
-clean_task = PythonOperator(task_id="clean_text", python_callable=clean_all_files, dag=dag)
-normalize_task = PythonOperator(task_id="normalize_text", python_callable=normalize_all_files, dag=dag)
+extract_task = PythonOperator(
+    task_id="extract_data", python_callable=extract_all_files, dag=dag
+)
+clean_task = PythonOperator(
+    task_id="clean_text", python_callable=clean_all_files, dag=dag
+)
+normalize_task = PythonOperator(
+    task_id="normalize_text", python_callable=normalize_all_files, dag=dag
+)
 chunk_task = PythonOperator(task_id="chunk_data", python_callable=chunk_data, dag=dag)
 
-validate_task = PythonOperator(task_id="validate_preprocessing", python_callable=validate_preprocessing, dag=dag)
+validate_task = PythonOperator(
+    task_id="validate_preprocessing", python_callable=validate_preprocessing, dag=dag
+)
 
-end_task = PythonOperator(task_id="preprocessing_completion", python_callable=preprocessing_completion, dag=dag)
+end_task = PythonOperator(
+    task_id="preprocessing_completion",
+    python_callable=preprocessing_completion,
+    dag=dag,
+)
 
 trigger_llm_mapping = TriggerDagRunOperator(
     task_id="trigger_llm_mapping",
@@ -230,4 +247,14 @@ trigger_rag_mapping = TriggerDagRunOperator(
 )
 
 # === DAG Flow ===
-start_task >> extract_task >> clean_task >> normalize_task >> chunk_task >> validate_task >> end_task >> trigger_llm_mapping >> trigger_rag_mapping
+(
+    start_task
+    >> extract_task
+    >> clean_task
+    >> normalize_task
+    >> chunk_task
+    >> validate_task
+    >> end_task
+    >> trigger_llm_mapping
+    >> trigger_rag_mapping
+)
