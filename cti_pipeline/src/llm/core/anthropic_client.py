@@ -5,7 +5,7 @@ from anthropic import Anthropic, RateLimitError, APIError
 from typing import List, Dict, Optional
 
 # Import des utilitaires de prompt
-from .prompt_utils import create_mitre_prompt
+from .prompt_utils import create_gemini_prompt
 
 
 class AnthropicClient:
@@ -48,7 +48,7 @@ class AnthropicClient:
             chunk_id = "unknown"
 
         # Création du prompt structuré
-        prompt = create_mitre_prompt(text, iocs)
+        prompt = create_gemini_prompt(text, iocs)
 
         # Tentatives avec gestion des erreurs
         for attempt in range(1, self.config["max_retries"] + 1):
