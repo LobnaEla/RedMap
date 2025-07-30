@@ -30,10 +30,10 @@ x-airflow-common:
     RAG_API_URL: ${RAG_API_URL}
 
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-./airflow}}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-./airflow}}/config:/opt/airflow/config
+    - ${AIRFLOW_PROJ_DIR:-./airflow}}/plugins:/opt/airflow/plugins
     - ../:/opt/project  
     - pip-local-volume:/home/airflow/.local   # for dev/testing purposes remove in production
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
@@ -44,7 +44,7 @@ x-airflow-common:
     postgres:
       condition: service_healthy
   build:
-    context: .
+    context: ./airflow
     dockerfile: Dockerfile.prod
   networks:
     - airflow_default
@@ -212,7 +212,7 @@ services:
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}:/sources
+      - ${AIRFLOW_PROJ_DIR:-./airflow}:/sources
       - ../:/opt/project  # Add the same project mount as other services
 
   airflow-cli:
@@ -252,14 +252,15 @@ services:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin123}
       - WEBHOOK_URL=http://localhost:5678/
       - N8N_PROTOCOL=http
       - N8N_HOST=localhost
       - N8N_PORT=5678
     volumes:
       - n8n_data:/home/node/.n8n
+      - ${N8N_PROJ_DIR:-./n8n}/workflows:/home/node/.n8n/workflows
     depends_on:
       - redis
     restart: always
@@ -275,7 +276,46 @@ services:
     volumes:
       - n8n_postgres_data:/var/lib/postgresql/data
     restart: always
+    networks:
+      - airflow_default 
 
+  eventmonitor:
+    build:
+      context: ./event_monitoring
+      dockerfile: Dockerfile
+    environment:
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/cti-event
+      - OTX_API_KEY=${OTX_API_KEY:-your-otx-api-key}
+      - TWITTER_API_KEY=${TWITTER_API_KEY:-your-twitter-api-key}
+      - MISP_URL=${MISP_URL:-}
+      - MISP_API_KEY=${MISP_API_KEY:-}
+      - GITHUB_REPOS=${GITHUB_REPOS:-[]}
+      - GITHUB_API_TOKEN=${GITHUB_API_TOKEN:-}
+      - TAXII_SERVERS=${TAXII_SERVERS:-[]}
+      - REDIS_URL=redis://redis:6379/2
+      - EVENT_LOG_LEVEL=${EVENT_LOG_LEVEL:-INFO}
+      - EVENT_CHECK_INTERVALS=${EVENT_CHECK_INTERVALS:-{}}
+      - EVENT_RATE_LIMITS=${EVENT_RATE_LIMITS:-{}}
+      - EVENT_PRIORITIES=${EVENT_PRIORITIES:-{}}
+    depends_on:
+      n8n:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    volumes:
+      - ${EVENT_MONITOR_DIR:-./event_monitoring}/config:/app/config
+      - ${EVENT_MONITOR_DIR:-./event_monitoring}/logs:/app/logs
+      - ${EVENT_MONITOR_DIR:-./event_monitoring}/data:/app/data
+    ports:
+      - "8001:8000"  # API de monitoring
+    networks:
+      - airflow_default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 
 volumes:
