@@ -1,3 +1,5 @@
+name: airflow
+
 x-airflow-common:
   &airflow-common
   image: apache/airflow:2.11.0
@@ -31,9 +33,9 @@ x-airflow-common:
 
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
-    - ${AIRFLOW_PROJ_DIR:-./airflow}}/logs:/opt/airflow/logs
-    - ${AIRFLOW_PROJ_DIR:-./airflow}}/config:/opt/airflow/config
-    - ${AIRFLOW_PROJ_DIR:-./airflow}}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/config:/opt/airflow/config
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins
     - ../:/opt/project  
     - pip-local-volume:/home/airflow/.local   # for dev/testing purposes remove in production
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
@@ -246,6 +248,7 @@ services:
       airflow-init:
         condition: service_completed_successfully
   
+  
   n8n:
     image: n8nio/n8n:latest
     ports:
@@ -266,6 +269,12 @@ services:
     restart: always
     networks:
       - airflow_default
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   n8n-postgres:
     image: postgres:13
