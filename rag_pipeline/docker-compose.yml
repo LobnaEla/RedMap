@@ -12,6 +12,8 @@ services:
       - "5000:5000"
       - "50051:50051"
     restart: on-failure:0
+    networks:
+      - rag_shared_network
     environment:
       QUERY_DEFAULTS_LIMIT: 25
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
@@ -37,6 +39,8 @@ services:
       context: .  
     ports:
       - "8000:8000"
+    networks:
+      - rag_shared_network
     depends_on:
       - weaviate  
 
@@ -45,5 +49,5 @@ volumes:
     driver: local
 
 networks:
-  default:
-    name: rag_pipeline_network
+  rag_shared_network:
+    external: true

@@ -44,7 +44,10 @@ def apply_rag():
     print(f"[RAG] Applying RAG on {len(chunk_files)} chunk files...")
     
     # Configure RAG API endpoint
-    RAG_API_URL = "http://127.0.0.1:8000/query"
+    RAG_API_URL = os.getenv("RAG_API_URL")
+    if not RAG_API_URL:
+        print("[RAG] RAG API URL not set. Please set the RAG_API_URL environment variable.")
+        return
     RAG_OUTPUT_DIR = os.path.join(DATA_DIR, "rag_results")
     os.makedirs(RAG_OUTPUT_DIR, exist_ok=True)
     
@@ -73,7 +76,6 @@ def apply_rag():
             for chunk in chunk_data.get("chunks", []):
                 chunk_id = chunk.get("chunk_id", 0)
                 chunk_text = chunk.get("text", "")
-                chunk_iocs = chunk.get("iocs", "")
                 
                 if not chunk_text.strip():
                     print(f"[RAG] Skipping empty chunk {chunk_id}")
@@ -83,8 +85,6 @@ def apply_rag():
                     # Prepare query for RAG API
                     # Combine text and IOCs for better retrieval
                     query_text = chunk_text
-                    if chunk_iocs and chunk_iocs.strip():
-                        query_text += f" IOCs: {chunk_iocs}"
                     
                     # Query RAG API
                     payload = {
@@ -93,7 +93,7 @@ def apply_rag():
                     }
                     
                     print(f"[RAG] Querying API for chunk {chunk_id}...")
-                    response = requests.post(RAG_API_URL, json=payload, timeout=30)
+                    response = requests.post(RAG_API_URL, json=payload, timeout=1000)
                     
                     if response.status_code == 200:
                         rag_response = response.json()
@@ -102,8 +102,6 @@ def apply_rag():
                         chunk_result = {
                             "chunk_id": chunk_id,
                             "original_text": chunk_text,
-                            "iocs": chunk_iocs,
-                            "query_sent": query_text,
                             "mitre_techniques": rag_response,
                             "retrieval_timestamp": datetime.now().isoformat(),
                             "status": "success"
@@ -120,8 +118,6 @@ def apply_rag():
                         error_result = {
                             "chunk_id": chunk_id,
                             "original_text": chunk_text,
-                            "iocs": chunk_iocs,
-                            "query_sent": query_text,
                             "mitre_techniques": [],
                             "retrieval_timestamp": datetime.now().isoformat(),
                             "status": "api_error",
@@ -134,8 +130,6 @@ def apply_rag():
                     error_result = {
                         "chunk_id": chunk_id,
                         "original_text": chunk_text,
-                        "iocs": chunk_iocs,
-                        "query_sent": query_text if 'query_text' in locals() else chunk_text,
                         "mitre_techniques": [],
                         "retrieval_timestamp": datetime.now().isoformat(),
                         "status": "network_error",
@@ -148,8 +142,6 @@ def apply_rag():
                     error_result = {
                         "chunk_id": chunk_id,
                         "original_text": chunk_text,
-                        "iocs": chunk_iocs,
-                        "query_sent": query_text if 'query_text' in locals() else chunk_text,
                         "mitre_techniques": [],
                         "retrieval_timestamp": datetime.now().isoformat(),
                         "status": "processing_error",
