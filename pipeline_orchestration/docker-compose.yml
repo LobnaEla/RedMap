@@ -28,6 +28,7 @@ x-airflow-common:
     OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     RAG_API_URL: ${RAG_API_URL}
+    RAG_API_URL: ${RAG_API_URL}
 
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
@@ -49,6 +50,9 @@ x-airflow-common:
   networks:
     - airflow_default
     - rag_shared_network
+  networks:
+    - airflow_default
+    - rag_shared_network
 
 services:
   postgres:
@@ -67,6 +71,8 @@ services:
     restart: always
     networks:
       - rag_shared_network
+    networks:
+      - rag_shared_network
 
   redis:
     image: redis:latest
@@ -79,6 +85,8 @@ services:
       retries: 50
       start_period: 30s
     restart: always
+    networks:
+      - rag_shared_network
     networks:
       - rag_shared_network
 
@@ -203,6 +211,7 @@ services:
         
         echo "[INIT] Starting Airflow initialization..."
         /entrypoint airflow version
+        /entrypoint airflow version
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_MIGRATE: 'true'
@@ -236,6 +245,7 @@ services:
       - "5555:5555"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://0.0.0.0:8080/health"]
+      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -265,6 +275,7 @@ services:
       - redis
     restart: always
     networks:
+      - airflow_default
       - airflow_default
 
   n8n-postgres:
@@ -325,6 +336,9 @@ volumes:
   pip-local-volume:   # for dev/testing purposes remove in production
 
 networks:
+  rag_shared_network:
+    external: true
+  airflow_default:
   rag_shared_network:
     external: true
   airflow_default:
