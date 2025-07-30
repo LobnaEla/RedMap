@@ -51,9 +51,6 @@ x-airflow-common:
   networks:
     - airflow_default
     - rag_shared_network
-  networks:
-    - airflow_default
-    - rag_shared_network
 
 services:
   postgres:
@@ -72,8 +69,6 @@ services:
     restart: always
     networks:
       - rag_shared_network
-    networks:
-      - rag_shared_network
 
   redis:
     image: redis:latest
@@ -86,8 +81,6 @@ services:
       retries: 50
       start_period: 30s
     restart: always
-    networks:
-      - rag_shared_network
     networks:
       - rag_shared_network
 
@@ -246,7 +239,6 @@ services:
       - "5555:5555"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://0.0.0.0:8080/health"]
-      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -343,9 +335,6 @@ volumes:
   pip-local-volume:   # for dev/testing purposes remove in production
 
 networks:
-  rag_shared_network:
-    external: true
-  airflow_default:
   rag_shared_network:
     external: true
   airflow_default:
