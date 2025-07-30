@@ -30,7 +30,6 @@ x-airflow-common:
     OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     RAG_API_URL: ${RAG_API_URL}
-    RAG_API_URL: ${RAG_API_URL}
 
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
@@ -279,16 +278,12 @@ services:
     restart: always
     networks:
       - airflow_default
-<<<<<<< HEAD
-      - airflow_default
-=======
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5678/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
->>>>>>> lobna
 
   n8n-postgres:
     image: postgres:13
