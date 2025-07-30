@@ -9,7 +9,7 @@ def build_cti_graph():
     # Connexion à Neo4j (à adapter)
     graph = Graph("bolt://localhost:7687", auth=("neo4j", "password"))
 
-    rag_dir = "/opt/project/rag_pipeline/data/rag_results"#i'll change it later
+    rag_dir = "/opt/project/cti_pipeline/data/rag_results"
     rag_files = glob.glob(os.path.join(rag_dir, "rag_*.json"))
 
     for file in rag_files:
