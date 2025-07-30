@@ -27,6 +27,7 @@ x-airflow-common:
     OPENAI_API_KEY: ${OPENAI_API_KEY}
     OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    RAG_API_URL: ${RAG_API_URL}
 
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
@@ -45,6 +46,9 @@ x-airflow-common:
   build:
     context: .
     dockerfile: Dockerfile.prod
+  networks:
+    - airflow_default
+    - rag_shared_network
 
 services:
   postgres:
@@ -61,6 +65,8 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+    networks:
+      - rag_shared_network
 
   redis:
     image: redis:latest
@@ -73,6 +79,8 @@ services:
       retries: 50
       start_period: 30s
     restart: always
+    networks:
+      - rag_shared_network
 
   airflow-webserver:
     <<: *airflow-common
@@ -90,8 +98,6 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-    networks:
-      - default
 
   airflow-scheduler:
     <<: *airflow-common
@@ -196,7 +202,7 @@ services:
         chown -R "$${AIRFLOW_UID}:0" /sources/{logs,dags,plugins}
         
         echo "[INIT] Starting Airflow initialization..."
-        exec /entrypoint airflow version
+        /entrypoint airflow version
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_MIGRATE: 'true'
@@ -229,7 +235,7 @@ services:
     ports:
       - "5555:5555"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -258,7 +264,7 @@ services:
       - redis
     restart: always
     networks:
-      - default
+      - airflow_default
 
   n8n-postgres:
     image: postgres:13
@@ -272,37 +278,14 @@ services:
 
 
 
-# entity-chunking:
-#   build:
-#     context: ../entity_based_chunking
-#     dockerfile: Dockerfile
-#   environment:
-#     - PYTHONUNBUFFERED=1
-#     - PYTHONDONTWRITEBYTECODE=1
-#     - PYTHONPATH=/app
-#     - GROQ_API_KEY=${GROQ_API_KEY}
-#   volumes:
-#     - ../entity_based_chunking:/app
-#     - chunking-logs:/app/logs
-#     - chunking-data:/app/data
-#   ports:
-#     - "8001:8000"
-#   healthcheck:
-#     test: ["CMD", "python", "-c", "import main; print('Service is healthy')"]
-#     interval: 30s
-#     timeout: 10s
-#     retries: 5
-#     start_period: 30s
-#   restart: always
-
 volumes:
   postgres-db-volume:
   n8n_data:
   n8n_postgres_data:
   pip-local-volume:   # for dev/testing purposes remove in production
-# chunking-logs:
-# chunking-data:  
 
 networks:
-  default:
+  rag_shared_network:
+    external: true
+  airflow_default:
     driver: bridge
