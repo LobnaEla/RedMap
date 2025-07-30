@@ -1,0 +1,475 @@
+{
+  "name": "CTI Event Triggers",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cti-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "de430452-0565-4db3-a9be-391b9c995f73",
+      "name": "Universal CTI Event Webhook",
+      "webhookId": "03824488-3e92-43b7-8855-b96b5d19f1d2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "613ceb04-7ada-4ffd-9a43-575bb9fee66a",
+              "name": "source_name",
+              "value": "={{$json.source_name}}",
+              "type": "string"
+            },
+            {
+              "id": "5e260ad0-1bf7-4d71-86be-17713ac7c0f6",
+              "name": "event_type",
+              "value": "`={{$json.event_type",
+              "type": "string"
+            },
+            {
+              "id": "12ac219b-76f1-4bae-87b3-71253e40da87",
+              "name": "trigger_reason",
+              "value": "`={{$json.reason",
+              "type": "string"
+            },
+            {
+              "id": "073c5c03-bd13-4ace-9363-4f3ef2ecb880",
+              "name": "timestamp",
+              "value": "={{new Date().toISOString()}}",
+              "type": "string"
+            },
+            {
+              "id": "6358fbaf-3c3f-4451-a47b-e68fadb781ac",
+              "name": "priority",
+              "value": "`={{$json.priority",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "4c5832d9-d94d-41ce-baab-01147e90fa76",
+      "name": "Extract Event Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.source_name}}",
+                    "rightValue": "otx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f489b017-95c1-4b3f-bd6f-9a0a442cc713"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "otx"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1df4cc78-b91a-44ab-a8a4-107cde69cdb6",
+                    "leftValue": "={{$json.source_name}}",
+                    "rightValue": "rss",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "rss"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d9cd3b62-c6ef-404f-a895-4d54de32702a",
+                    "leftValue": "={{$json.source_name}}",
+                    "rightValue": "tuncert",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "tuncert"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2517650d-8883-4584-8cf8-25f1323b0a8f",
+                    "leftValue": "={{$json.source_name}}",
+                    "rightValue": "twitter",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "twitter"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f95d4155-3cba-4828-af98-5b17e698adea",
+                    "leftValue": "={{$json.source_name}}",
+                    "rightValue": "blog",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "blog"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        416,
+        -48
+      ],
+      "id": "19ea89b9-7f0b-4de3-a825-98ac159a4f52",
+      "name": "Source Router"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const sourceConfigs = {\n  'otx': { cooldown_minutes: 60, max_concurrent: 2 },\n  'rss': { cooldown_minutes: 30, max_concurrent: 3 },\n  'tuncert': { cooldown_minutes: 120, max_concurrent: 1 },\n  'twitter': { cooldown_minutes: 15, max_concurrent: 5 },\n  'blog': { cooldown_minutes: 45, max_concurrent: 2 }\n};\n\nconst sourceName = $input.all()[0].json.source_name;\nconst config = sourceConfigs[sourceName] || { cooldown_minutes: 30, max_concurrent: 1 };\n\nreturn [{\n  json: {\n    ...$input.all()[0].json,\n    cooldown_minutes: config.cooldown_minutes,\n    max_concurrent: config.max_concurrent\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        0
+      ],
+      "id": "aa464b33-107f-4087-94ac-bc628aa4f194",
+      "name": "Apply Source Config"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://redis:6379",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"command\": \"GET\",\n  \"args\": [\"last_trigger_{{$json.source_name}}\"]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        0
+      ],
+      "id": "ffff52cf-6c5e-41d7-a4da-5b00c82eb381",
+      "name": "Get Last Trigger Time"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "84057684-918a-4ba5-a771-c70f98d5d6e0",
+              "leftValue": "={{new Date($json.last_check_timestamp || '2020-01-01').getTime()}}",
+              "rightValue": "={{new Date().getTime() - (($json.cooldown_minutes || 30) * 60 * 1000)}}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "18eea97d-08ba-4a37-b73f-44769a62935f",
+      "name": "Rate Limiter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://airflow-webserver:8080/api/v1/dags/cti_pipeline_{{$json.source_name}}/dagRuns",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"conf\": {\n    \"event_trigger\": true,\n    \"event_type\": \"{{$json.event_type}}\",\n    \"trigger_reason\": \"{{$json.trigger_reason}}\",\n    \"timestamp\": \"{{$json.timestamp}}\",\n    \"priority\": \"{{$json.priority}}\",\n    \"source_metadata\": {{JSON.stringify($json.source_metadata || {})}}\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1264,
+        -96
+      ],
+      "id": "ff05c630-ffc7-49f2-83b9-8a8f43181481",
+      "name": "Trigger Airflow DAG",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uGR6qM9AflAFO6ua",
+          "name": "airflow-auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"triggered\",\n  \"source\": \"{{$json.source_name}}\",\n  \"event_type\": \"{{$json.event_type}}\",\n  \"dag_triggered\": true,\n  \"timestamp\": \"{{$json.timestamp}}\",\n  \"rate_limited\": false\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1472,
+        -96
+      ],
+      "id": "4ebdf116-6629-4729-b53b-1b1f07c1b194",
+      "name": "Success Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"rate_limited\",\n  \"source\": \"{{$json.source_name}}\",\n  \"message\": \"Source triggered too recently, ignoring event\",\n  \"cooldown_remaining\": \"{{Math.ceil(((new Date($json.last_check_timestamp).getTime() + (($json.cooldown_minutes || 30) * 60 * 1000)) - new Date().getTime()) / 1000 / 60)}} minutes\",\n  \"timestamp\": \"{{new Date().toISOString()}}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1264,
+        96
+      ],
+      "id": "8a0b0dcd-43f2-464a-a97d-a8b40eb69598",
+      "name": "Rate Limited Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Universal CTI Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Event Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Event Data": {
+      "main": [
+        [
+          {
+            "node": "Source Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source Router": {
+      "main": [
+        [
+          {
+            "node": "Apply Source Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Source Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Source Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Source Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply Source Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Source Config": {
+      "main": [
+        [
+          {
+            "node": "Get Last Trigger Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Last Trigger Time": {
+      "main": [
+        [
+          {
+            "node": "Rate Limiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limiter": {
+      "main": [
+        [
+          {
+            "node": "Trigger Airflow DAG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rate Limited Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Airflow DAG": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4c39134a-bcba-40b4-acbe-750c53d97f72",
+  "meta": {
+    "instanceId": "60744c3b045463febae9743c7ad9ffb44a07f63de1967c43d10295ce7d3082ae"
+  },
+  "id": "GXriEHQExcyVcoDp",
+  "tags": []
+}

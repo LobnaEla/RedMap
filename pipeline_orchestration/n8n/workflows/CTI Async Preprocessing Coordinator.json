@@ -1,0 +1,193 @@
+{
+  "name": "CTI Async Preprocessing Coordinator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-source",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d77ab84d-b5f4-4aed-ae31-786e5edd3047",
+      "name": "Webhook Receiver",
+      "webhookId": "d537e30e-fca2-4402-b63f-aa1413b5818b"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "19de8949-2ce8-4692-a912-f6af63271dab",
+              "name": "source_name",
+              "value": "={{$json.source_name}}",
+              "type": "string"
+            },
+            {
+              "id": "865a9e9c-8c05-4f1c-8169-760095af2083",
+              "name": "data_dir",
+              "value": "={{$json.data_dir}}",
+              "type": "string"
+            },
+            {
+              "id": "f369ae8b-f9b6-462d-bff8-25ebdd7b2cbf",
+              "name": "timestamp",
+              "value": "={{$json.timestamp}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "09f6d367-ef5e-4533-a76f-ac40da986d5a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://airflow-webserver:8080/api/v1/dags/preprocess_pipeline/dagRuns",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"conf\": {\n    \"source_name\": \"{{$json.source_name}}\",\n    \"data_dir\": \"{{$json.data_dir}}\",\n    \"trigger_time\": \"{{new Date().toISOString()}}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "b52c6e60-f495-42b5-80c2-2a2e692ddf86",
+      "name": "Start Preprocessing",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uGR6qM9AflAFO6ua",
+          "name": "airflow-auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "91e4d5e5-3013-4c4a-bee5-eb2535e42472",
+              "name": "processing_started",
+              "value": "true",
+              "type": "string"
+            },
+            {
+              "id": "16adc0d5-29c2-4606-8542-50b1a08bf957",
+              "name": "airflow_dag_triggered",
+              "value": "={{$json.status === \"success\"}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "4cfd63b6-7c0d-42dd-bd3d-769b65094a00",
+      "name": "Store Completion"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"processing_started\",\n  \"source\": \"{{$json.source_name}}\",\n  \"preprocessing_dag_triggered\": true,\n  \"timestamp\": \"{{new Date().toISOString()}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        816,
+        0
+      ],
+      "id": "2840075b-d4ca-4568-a0ce-71960061d98f",
+      "name": "Response to Airflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Receiver": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Start Preprocessing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Preprocessing": {
+      "main": [
+        [
+          {
+            "node": "Store Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Completion": {
+      "main": [
+        [
+          {
+            "node": "Response to Airflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d3c21d9d-bf1f-4d59-bdc5-72c52cf0cc87",
+  "meta": {
+    "instanceId": "60744c3b045463febae9743c7ad9ffb44a07f63de1967c43d10295ce7d3082ae"
+  },
+  "id": "OTbg4jBvD7Lo2NN1",
+  "tags": []
+}
