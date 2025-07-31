@@ -34,6 +34,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-./airflow}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-./airflow}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-./airflow}/scripts:/opt/airflow/scripts
     - ../:/opt/project  
     - pip-local-volume:/home/airflow/.local   # for dev/testing purposes remove in production
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
