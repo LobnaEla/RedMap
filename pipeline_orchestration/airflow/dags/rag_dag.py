@@ -8,7 +8,7 @@ sys.path.append("/opt/project")
 import importlib.util
 
 shared_spec = importlib.util.spec_from_file_location(
-    "shared", "/opt/project/airflow/scripts/shared.py"
+    "shared", "/opt/airflow/scripts/shared.py"
 )
 shared = importlib.util.module_from_spec(shared_spec)
 shared_spec.loader.exec_module(shared)
