@@ -1,610 +1,703 @@
+#!/usr/bin/env python3
 """
-Event Monitoring Service for CTI Sources
-Monitors external APIs, feeds, and triggers n8n webhooks
+Complete Event-Driven CTI Service
+Monitors external sources and triggers ingestion pipelines automatically
 """
 
+import requests
+import yaml
+import json
+import logging
 import asyncio
 import aiohttp
-import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import json
+import feedparser
 import hashlib
-from dataclasses import dataclass
-from abc import ABC, abstractmethod
+import redis
+import os
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any, Set
+from pathlib import Path
+from dataclasses import dataclass, asdict
+from enum import Enum
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
+class EventType(Enum):
+    """Event types that can trigger CTI pipeline"""
+
+    NEW_CONTENT = "new_content"
+    HIGH_PRIORITY = "high_priority"
+    THREAT_INDICATOR = "threat_indicator"
+    VULNERABILITY = "vulnerability"
+    SCHEDULED = "scheduled"
+    MANUAL = "manual"
+
+
+class Priority(Enum):
+    """Priority levels for events"""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
 @dataclass
-class EventConfig:
-    """Configuration for each source"""
+class CTIEvent:
+    """CTI Event data structure"""
 
     source_name: str
-    check_interval: int  # seconds
-    rate_limit: int  # minutes between triggers
-    priority: str  # normal, high, critical
-    enabled: bool = True
+    event_type: str
+    reason: str
+    priority: str
+    timestamp: str = None
+    source_metadata: Dict[str, Any] = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow().isoformat()
+        if self.source_metadata is None:
+            self.source_metadata = {}
 
 
-class BaseSourceMonitor(ABC):
-    """Base class for source monitors"""
+class CTIEventService:
+    """Core service for managing CTI events and triggers"""
 
-    def __init__(self, config: EventConfig, n8n_webhook_url: str):
-        self.config = config
-        self.n8n_url = n8n_webhook_url
-        self.last_trigger = None
-        self.last_state_hash = None
+    def __init__(
+        self,
+        n8n_webhook_url: str = None,
+        redis_host: str = None,
+        redis_port: int = None,
+        config_dir: str = "config",
+    ):
 
-    @abstractmethod
-    async def check_for_updates(self) -> Optional[Dict]:
-        """Check if source has updates. Return event data if yes, None if no."""
-        pass
+        # Load configuration from environment
+        self.n8n_webhook_url = n8n_webhook_url or os.getenv(
+            "N8N_WEBHOOK_URL", "http://localhost:5678/webhook/cti-event"
+        )
+        redis_host = redis_host or os.getenv("REDIS_HOST", "localhost")
+        redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
 
-    async def trigger_n8n_event(self, event_data: Dict) -> bool:
-        """Send event to n8n webhook"""
+        self.config_dir = Path(config_dir)
+
+        # Initialize Redis connection
         try:
-            payload = {
-                "source_name": self.config.source_name,
-                "event_type": event_data.get("event_type", "data_update"),
-                "reason": event_data.get("reason", "automated_check"),
-                "priority": self.config.priority,
-                "source_metadata": event_data.get("metadata", {}),
-            }
-
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.n8n_url, json=payload, timeout=aiohttp.ClientTimeout(total=30)
-                ) as response:
-                    if response.status == 200:
-                        logger.info(
-                            f"✅ {self.config.source_name}: Event triggered successfully"
-                        )
-                        self.last_trigger = datetime.now()
-                        return True
-                    else:
-                        logger.error(
-                            f"❌ {self.config.source_name}: n8n trigger failed - {response.status}"
-                        )
-                        return False
-
+            self.redis_client = redis.Redis(
+                host=redis_host, port=redis_port, decode_responses=True
+            )
+            self.redis_client.ping()
+            logger.info("Connected to Redis successfully")
         except Exception as e:
-            logger.error(f"❌ {self.config.source_name}: Failed to trigger n8n - {e}")
-            return False
+            logger.error(f"Failed to connect to Redis: {e}")
+            self.redis_client = None
 
-    def should_trigger(self) -> bool:
-        """Check if enough time has passed since last trigger"""
-        if not self.last_trigger:
+        # Load configurations
+        self.sources_config = self._load_sources_config()
+        self.source_limits = self._get_source_limits()
+
+    def _load_sources_config(self) -> Dict[str, Any]:
+        """Load sources configuration from YAML"""
+        try:
+            sources_file = self.config_dir / "sources.yaml"
+            if sources_file.exists():
+                with open(sources_file, "r") as f:
+                    return yaml.safe_load(f)
+            else:
+                logger.warning(f"Sources config file not found at {sources_file}")
+                return {"sources": []}
+        except Exception as e:
+            logger.error(f"Error loading sources config: {e}")
+            return {"sources": []}
+
+    def _get_source_limits(self) -> Dict[str, Dict[str, int]]:
+        """Get rate limiting configuration for each source"""
+        return {
+            "otx": {"cooldown_minutes": 60, "max_concurrent": 2},
+            "rss": {"cooldown_minutes": 30, "max_concurrent": 3},
+            "tuncert": {"cooldown_minutes": 120, "max_concurrent": 1},
+            "twitter": {"cooldown_minutes": 15, "max_concurrent": 5},
+            "blog": {"cooldown_minutes": 45, "max_concurrent": 2},
+        }
+
+    def _check_rate_limit(self, source_name: str) -> bool:
+        """Check if source can be triggered based on rate limits"""
+        if not self.redis_client:
+            logger.warning("Redis not available, skipping rate limit check")
             return True
 
-        time_since_trigger = datetime.now() - self.last_trigger
-        cooldown = timedelta(minutes=self.config.rate_limit)
-        return time_since_trigger >= cooldown
+        limits = self.source_limits.get(source_name, {"cooldown_minutes": 30})
+        cooldown_key = f"last_trigger_{source_name}"
 
-    def get_state_hash(self, data: str) -> str:
-        """Generate hash of current state for change detection"""
-        return hashlib.md5(data.encode()).hexdigest()
-
-
-class OTXMonitor(BaseSourceMonitor):
-    """Monitor AlienVault OTX for new pulses"""
-
-    def __init__(self, config: EventConfig, n8n_webhook_url: str, api_key: str):
-        super().__init__(config, n8n_webhook_url)
-        self.api_key = api_key
-        self.base_url = "https://otx.alienvault.com/api/v1"
-
-    async def check_for_updates(self) -> Optional[Dict]:
         try:
-            headers = {"X-OTX-API-KEY": self.api_key}
+            last_trigger = self.redis_client.get(cooldown_key)
+            if last_trigger:
+                last_time = datetime.fromisoformat(last_trigger)
+                cooldown_period = timedelta(minutes=limits["cooldown_minutes"])
 
-            # Check for recent pulses (last hour)
-            since = (datetime.now() - timedelta(hours=1)).isoformat()
-            url = f"{self.base_url}/pulses/subscribed?modified_since={since}&limit=50"
+                if datetime.utcnow() - last_time < cooldown_period:
+                    remaining = cooldown_period - (datetime.utcnow() - last_time)
+                    logger.info(
+                        f"Source {source_name} rate limited. {remaining.total_seconds()/60:.1f} minutes remaining"
+                    )
+                    return False
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers, timeout=30) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        pulse_count = len(data.get("results", []))
-
-                        if pulse_count > 0:
-                            # Create state hash to avoid duplicate triggers
-                            state_data = json.dumps(
-                                data.get("results", []), sort_keys=True
-                            )
-                            current_hash = self.get_state_hash(state_data)
-
-                            if current_hash != self.last_state_hash:
-                                self.last_state_hash = current_hash
-
-                                return {
-                                    "event_type": "new_pulses",
-                                    "reason": "otx_api_check",
-                                    "metadata": {
-                                        "pulse_count": pulse_count,
-                                        "check_timestamp": datetime.now().isoformat(),
-                                        "categories": list(
-                                            {
-                                                p.get("name", "").split()[0]
-                                                for p in data.get("results", [])
-                                            }
-                                        )[:5],
-                                    },
-                                }
-
+            return True
         except Exception as e:
-            logger.error(f"❌ OTX check failed: {e}")
+            logger.error(f"Error checking rate limit for {source_name}: {e}")
+            return True
 
-        return None
+    def _update_trigger_time(self, source_name: str):
+        """Update the last trigger time for a source"""
+        if self.redis_client:
+            try:
+                cooldown_key = f"last_trigger_{source_name}"
+                self.redis_client.set(cooldown_key, datetime.utcnow().isoformat())
+            except Exception as e:
+                logger.error(f"Error updating trigger time for {source_name}: {e}")
 
+    def trigger_event(self, event: CTIEvent) -> Dict[str, Any]:
+        """Trigger a CTI event via n8n webhook"""
 
-class RSSMonitor(BaseSourceMonitor):
-    """Monitor RSS feeds for new security content"""
-
-    def __init__(self, config: EventConfig, n8n_webhook_url: str, rss_feeds: List[str]):
-        super().__init__(config, n8n_webhook_url)
-        self.rss_feeds = rss_feeds
-        self.keywords = [
-            "vulnerability",
-            "exploit",
-            "malware",
-            "apt",
-            "zero-day",
-            "cve",
-        ]
-
-    async def check_for_updates(self) -> Optional[Dict]:
-        try:
-            import feedparser
-
-            new_articles = []
-            since_time = datetime.now() - timedelta(hours=2)
-
-            for feed_url in self.rss_feeds:
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(feed_url, timeout=30) as response:
-                            if response.status == 200:
-                                content = await response.text()
-                                feed = feedparser.parse(content)
-
-                                for entry in feed.entries:
-                                    pub_date = datetime(*entry.published_parsed[:6])
-
-                                    if pub_date > since_time:
-                                        # Check for security-related keywords
-                                        title_lower = entry.title.lower()
-                                        summary_lower = entry.get("summary", "").lower()
-
-                                        matched_keywords = [
-                                            kw
-                                            for kw in self.keywords
-                                            if kw in title_lower or kw in summary_lower
-                                        ]
-
-                                        if matched_keywords:
-                                            new_articles.append(
-                                                {
-                                                    "title": entry.title,
-                                                    "url": entry.link,
-                                                    "keywords": matched_keywords,
-                                                    "published": pub_date.isoformat(),
-                                                }
-                                            )
-
-                except Exception as e:
-                    logger.warning(f"Failed to parse RSS feed {feed_url}: {e}")
-
-            if new_articles:
-                return {
-                    "event_type": "new_articles",
-                    "reason": "rss_monitoring",
-                    "metadata": {
-                        "article_count": len(new_articles),
-                        "articles": new_articles[:5],  # Limit to first 5
-                        "keywords_found": list(
-                            set(
-                                [
-                                    kw
-                                    for article in new_articles
-                                    for kw in article["keywords"]
-                                ]
-                            )
-                        ),
-                        "check_timestamp": datetime.now().isoformat(),
-                    },
-                }
-
-        except Exception as e:
-            logger.error(f"❌ RSS check failed: {e}")
-
-        return None
-
-
-class TunCERTMonitor(BaseSourceMonitor):
-    """Monitor TunCERT for new vulnerability advisories"""
-
-    def __init__(self, config: EventConfig, n8n_webhook_url: str):
-        super().__init__(config, n8n_webhook_url)
-        self.base_url = "https://www.tuncert.tn"  # Adjust based on actual API
-
-    async def check_for_updates(self) -> Optional[Dict]:
-        try:
-            # This would need to be adapted to TunCERT's actual API/RSS
-            # For now, simulate checking for new advisories
-
-            async with aiohttp.ClientSession() as session:
-                # Example: Check RSS feed or API endpoint
-                url = f"{self.base_url}/api/advisories/recent"  # Hypothetical
-
-                async with session.get(url, timeout=30) as response:
-                    if response.status == 200:
-                        data = await response.json()
-
-                        new_advisories = [
-                            adv
-                            for adv in data.get("advisories", [])
-                            if self._is_recent(adv.get("published_date"))
-                        ]
-
-                        if new_advisories:
-                            return {
-                                "event_type": "new_advisories",
-                                "reason": "tuncert_monitoring",
-                                "metadata": {
-                                    "advisory_count": len(new_advisories),
-                                    "severity_levels": [
-                                        adv.get("severity") for adv in new_advisories
-                                    ],
-                                    "cve_ids": [
-                                        adv.get("cve_id")
-                                        for adv in new_advisories
-                                        if adv.get("cve_id")
-                                    ],
-                                    "check_timestamp": datetime.now().isoformat(),
-                                },
-                            }
-
-        except Exception as e:
-            logger.error(f"❌ TunCERT check failed: {e}")
-
-        return None
-
-    def _is_recent(self, date_str: str) -> bool:
-        """Check if advisory is from last 24 hours"""
-        try:
-            pub_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            return (datetime.now() - pub_date).days < 1
-        except:
-            return False
-
-
-class TwitterMonitor(BaseSourceMonitor):
-    """Monitor Twitter users for threat intelligence tweets"""
-
-    def __init__(self, config: EventConfig, n8n_webhook_url: str, twitter_api_key: str):
-        super().__init__(config, n8n_webhook_url)
-        self.api_key = twitter_api_key
-        self.threat_intel_keywords = [
-            "IOC",
-            "malware",
-            "C2",
-            "APT",
-            "threat",
-            "vulnerability",
-            "exploit",
-            "phishing",
-            "ransomware",
-            "backdoor",
-        ]
-        self.monitored_users = [
-            "malware_traffic",
-            "threatintel",
-            "vxunderground",
-            "bad_packets",
-            "cyber_feed",
-        ]
-
-    async def check_for_updates(self) -> Optional[Dict]:
-        try:
-            # Note: Twitter API v2 requires different authentication
-            headers = {"Authorization": f"Bearer {self.api_key}"}
-
-            # Search for recent tweets from monitored users with threat intel keywords
-            query = f"from:{' OR from:'.join(self.monitored_users)} ({' OR '.join(self.threat_intel_keywords)})"
-            url = f"https://api.twitter.com/2/tweets/search/recent"
-
-            params = {
-                "query": query,
-                "max_results": 50,
-                "tweet.fields": "created_at,author_id,public_metrics",
+        # Validate source exists
+        valid_sources = [s["name"] for s in self.sources_config.get("sources", [])]
+        if event.source_name not in valid_sources:
+            logger.error(f"Unknown source: {event.source_name}")
+            return {
+                "status": "error",
+                "message": f"Unknown source: {event.source_name}",
+                "valid_sources": valid_sources,
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, headers=headers, params=params, timeout=30
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        tweets = data.get("data", [])
+        # Check rate limits
+        if not self._check_rate_limit(event.source_name):
+            limits = self.source_limits.get(event.source_name, {})
+            return {
+                "status": "rate_limited",
+                "source": event.source_name,
+                "message": "Source triggered too recently, ignoring event",
+                "cooldown_minutes": limits.get("cooldown_minutes", 30),
+            }
 
-                        # Filter tweets from last 2 hours
-                        recent_tweets = []
-                        cutoff_time = datetime.now() - timedelta(hours=2)
+        # Prepare payload for n8n
+        payload = asdict(event)
 
-                        for tweet in tweets:
-                            tweet_time = datetime.fromisoformat(
-                                tweet["created_at"].replace("Z", "+00:00")
-                            )
-                            if tweet_time > cutoff_time:
-                                recent_tweets.append(tweet)
-
-                        if recent_tweets:
-                            return {
-                                "event_type": "threat_intel_tweets",
-                                "reason": "twitter_monitoring",
-                                "metadata": {
-                                    "tweet_count": len(recent_tweets),
-                                    "high_engagement_tweets": [
-                                        t
-                                        for t in recent_tweets
-                                        if t.get("public_metrics", {}).get(
-                                            "retweet_count", 0
-                                        )
-                                        > 10
-                                    ][:3],
-                                    "keywords_found": self.threat_intel_keywords,
-                                    "check_timestamp": datetime.now().isoformat(),
-                                },
-                            }
-
-        except Exception as e:
-            logger.error(f"❌ Twitter check failed: {e}")
-
-        return None
-
-
-class BlogMonitor(BaseSourceMonitor):
-    """Monitor security blogs for new threat analysis"""
-
-    def __init__(self, config: EventConfig, n8n_webhook_url: str, blog_urls: List[str]):
-        super().__init__(config, n8n_webhook_url)
-        self.blog_urls = blog_urls
-        self.threat_keywords = [
-            "mitre",
-            "att&ck",
-            "ttp",
-            "apt",
-            "threat analysis",
-            "malware analysis",
-            "incident response",
-            "ioc",
-        ]
-
-    async def check_for_updates(self) -> Optional[Dict]:
         try:
-            new_posts = []
+            # Send to n8n webhook
+            response = requests.post(
+                self.n8n_webhook_url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=30,
+            )
 
-            for blog_url in self.blog_urls:
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        # Try RSS first, then HTML scraping
-                        rss_url = (
-                            f"{blog_url}/rss"
-                            if not blog_url.endswith("/rss")
-                            else blog_url
-                        )
+            if response.status_code == 200:
+                # Update trigger time on successful trigger
+                self._update_trigger_time(event.source_name)
 
-                        async with session.get(rss_url, timeout=30) as response:
-                            if response.status == 200:
-                                import feedparser
-
-                                content = await response.text()
-                                feed = feedparser.parse(content)
-
-                                cutoff_time = datetime.now() - timedelta(hours=6)
-
-                                for entry in feed.entries:
-                                    try:
-                                        pub_date = datetime(*entry.published_parsed[:6])
-
-                                        if pub_date > cutoff_time:
-                                            title_lower = entry.title.lower()
-                                            summary_lower = entry.get(
-                                                "summary", ""
-                                            ).lower()
-
-                                            # Check for threat intel relevance
-                                            matched_keywords = [
-                                                kw
-                                                for kw in self.threat_keywords
-                                                if kw in title_lower
-                                                or kw in summary_lower
-                                            ]
-
-                                            if matched_keywords:
-                                                new_posts.append(
-                                                    {
-                                                        "title": entry.title,
-                                                        "url": entry.link,
-                                                        "blog_source": blog_url,
-                                                        "keywords": matched_keywords,
-                                                        "published": pub_date.isoformat(),
-                                                    }
-                                                )
-                                    except:
-                                        continue
-
-                except Exception as e:
-                    logger.warning(f"Failed to check blog {blog_url}: {e}")
-
-            if new_posts:
+                logger.info(
+                    f"Successfully triggered event for source {event.source_name}"
+                )
                 return {
-                    "event_type": "threat_analysis",
-                    "reason": "blog_monitoring",
-                    "metadata": {
-                        "post_count": len(new_posts),
-                        "posts": new_posts[:3],  # Limit to first 3
-                        "sources": list(
-                            set([post["blog_source"] for post in new_posts])
-                        ),
-                        "check_timestamp": datetime.now().isoformat(),
-                    },
+                    "status": "triggered",
+                    "source": event.source_name,
+                    "event_type": event.event_type,
+                    "response": response.json() if response.content else {},
+                }
+            else:
+                logger.error(
+                    f"Failed to trigger event. Status: {response.status_code}, Response: {response.text}"
+                )
+                return {
+                    "status": "error",
+                    "message": f"HTTP {response.status_code}: {response.text}",
                 }
 
-        except Exception as e:
-            logger.error(f"❌ Blog check failed: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request failed: {e}")
+            return {"status": "error", "message": f"Request failed: {str(e)}"}
 
+    def get_source_status(self, source_name: str) -> Dict[str, Any]:
+        """Get current status of a source"""
+        if not self.redis_client:
+            return {"status": "unknown", "message": "Redis not available"}
+
+        try:
+            cooldown_key = f"last_trigger_{source_name}"
+            last_trigger = self.redis_client.get(cooldown_key)
+            limits = self.source_limits.get(source_name, {"cooldown_minutes": 30})
+
+            if last_trigger:
+                last_time = datetime.fromisoformat(last_trigger)
+                cooldown_period = timedelta(minutes=limits["cooldown_minutes"])
+                time_since_trigger = datetime.utcnow() - last_time
+
+                if time_since_trigger < cooldown_period:
+                    remaining = cooldown_period - time_since_trigger
+                    return {
+                        "status": "rate_limited",
+                        "last_trigger": last_trigger,
+                        "cooldown_remaining_minutes": remaining.total_seconds() / 60,
+                        "can_trigger": False,
+                    }
+                else:
+                    return {
+                        "status": "ready",
+                        "last_trigger": last_trigger,
+                        "can_trigger": True,
+                    }
+            else:
+                return {"status": "ready", "last_trigger": None, "can_trigger": True}
+
+        except Exception as e:
+            logger.error(f"Error getting status for {source_name}: {e}")
+            return {"status": "error", "message": str(e)}
+
+
+class EventMonitor:
+    """Base class for monitoring external sources for changes"""
+
+    def __init__(self, event_service: CTIEventService):
+        self.event_service = event_service
+        self.last_check_hashes: Dict[str, str] = {}
+        self.redis_key_prefix = "monitor_hash_"
+
+        # Load previous hashes from Redis if available
+        self._load_previous_hashes()
+
+    def _load_previous_hashes(self):
+        """Load previous content hashes from Redis"""
+        if self.event_service.redis_client:
+            try:
+                keys = self.event_service.redis_client.keys(f"{self.redis_key_prefix}*")
+                for key in keys:
+                    source_key = key.replace(self.redis_key_prefix, "")
+                    hash_value = self.event_service.redis_client.get(key)
+                    if hash_value:
+                        self.last_check_hashes[source_key] = hash_value
+                logger.info(f"Loaded {len(self.last_check_hashes)} previous hashes")
+            except Exception as e:
+                logger.error(f"Error loading previous hashes: {e}")
+
+    def _save_hash(self, source_key: str, hash_value: str):
+        """Save content hash to Redis"""
+        if self.event_service.redis_client:
+            try:
+                redis_key = f"{self.redis_key_prefix}{source_key}"
+                self.event_service.redis_client.set(
+                    redis_key, hash_value, ex=86400
+                )  # 24 hour expiry
+            except Exception as e:
+                logger.error(f"Error saving hash for {source_key}: {e}")
+
+    async def monitor(self):
+        """Override in subclasses"""
+        raise NotImplementedError
+
+
+class RSSMonitor(EventMonitor):
+    """Monitor RSS feeds for new entries"""
+
+    def __init__(self, event_service: CTIEventService):
+        super().__init__(event_service)
+        self.rss_sources = self._load_rss_sources()
+
+    def _load_rss_sources(self) -> List[Dict]:
+        """Load RSS sources configuration"""
+        try:
+            from rss_sources import RSS_SOURCES
+
+            return RSS_SOURCES
+        except ImportError:
+            logger.warning("RSS sources not found")
+            return []
+
+    async def monitor(self):
+        """Check RSS feeds for new content"""
+        if not self.rss_sources:
+            return
+
+        for source in self.rss_sources:
+            try:
+                feed = feedparser.parse(source["url"])
+
+                # Create hash of recent entries
+                recent_entries = feed.entries[:10]  # Check last 10 entries
+                content_hash = self._hash_entries(recent_entries)
+
+                source_key = f"rss_{source['name']}"
+
+                # Check if content changed
+                if source_key in self.last_check_hashes:
+                    if content_hash != self.last_check_hashes[source_key]:
+                        logger.info(
+                            f"New content detected in RSS source: {source['name']}"
+                        )
+
+                        # Trigger event
+                        event = CTIEvent(
+                            source_name="rss",
+                            event_type=EventType.NEW_CONTENT.value,
+                            reason=f"New entries detected in {source['name']}",
+                            priority=Priority.MEDIUM.value,
+                            source_metadata={
+                                "rss_source": source["name"],
+                                "feed_url": source["url"],
+                                "new_entries_count": len(recent_entries),
+                                "latest_entry_title": (
+                                    recent_entries[0].get("title", "")
+                                    if recent_entries
+                                    else ""
+                                ),
+                            },
+                        )
+
+                        result = self.event_service.trigger_event(event)
+                        logger.info(f"RSS trigger result: {result.get('status')}")
+
+                # Update hash
+                self.last_check_hashes[source_key] = content_hash
+                self._save_hash(source_key, content_hash)
+
+            except Exception as e:
+                logger.error(
+                    f"Error monitoring RSS source {source.get('name', 'unknown')}: {e}"
+                )
+
+    def _hash_entries(self, entries: List) -> str:
+        """Create hash of entry titles and dates"""
+        content = ""
+        for entry in entries:
+            content += f"{entry.get('title', '')}{entry.get('published', '')}"
+        return hashlib.md5(content.encode()).hexdigest()
+
+
+class BlogMonitor(EventMonitor):
+    """Monitor blog sources for new posts"""
+
+    def __init__(self, event_service: CTIEventService):
+        super().__init__(event_service)
+        self.blog_sources = self._load_blog_sources()
+
+    def _load_blog_sources(self) -> List[Dict]:
+        """Load blog sources configuration"""
+        try:
+            from blog_sources import BLOG_SOURCES
+
+            return BLOG_SOURCES
+        except ImportError:
+            logger.warning("Blog sources not found")
+            return []
+
+    async def monitor(self):
+        """Check blog sources for new content"""
+        if not self.blog_sources:
+            return
+
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            for source in self.blog_sources:
+                try:
+                    async with session.get(source["url"]) as response:
+                        if response.status == 200:
+                            content = await response.text()
+                            # Use first 5000 characters to detect changes
+                            content_hash = hashlib.md5(
+                                content[:5000].encode()
+                            ).hexdigest()
+
+                            source_key = f"blog_{source['name']}"
+
+                            if source_key in self.last_check_hashes:
+                                if content_hash != self.last_check_hashes[source_key]:
+                                    logger.info(
+                                        f"Content change detected in blog: {source['name']}"
+                                    )
+
+                                    event = CTIEvent(
+                                        source_name="blog",
+                                        event_type=EventType.NEW_CONTENT.value,
+                                        reason=f"Content change detected in {source['name']}",
+                                        priority=Priority.MEDIUM.value,
+                                        source_metadata={
+                                            "blog_source": source["name"],
+                                            "blog_url": source["url"],
+                                            "response_status": response.status,
+                                        },
+                                    )
+
+                                    result = self.event_service.trigger_event(event)
+                                    logger.info(
+                                        f"Blog trigger result: {result.get('status')}"
+                                    )
+
+                            # Update hash
+                            self.last_check_hashes[source_key] = content_hash
+                            self._save_hash(source_key, content_hash)
+                        else:
+                            logger.warning(
+                                f"HTTP {response.status} for blog {source['name']}"
+                            )
+
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        f"Timeout monitoring blog {source.get('name', 'unknown')}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Error monitoring blog {source.get('name', 'unknown')}: {e}"
+                    )
+
+
+class OTXMonitor(EventMonitor):
+    """Monitor OTX for new pulses"""
+
+    def __init__(self, event_service: CTIEventService):
+        super().__init__(event_service)
+        self.otx_api_key = os.getenv("OTX_API_KEY")
+        self.otx_url = "https://otx.alienvault.com/api/v1/pulses/subscribed"
+
+    async def monitor(self):
+        """Check OTX for new pulses"""
+        if not self.otx_api_key:
+            logger.debug("OTX API key not configured, skipping OTX monitoring")
+            return
+
+        headers = {"X-OTX-API-KEY": self.otx_api_key}
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=30)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(self.otx_url, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+
+                        # Get recent pulses (last 2 hours)
+                        recent_pulses = []
+                        cutoff_time = datetime.utcnow() - timedelta(hours=2)
+
+                        for pulse in data.get("results", []):
+                            try:
+                                pulse_time = datetime.fromisoformat(
+                                    pulse["created"].replace("Z", "+00:00")
+                                )
+                                if pulse_time > cutoff_time:
+                                    recent_pulses.append(pulse)
+                            except (ValueError, KeyError):
+                                continue
+
+                        if recent_pulses:
+                            # Check for high-priority indicators
+                            high_priority = any(
+                                pulse.get("TLP", "").lower() in ["red", "amber"]
+                                or len(pulse.get("indicators", [])) > 100
+                                for pulse in recent_pulses
+                            )
+
+                            priority = (
+                                Priority.HIGH.value
+                                if high_priority
+                                else Priority.MEDIUM.value
+                            )
+                            event_type = (
+                                EventType.HIGH_PRIORITY.value
+                                if high_priority
+                                else EventType.NEW_CONTENT.value
+                            )
+
+                            event = CTIEvent(
+                                source_name="otx",
+                                event_type=event_type,
+                                reason=f"New OTX pulses detected ({len(recent_pulses)} pulses)",
+                                priority=priority,
+                                source_metadata={
+                                    "new_pulses_count": len(recent_pulses),
+                                    "high_priority": high_priority,
+                                    "pulse_ids": [
+                                        p.get("id")
+                                        for p in recent_pulses[:5]
+                                        if p.get("id")
+                                    ],
+                                },
+                            )
+
+                            result = self.event_service.trigger_event(event)
+                            logger.info(f"OTX trigger result: {result.get('status')}")
+                    else:
+                        logger.warning(f"OTX API returned status {response.status}")
+
+        except asyncio.TimeoutError:
+            logger.warning("Timeout monitoring OTX")
+        except Exception as e:
+            logger.error(f"Error monitoring OTX: {e}")
+
+
+class TunCertMonitor(EventMonitor):
+    """Monitor Turkey CERT for new vulnerabilities"""
+
+    async def monitor(self):
+        """Check TunCert for new vulnerability announcements"""
+        try:
+            # TunCert typically has RSS feeds or web pages to monitor
+            # This is a placeholder - implement based on actual TunCert API/feeds
+
+            # For now, trigger based on schedule (every 2 hours)
+            source_key = "tuncert_last_check"
+            now = datetime.utcnow()
+
+            if source_key in self.last_check_hashes:
+                last_check = datetime.fromisoformat(self.last_check_hashes[source_key])
+                if now - last_check < timedelta(hours=2):
+                    return
+
+            # Simulate checking for new vulnerabilities
+            logger.info("Checking TunCert for new vulnerabilities")
+
+            event = CTIEvent(
+                source_name="tuncert",
+                event_type=EventType.VULNERABILITY.value,
+                reason="Scheduled TunCert vulnerability check",
+                priority=Priority.MEDIUM.value,
+                source_metadata={
+                    "check_type": "scheduled",
+                    "last_check": self.last_check_hashes.get(source_key),
+                },
+            )
+
+            result = self.event_service.trigger_event(event)
+            logger.info(f"TunCert trigger result: {result.get('status')}")
+
+            # Update last check time
+            self.last_check_hashes[source_key] = now.isoformat()
+            self._save_hash(source_key, now.isoformat())
+
+        except Exception as e:
+            logger.error(f"Error monitoring TunCert: {e}")
+
+
+class TwitterMonitor(EventMonitor):
+    """Monitor Twitter for security-related content"""
+
+    async def monitor(self):
+        """Monitor Twitter accounts for new security content"""
+        # Note: Twitter API v2 requires authentication and has rate limits
+        # This is a placeholder implementation
+
+        twitter_config = self._load_twitter_config()
+        if not twitter_config:
+            logger.debug("Twitter configuration not found, skipping Twitter monitoring")
+            return
+
+        # Implement Twitter API monitoring here
+        logger.debug("Twitter monitoring requires API v2 implementation")
+
+    def _load_twitter_config(self) -> Optional[Dict]:
+        """Load Twitter configuration"""
+        try:
+            config_file = self.event_service.config_dir / "twitter_users.yaml"
+            if config_file.exists():
+                with open(config_file, "r") as f:
+                    return yaml.safe_load(f)
+        except Exception as e:
+            logger.error(f"Error loading Twitter config: {e}")
         return None
 
 
 class EventOrchestrator:
-    """Main orchestrator for all source monitors"""
+    """Orchestrates all event monitors"""
 
-    def __init__(self, n8n_webhook_url: str):
-        self.n8n_url = n8n_webhook_url
-        self.monitors: List[BaseSourceMonitor] = []
+    def __init__(self, event_service: CTIEventService, check_interval: int = None):
+        self.event_service = event_service
+        self.check_interval = check_interval or int(
+            os.getenv("MONITOR_INTERVAL", 300)
+        )  # 5 minutes default
+        self.monitors: List[EventMonitor] = []
         self.running = False
 
-    def add_monitor(self, monitor: BaseSourceMonitor):
-        """Add a source monitor"""
-        self.monitors.append(monitor)
-        logger.info(f"Added monitor for {monitor.config.source_name}")
+        self._setup_monitors()
 
-    async def run_monitor(self, monitor: BaseSourceMonitor):
-        """Run a single monitor continuously"""
-        while self.running:
-            try:
-                if not monitor.config.enabled:
-                    await asyncio.sleep(monitor.config.check_interval)
-                    continue
-
-                logger.debug(f"Checking {monitor.config.source_name}...")
-
-                # Check for updates
-                event_data = await monitor.check_for_updates()
-
-                if event_data and monitor.should_trigger():
-                    logger.info(f"🎯 {monitor.config.source_name}: New event detected")
-                    await monitor.trigger_n8n_event(event_data)
-                elif event_data:
-                    logger.info(
-                        f"⏰ {monitor.config.source_name}: Event detected but rate limited"
-                    )
-
-                await asyncio.sleep(monitor.config.check_interval)
-
-            except Exception as e:
-                logger.error(f"❌ Error in {monitor.config.source_name} monitor: {e}")
-                await asyncio.sleep(60)  # Wait before retrying
-
-    async def start(self):
-        """Start all monitors"""
-        self.running = True
-        logger.info(
-            f"🚀 Starting event orchestrator with {len(self.monitors)} monitors"
-        )
-
-        # Start all monitors concurrently
-        tasks = [
-            asyncio.create_task(self.run_monitor(monitor)) for monitor in self.monitors
+    def _setup_monitors(self):
+        """Setup all monitors based on configuration"""
+        monitor_classes = [
+            RSSMonitor,
+            BlogMonitor,
+            OTXMonitor,
+            TunCertMonitor,
+            TwitterMonitor,
         ]
 
-        try:
-            await asyncio.gather(*tasks)
-        except KeyboardInterrupt:
-            logger.info("Shutting down...")
-            self.running = False
+        for monitor_class in monitor_classes:
+            try:
+                monitor = monitor_class(self.event_service)
+                self.monitors.append(monitor)
+                logger.info(f"Setup {monitor_class.__name__}")
+            except Exception as e:
+                logger.error(f"Failed to setup {monitor_class.__name__}: {e}")
 
-            # Cancel all tasks
-            for task in tasks:
-                task.cancel()
+    async def start_monitoring(self):
+        """Start continuous monitoring"""
+        self.running = True
+        logger.info(f"Starting event monitoring with {len(self.monitors)} monitors")
+        logger.info(f"Check interval: {self.check_interval} seconds")
 
-            await asyncio.gather(*tasks, return_exceptions=True)
+        while self.running:
+            try:
+                start_time = datetime.utcnow()
 
+                # Run all monitors concurrently
+                monitor_tasks = [monitor.monitor() for monitor in self.monitors]
+                await asyncio.gather(*monitor_tasks, return_exceptions=True)
 
-# === Configuration and Main ===
+                duration = (datetime.utcnow() - start_time).total_seconds()
+                logger.debug(f"Completed monitoring cycle in {duration:.2f} seconds")
 
+                # Wait before next check
+                await asyncio.sleep(self.check_interval)
 
-def create_orchestrator() -> EventOrchestrator:
-    """Create and configure the event orchestrator"""
+            except KeyboardInterrupt:
+                logger.info("Monitoring stopped by user")
+                self.running = False
+                break
+            except Exception as e:
+                logger.error(f"Error in monitoring cycle: {e}")
+                await asyncio.sleep(60)  # Wait 1 minute before retry
 
-    N8N_WEBHOOK_URL = "http://localhost:5678/webhook/cti-event"
-
-    orchestrator = EventOrchestrator(N8N_WEBHOOK_URL)
-
-    # OTX Monitor
-    otx_config = EventConfig(
-        source_name="otx",
-        check_interval=3600,  # 1 hour
-        rate_limit=60,  # 1 hour cooldown
-        priority="high",
-    )
-    if OTX_API_KEY := "your-otx-api-key":  # Set your API key
-        orchestrator.add_monitor(OTXMonitor(otx_config, N8N_WEBHOOK_URL, OTX_API_KEY))
-
-    # RSS Monitor
-    rss_config = EventConfig(
-        source_name="rss",
-        check_interval=1800,  # 30 minutes
-        rate_limit=30,  # 30 minutes cooldown
-        priority="normal",
-    )
-    rss_feeds = [
-        "https://feeds.feedburner.com/eset/blog",
-        "https://www.schneier.com/blog/atom.xml",
-        "https://krebsonsecurity.com/feed/",
-        "https://threatpost.com/feed/",
-    ]
-    orchestrator.add_monitor(RSSMonitor(rss_config, N8N_WEBHOOK_URL, rss_feeds))
-
-    # TunCERT Monitor
-    tuncert_config = EventConfig(
-        source_name="tuncert",
-        check_interval=7200,  # 2 hours
-        rate_limit=120,  # 2 hours cooldown
-        priority="high",
-    )
-    orchestrator.add_monitor(TunCERTMonitor(tuncert_config, N8N_WEBHOOK_URL))
-
-    # Twitter Monitor
-    twitter_config = EventConfig(
-        source_name="twitter",
-        check_interval=900,  # 15 minutes
-        rate_limit=15,  # 15 minutes cooldown
-        priority="normal",
-    )
-    if TWITTER_API_KEY := "your-twitter-api-key":  # Set your API key
-        orchestrator.add_monitor(
-            TwitterMonitor(twitter_config, N8N_WEBHOOK_URL, TWITTER_API_KEY)
-        )
-
-    # Blog Monitor
-    blog_config = EventConfig(
-        source_name="blog",
-        check_interval=2700,  # 45 minutes
-        rate_limit=45,  # 45 minutes cooldown
-        priority="normal",
-    )
-    security_blogs = [
-        "https://blog.malwarebytes.com",
-        "https://blog.trendmicro.com",
-        "https://unit42.paloaltonetworks.com",
-        "https://www.fireeye.com/blog/threat-research",
-    ]
-    orchestrator.add_monitor(BlogMonitor(blog_config, N8N_WEBHOOK_URL, security_blogs))
-
-    return orchestrator
+    def stop_monitoring(self):
+        """Stop the monitoring loop"""
+        self.running = False
+        logger.info("Monitoring stop requested")
 
 
+# Main execution
 async def main():
-    """Main entry point"""
-    orchestrator = create_orchestrator()
-    await orchestrator.start()
+    """Main async function"""
+    # Initialize services
+    event_service = CTIEventService()
+
+    # Start monitoring
+    orchestrator = EventOrchestrator(event_service)
+
+    try:
+        await orchestrator.start_monitoring()
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+        orchestrator.stop_monitoring()
 
 
 if __name__ == "__main__":
+    # Setup logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+    # Run the event-driven monitoring
     asyncio.run(main())
