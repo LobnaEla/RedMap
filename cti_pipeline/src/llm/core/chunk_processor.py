@@ -5,29 +5,22 @@ from typing import Dict
 
 # Import du client Gemini
 from .gemini_client import GeminiClient
+from .config import LLM_CONFIG
 
 class ChunkProcessor:
-    def __init__(self, api_key: str = None):
+    def __init__(self, api_key: str):
         """
         Processeur de chunks CTI pour le mapping MITRE via Gemini
 
         Args:
-            api_key: Clé API Gemini
+            api_key: Clé API Gemini (obligatoire)
         """
         self.api_key = api_key
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY not configured")
 
-        # Configuration LLM
-        self.llm_config = {
-            "model": "gemini-pro",
-            "temperature": 0.1,
-            "max_retries": 3,
-            "batch_size": 10,
-            "request_delay": 0.5,
-            "file_delay": 2,
-        }
-
+        # Utilise la configuration centralisée
+        self.llm_config = LLM_CONFIG
         self.client = GeminiClient(self.api_key, self.llm_config)
 
     def process_chunk(self, chunk: Dict, source_file: str) -> Dict:
