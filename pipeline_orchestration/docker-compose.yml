@@ -80,6 +80,9 @@ services:
       retries: 50
       start_period: 30s
     restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
     networks:
       - rag_shared_network
 
@@ -261,6 +264,7 @@ services:
       - N8N_PROTOCOL=http
       - N8N_HOST=localhost
       - N8N_PORT=5678
+      - GENERIC_TIMEZONE=UTC
     volumes:
       - n8n_data:/home/node/.n8n
       - ${N8N_PROJ_DIR:-./n8n}/workflows:/home/node/.n8n/workflows
@@ -294,41 +298,31 @@ services:
       dockerfile: Dockerfile
     environment:
       - N8N_WEBHOOK_URL=http://n8n:5678/webhook/cti-event
-      - OTX_API_KEY=${OTX_API_KEY:-your-otx-api-key}
-      - TWITTER_API_KEY=${TWITTER_API_KEY:-your-twitter-api-key}
-      - MISP_URL=${MISP_URL:-}
-      - MISP_API_KEY=${MISP_API_KEY:-}
-      - GITHUB_REPOS=${GITHUB_REPOS:-[]}
-      - GITHUB_API_TOKEN=${GITHUB_API_TOKEN:-}
-      - TAXII_SERVERS=${TAXII_SERVERS:-[]}
-      - REDIS_URL=redis://redis:6379/2
-      - EVENT_LOG_LEVEL=${EVENT_LOG_LEVEL:-INFO}
-      - EVENT_CHECK_INTERVALS=${EVENT_CHECK_INTERVALS:-{}}
-      - EVENT_RATE_LIMITS=${EVENT_RATE_LIMITS:-{}}
-      - EVENT_PRIORITIES=${EVENT_PRIORITIES:-{}}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONITOR_INTERVAL=300
+      - OTX_API_KEY=${OTX_API_KEY:-}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./config:/app/config:ro
+      - ./event_monitoring/logs:/app/logs
     depends_on:
-      n8n:
-        condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
-    volumes:
-      - ${EVENT_MONITOR_DIR:-./event_monitoring}/config:/app/config
-      - ${EVENT_MONITOR_DIR:-./event_monitoring}/logs:/app/logs
-      - ${EVENT_MONITOR_DIR:-./event_monitoring}/data:/app/data
-    ports:
-      - "8001:8000"  # API de monitoring
-    networks:
-      - airflow_default
+      n8n:
+        condition: service_started
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import redis; r=redis.Redis(host='redis', port=6379); r.ping()"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
 
 
 volumes:
   postgres-db-volume:
+  redis_data:
   n8n_data:
   n8n_postgres_data:
   pip-local-volume:   # for dev/testing purposes remove in production

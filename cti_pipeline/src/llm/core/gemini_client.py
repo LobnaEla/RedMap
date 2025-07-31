@@ -56,18 +56,26 @@ class GeminiClient:
                     prompt,
                     generation_config={
                         "temperature": self.config["temperature"],
-                    }
+                    },
                 )
 
-                content = response.text.strip() if response and hasattr(response, "text") else ""
+                content = (
+                    response.text.strip()
+                    if response and hasattr(response, "text")
+                    else ""
+                )
                 if content:
                     mitre_codes = self._parse_llm_response(content)
-                    return self._create_success_result(chunk_id, text, iocs, mitre_codes)
+                    return self._create_success_result(
+                        chunk_id, text, iocs, mitre_codes
+                    )
                 else:
-                    return self._create_error_result(chunk_id, "Empty response from LLM")
+                    return self._create_error_result(
+                        chunk_id, "Empty response from LLM"
+                    )
 
             except ResourceExhausted:
-                wait_time = 2 ** attempt
+                wait_time = 2**attempt
                 print(f"Rate limit exceeded. Retrying in {wait_time}s...")
                 time.sleep(wait_time)
                 continue
@@ -78,7 +86,9 @@ class GeminiClient:
                 return self._create_error_result(chunk_id, error_msg)
 
             except Exception as e:
-                return self._create_error_result(chunk_id, f"Unexpected error: {str(e)}")
+                return self._create_error_result(
+                    chunk_id, f"Unexpected error: {str(e)}"
+                )
 
         return self._create_error_result(
             chunk_id, f"Failed after {self.config['max_retries']} attempts"
@@ -91,6 +101,7 @@ class GeminiClient:
                 return json.loads(response)
 
             import re
+
             return re.findall(r"T\d+(?:\.\d+)?", response)
 
         except json.JSONDecodeError:

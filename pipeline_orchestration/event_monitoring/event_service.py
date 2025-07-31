@@ -82,7 +82,7 @@ class CTIEventService:
 
         # Load configuration from environment
         self.n8n_webhook_url = n8n_webhook_url or os.getenv(
-            "N8N_WEBHOOK_URL", "http://localhost:5678/webhook/cti-event"
+            "N8N_WEBHOOK_URL", "http://n8n:5678/webhook/cti-event"
         )
         redis_host = redis_host or os.getenv("REDIS_HOST", "localhost")
         redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
@@ -313,7 +313,7 @@ class RSSMonitor(EventMonitor):
     def _load_rss_sources(self) -> List[Dict]:
         """Load RSS sources configuration"""
         try:
-            from rss_sources import RSS_SOURCES
+            from ...cti_pipeline.config.rss_sources import RSS_SOURCES
 
             return RSS_SOURCES
         except ImportError:
@@ -390,7 +390,7 @@ class BlogMonitor(EventMonitor):
     def _load_blog_sources(self) -> List[Dict]:
         """Load blog sources configuration"""
         try:
-            from blog_sources import BLOG_SOURCES
+            from ...cti_pipeline.config.blog_sources import BLOG_SOURCES
 
             return BLOG_SOURCES
         except ImportError:
