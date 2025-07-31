@@ -8,6 +8,7 @@ from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
 
 # Import des utilitaires de prompt
 from .prompt_utils import create_gemini_prompt
+from .config import LLM_CONFIG
 
 
 class GeminiClient:
@@ -17,14 +18,10 @@ class GeminiClient:
 
         Args:
             api_key: Clé API Gemini
-            model_config: Configuration du modèle LLM
+            model_config: Configuration du modèle LLM (optionnel, utilise LLM_CONFIG par défaut)
         """
         genai.configure(api_key=api_key)
-        self.config = model_config or {
-            "model": "gemini-pro",
-            "temperature": 0.1,
-            "max_retries": 3,
-        }
+        self.config = model_config or LLM_CONFIG
         self.model = genai.GenerativeModel(self.config["model"])
 
     def map_to_mitre(self, text: str, iocs: str, chunk_id: str) -> Dict:

@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
-from airflow.models import Variable
 
 # ================================
 # PATH CONFIGURATION
@@ -35,11 +34,11 @@ COMPREHENSIVE_MAPPING_FILE = "comprehensive_mitre_mappings.json"
 STATS_FILE = "mitre_mapping_statistics.json"
 
 load_dotenv()
-ANTHROPIC_API_KEY = Variable.get("ANTHROPIC_API_KEY", default_var=None)
-print(f"Using ANTHROPIC_API_KEY: {ANTHROPIC_API_KEY is not None}")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+print(f"Using GEMINI_API_KEY: {GEMINI_API_KEY is not None}")
 
-if not ANTHROPIC_API_KEY:
-    raise ValueError("ANTHROPIC_API_KEY not set in Airflow Variables")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY not found in environment variables")
 
 # ================================
 # DAG DEFINITION
@@ -57,11 +56,11 @@ default_args = {
 dag = DAG(
     "llm_mitre_mapping",
     default_args=default_args,
-    description="CTI to MITRE ATT&CK Mapping Pipeline using Claude Opus 4",
+    description="CTI to MITRE ATT&CK Mapping Pipeline using Gemini 1.5 Flash",
     schedule_interval=None,
     catchup=False,
     is_paused_upon_creation=False,
-    tags=["cti", "llm", "mitre", "mapping", "claude"],
+    tags=["cti", "llm", "mitre", "mapping", "gemini"],
     max_active_runs=1,
 )
 
@@ -140,7 +139,7 @@ def process_all_chunks():
 
         # Initialisation du processeur
         print("Initializing ChunkProcessor with API key")
-        processor = ChunkProcessor(ANTHROPIC_API_KEY)
+        processor = ChunkProcessor(GEMINI_API_KEY)
 
         # Chargement des fichiers
         chunk_files = load_chunk_files(CHUNKS_DIR)
@@ -238,6 +237,55 @@ def process_all_chunks():
                 print(f"Progress: {file_idx}/{len(chunk_files)} files processed")
                 print(f"Current success rate: {success_rate:.2f}%")
 
+                # Save results after each file is processed
+                print(f"Saving results for file: {filename}")
+                try:
+                    # Save individual chunk results for this file
+                    file_mappings = [m for m in all_mappings if m.get("source_file") == filename]
+                    successful_saves = 0
+                    os.makedirs(LLM_RESULTS_DIR, exist_ok=True)
+                    
+                    for mapping in file_mappings:
+                        if mapping.get("success", False):
+                            file_path = os.path.join(LLM_RESULTS_DIR, f"{mapping['chunk_id']}.json")
+                            with open(file_path, "w", encoding="utf-8") as f:
+                                json.dump(mapping, f, indent=2, ensure_ascii=False)
+                            successful_saves += 1
+                    
+                    print(f"✅ Saved {successful_saves} chunk results for {filename}")
+                    
+                    # Save incremental comprehensive file with current progress
+                    os.makedirs(MITRE_MAPPING_DIR, exist_ok=True)
+                    incremental_stats = {
+                        "generated_at": datetime.now().isoformat(),
+                        "total_chunks": stats["total_chunks"],
+                        "successful_mappings": stats["successful_mappings"],
+                        "success_rate": success_rate / 100,
+                        "files_processed": file_idx,
+                        "total_files": len(chunk_files),
+                    }
+                    
+                    incremental_path = os.path.join(MITRE_MAPPING_DIR, "incremental_mitre_mappings.json")
+                    with open(incremental_path, "w", encoding="utf-8") as f:
+                        json.dump({
+                            "metadata": incremental_stats,
+                            "mappings": all_mappings,
+                        }, f, indent=2, ensure_ascii=False)
+                    
+                    print(f"✅ Saved incremental results to {incremental_path}")
+                    
+                    # Save error logs incrementally
+                    file_errors = [m for m in file_mappings if not m.get("success", True)]
+                    if file_errors:
+                        os.makedirs(LOGS_DIR, exist_ok=True)
+                        error_path = os.path.join(LOGS_DIR, f"errors_{filename.replace('.json', '')}.json")
+                        with open(error_path, "w", encoding="utf-8") as f:
+                            json.dump(file_errors, f, indent=2, ensure_ascii=False)
+                        print(f"✅ Saved {len(file_errors)} error logs for {filename}")
+                    
+                except Exception as save_error:
+                    print(f"⚠️ Warning: Could not save results for {filename}: {str(save_error)}")
+
                 # Délai entre les fichiers
                 time.sleep(2)  # 2s
 
@@ -261,18 +309,56 @@ def process_all_chunks():
         print(f"Success rate: {stats['success_rate']:.2f}%")
         print("=" * 50 + "\n")
 
-        # Sauvegarde des résultats
-        save_processing_results(
-            all_mappings,
-            stats,
-            {
-                "llm_results": LLM_RESULTS_DIR,
-                "mitre_mappings": MITRE_MAPPING_DIR,
-                "logs": LOGS_DIR,
-            },
-        )
+        # Final comprehensive save (rename incremental to final)
+        try:
+            incremental_path = os.path.join(MITRE_MAPPING_DIR, "incremental_mitre_mappings.json")
+            final_path = os.path.join(MITRE_MAPPING_DIR, COMPREHENSIVE_MAPPING_FILE)
+            
+            if os.path.exists(incremental_path):
+                # Update the final metadata
+                with open(incremental_path, "r", encoding="utf-8") as f:
+                    final_data = json.load(f)
+                
+                final_data["metadata"].update({
+                    "generated_at": stats.get("end_time", ""),
+                    "success_rate": stats.get("success_rate", 0),
+                    "processing_completed": True
+                })
+                
+                with open(final_path, "w", encoding="utf-8") as f:
+                    json.dump(final_data, f, indent=2, ensure_ascii=False)
+                
+                # Remove incremental file
+                os.remove(incremental_path)
+                print(f"✅ Final comprehensive results saved to {final_path}")
+            else:
+                # Fallback to original save method
+                save_processing_results(
+                    all_mappings,
+                    stats,
+                    {
+                        "llm_results": LLM_RESULTS_DIR,
+                        "mitre_mappings": MITRE_MAPPING_DIR,
+                        "logs": LOGS_DIR,
+                    },
+                )
+                print("✅ Results saved using fallback method")
+                
+        except Exception as save_error:
+            print(f"⚠️ Warning: Error in final save: {str(save_error)}")
+            # Fallback to original save method
+            save_processing_results(
+                all_mappings,
+                stats,
+                {
+                    "llm_results": LLM_RESULTS_DIR,
+                    "mitre_mappings": MITRE_MAPPING_DIR,
+                    "logs": LOGS_DIR,
+                },
+            )
+            print("✅ Results saved using fallback method")
 
-        print("Results saved successfully")
+        print("Results processing completed")
         return {"status": "success", "processed_files": len(chunk_files), **stats}
 
     except Exception as e:
