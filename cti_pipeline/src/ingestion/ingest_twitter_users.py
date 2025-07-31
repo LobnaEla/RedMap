@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from datetime import datetime
 import time, json, os
+import yaml
 
 from ..utilities import (
     get_content_hash,
@@ -31,7 +32,14 @@ CTI_KEYWORDS = [
     "attack",
 ]
 
-# Remove the hardcoded DATA_DIR since it will be passed as parameter
+
+def load_twitter_users(
+    config_path: str = "cti_pipeline/config/twitter_users.yaml",
+) -> List[str]:
+    """Charge la liste des utilisateurs Twitter depuis un fichier YAML"""
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return config.get("users", [])
 
 
 def initialize_driver() -> webdriver.Chrome:
@@ -155,7 +163,7 @@ def ingest_all_twitter_users(
     data_dir: str, metadata_dir: str = "cti_pipeline/data/metadata"
 ) -> Dict[str, int]:
     """Point d'entrée principal pour l'ingestion Twitter"""
-    users = ["vxunderground", "CERT_FR", "CISACyber"]
+    users = load_twitter_users()
     stats = {"processed": 0, "users": len(users)}
     processed_data = load_processed_items("twitter")
 
