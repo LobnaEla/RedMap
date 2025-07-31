@@ -6,7 +6,7 @@ from pathlib import Path
 import time
 from dotenv import load_dotenv
 from cti_pipeline.src.llm.core.chunk_processor import ChunkProcessor
-from cti_pipeline.src.llm.core.anthropic_client import AnthropicClient
+from cti_pipeline.src.llm.core.gemini_client import AnthropicClient
 
 # Configure logging
 logging.basicConfig(

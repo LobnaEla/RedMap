@@ -3,26 +3,24 @@ import json
 from datetime import datetime
 from typing import Dict
 
-# Import des dépendances
-from .anthropic_client import AnthropicClient
-
+# Import du client Gemini
+from .gemini_client import GeminiClient
 
 class ChunkProcessor:
     def __init__(self, api_key: str = None):
         """
-        Processeur de chunks CTI pour le mapping MITRE
+        Processeur de chunks CTI pour le mapping MITRE via Gemini
 
         Args:
-            api_key: Clé API Anthropic (optionnelle)
+            api_key: Clé API Gemini
         """
         self.api_key = api_key
         if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY not configured")
+            raise ValueError("GEMINI_API_KEY not configured")
 
         # Configuration LLM
         self.llm_config = {
-            "model": "claude-opus-4-20250514",
-            "max_tokens": 200,
+            "model": "gemini-pro",
             "temperature": 0.1,
             "max_retries": 3,
             "batch_size": 10,
@@ -30,7 +28,7 @@ class ChunkProcessor:
             "file_delay": 2,
         }
 
-        self.client = AnthropicClient(self.api_key, self.llm_config)
+        self.client = GeminiClient(self.api_key, self.llm_config)
 
     def process_chunk(self, chunk: Dict, source_file: str) -> Dict:
         """
@@ -43,29 +41,26 @@ class ChunkProcessor:
         Returns:
             Dictionnaire contenant les résultats du mapping
         """
-        # Validation des entrées
         if not isinstance(chunk, dict):
             return self._error_result("unknown", "Chunk must be a dictionary")
 
         chunk_id = chunk.get("chunk_id", "unknown")
         text = chunk.get("text", "")
-        iocs = chunk.get("iocs", "")  # Default to empty string
+        iocs = chunk.get("iocs", "")
 
         if not text.strip():
             return self._error_result(chunk_id, "Empty text content")
 
-        if not isinstance(iocs, str):  # Changed validation to check for string
+        if not isinstance(iocs, str):
             return self._error_result(chunk_id, "IOCs must be a string")
 
         try:
-            # Traitement du chunk
             mapping = self.client.map_to_mitre(
                 text=text,
-                iocs=iocs,  # Passing string IOCs
+                iocs=iocs,
                 chunk_id=chunk_id,
             )
 
-            # Ajout des métadonnées
             mapping["source_file"] = source_file
             mapping["processing_time"] = datetime.now().isoformat()
 
