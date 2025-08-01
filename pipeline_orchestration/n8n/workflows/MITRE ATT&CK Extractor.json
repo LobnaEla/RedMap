@@ -1,0 +1,329 @@
+{
+  "name": "MITRE ATT&CK Extractor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "17b77c74-d0bf-413f-8858-2626ff7739ab",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -2352,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/data/MITRE_ATT&CK/enterprise-attack.csv"
+      },
+      "id": "f6e0604b-9fa9-4202-a95c-b002ab484f81",
+      "name": "Check Local CSV Exists",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -2128,
+        272
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/mitre/cti/commits/master",
+        "options": {}
+      },
+      "id": "fe22c25e-0ffc-4940-be45-ed3e6b17e53f",
+      "name": "Get Latest MITRE Commit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1904,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/data/MITRE_ATT&CK/.last_mitre_commit"
+      },
+      "id": "85e3d17f-db80-47b1-9b09-42bf1af31bfe",
+      "name": "Get Stored MITRE Commit",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -1696,
+        272
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{ $node['Check Local CSV Exists'].json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            },
+            {
+              "id": "condition2",
+              "leftValue": "={{ $node['Get Latest MITRE Commit'].json.sha }}",
+              "rightValue": "={{ $node['Get Stored MITRE Commit'].binary.data.toString().trim() }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEqual"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "d863cb29-efe8-459c-869a-ac69dbc9076b",
+      "name": "Need Update?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://github.com/mitre/cti/raw/master/enterprise-attack/enterprise-attack.json",
+        "options": {}
+      },
+      "id": "daffb187-ab4d-47ab-a470-1e024c6a7d74",
+      "name": "Fetch MITRE JSON",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1248,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const path = '/data/MITRE_ATT&CK';\n\nconst raw = items[0].json.data;\nconst input = typeof raw === 'string' ? JSON.parse(raw) : raw;\nconst assert = (cond, msg) => { if (!cond) throw new Error(msg); };\n\nassert('spec_version' in input, \"Failure reading version info in JSON file\");\nassert('objects' in input, \"Failure reading objects in JSON file\");\nassert(input.spec_version === '2.0', \"Unsupported STIX version\");\n\nconst o = {};\nfor (const i of input.objects) {\n    assert('type' in i, `type information is missing in entry ${JSON.stringify(i)}`);\n    assert('id' in i, `id field is missing in entry ${JSON.stringify(i)}`);\n    \n    if (i.revoked === true || i.x_mitre_deprecated === true) continue;\n\n    const id = i.id;\n    const t = i.type;\n\n    if (!o[t]) o[t] = {};\n    o[t][id] = i;\n}\n\n// Build tactics dictionary\nconst tactics = {};\nfor (const [_, tactic] of Object.entries(o['x-mitre-tactic'] || {})) {\n    const shortName = tactic.x_mitre_shortname || '';\n    const name = tactic.name || '';\n    const extRef = tactic.external_references?.[0] || {};\n    const id = extRef.external_id || '';\n    const url = extRef.url || '';\n    tactics[shortName] = name;\n}\n\n// Mini Markdown parser\nfunction minimd(s, fmt = 'text') {\n    if (!s) return '';\n    if (fmt === 'html') {\n        s = s.replace(/<code>(.*?)<\\/code>/g, (_, code) => `<code>${code.replace('<', '&lt;')}</code>`);\n        s = s.replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>');\n        s = s.replace(/\\[([^\\[]*)\\]\\((.*?)\\)/g, '<a href=\"$2\">$1</a>');\n        s = s.replace(/(?:^|\\n)#+([^\\n]*)/g, '<b><u>$1</u></b><br/>');\n        s = s.replace(/\"https:\\/\\/attack\\.mitre\\.org\\/techniques\\/(.*?)\"/g, (_, tech) => `\"${tech.replace(/\\//g, \".\")}\"`);\n        s = s.replace(/\\n/g, '<br/>');\n    } else {\n        s = s.replace(/(?:^|\\n)#+([^\\n]*)/g, '# $1 #\\n');\n        s = s.replace(/<code>(.*?)<\\/code>/g, (_, code) => '`' + code + '`');\n        s = s.replace(/https:\\/\\/attack\\.mitre\\.org\\/(techniques|tactics|software)\\/([^\\]\\)\"\\)]+)/g, (_, __, tech) => tech.replace(/\\//g, \".\"));\n        s = s.replace(/<br>/g, '\\n');\n    }\n    return s;\n}\n\n// Extract techniques\nconst tech = {};\nfor (const [tn, t] of Object.entries(o['attack-pattern'] || {})) {\n    let mitreId = '';\n    let mitreUrl = '';\n\n    for (const r of (t.external_references || [])) {\n        if (r.source_name === 'mitre-attack') {\n            mitreId = r.external_id || '';\n            mitreUrl = r.url || '';\n            break;\n        }\n    }\n\n    assert(mitreId !== '', `Didn't find a mitre id for ${JSON.stringify(t)}`);\n\n    const name = t.name || '';\n    const platforms = t.x_mitre_platforms || [];\n    const phases = (t.kill_chain_phases || []).filter(p => p.kill_chain_name === 'mitre-attack')\n        .map(p => tactics[p.phase_name] || p.phase_name);\n    const dataSources = t.x_mitre_data_sources || [];\n    const description = minimd(t.description || '');\n    const detection = minimd(t.x_mitre_detection || '');\n\n    tech[mitreId] = { name, id: tn, url: mitreUrl, platforms, phases, dataSources, detection, description };\n}\n\n// Create CSV\nfunction toCsv(rows, headers) {\n    const escape = (str) => `\"${String(str).replace(/\"/g, '\"\"')}\"`;\n    const csv = [headers.map(escape).join(',')];\n    for (const row of rows) {\n        csv.push(headers.map(h => escape(row[h] || '')).join(','));\n    }\n    return csv.join('\\n');\n}\n\nconst headers = ['name', 'id', 'url', 'platforms', 'kill chain phases', 'description', 'data sources', 'detection'];\nconst rows = [];\n\nfor (const tid of Object.keys(tech).sort()) {\n    const t = tech[tid];\n    rows.push({\n        name: t.name,\n        id: tid,\n        url: t.url,\n        platforms: t.platforms.join(', '),\n        'kill chain phases': t.phases.join(', '),\n        description: t.description,\n        'data sources': t.dataSources.join(', '),\n        detection: t.detection\n    });\n}\n\nconst csvContent = toCsv(rows, headers);\n\n// Save file path\nconst filePath = `${path}/enterprise-attack.csv`;\n\n// Return JSON + Binary\nreturn [\n  {\n    json: {\n      message: `Processed ${Object.keys(tech).length} techniques`,\n      rowCount: Object.keys(tech).length,\n      filePath\n    },\n    binary: {\n      data: {\n        data: Buffer.from(csvContent, 'utf-8').toString('base64'),\n        mimeType: 'text/csv',\n        fileName: 'enterprise-attack.csv'\n      }\n    }\n  }\n];\n"
+      },
+      "id": "16fed14f-3f63-4d22-abf7-b9f658ebb6bc",
+      "name": "Process to CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "/data/MITRE_ATT&CK/enterprise-attack.csv",
+        "options": {
+          "append": false
+        }
+      },
+      "id": "c7a14a16-1a2f-4a14-81b3-f73fd9987dec",
+      "name": "Save CSV File",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": ".last_mitre_commit",
+        "options": {}
+      },
+      "id": "7321d17b-ecac-45e5-8530-d1b5c86a34d4",
+      "name": "Save MITRE Commit Hash",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update local git ref to match remote\nconst remoteCommit = $node['Get Latest MITRE Commit'].json.sha;\n\nreturn {\n  json: {\n    message: 'MITRE ATT&CK data updated successfully',\n    mitre_commit: remoteCommit,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "7481cfa7-23c9-4595-8dfc-a0e9acd3e027",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  json: {\n    message: 'MITRE ATT&CK data is up to date',\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "0b59682b-84a7-4717-8f89-1a8fd6e5bb05",
+      "name": "Already Up to Date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log error and provide fallback\nconst error = $input.first().json.error || 'Unknown error occurred';\n\nreturn {\n  json: {\n    error: true,\n    message: `Failed to update MITRE ATT&CK data: ${error}`,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "3404e4cf-3cda-4287-b21a-0d853f458ab3",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        352
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Check Local CSV Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Local CSV Exists": {
+      "main": [
+        [
+          {
+            "node": "Get Latest MITRE Commit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Latest MITRE Commit": {
+      "main": [
+        [
+          {
+            "node": "Get Stored MITRE Commit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Stored MITRE Commit": {
+      "main": [
+        [
+          {
+            "node": "Need Update?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Need Update?": {
+      "main": [
+        [
+          {
+            "node": "Fetch MITRE JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already Up to Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch MITRE JSON": {
+      "main": [
+        [
+          {
+            "node": "Process to CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process to CSV": {
+      "main": [
+        [
+          {
+            "node": "Save CSV File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save CSV File": {
+      "main": [
+        [
+          {
+            "node": "Save MITRE Commit Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save MITRE Commit Hash": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "80a8ace3-abd5-4aad-8a40-03c5ce61d413",
+  "meta": {
+    "instanceId": "e5547ec10e56064bd60f32e9598c31669587633fbcced022b8773bce053f7d6b"
+  },
+  "id": "bb8sRMImU6GfmS9B",
+  "tags": [
+    {
+      "createdAt": "2025-07-31T15:05:07.321Z",
+      "updatedAt": "2025-07-31T15:05:07.321Z",
+      "id": "WkDT1dzFuV2pWEXr",
+      "name": "mitre"
+    },
+    {
+      "createdAt": "2025-07-31T15:05:07.331Z",
+      "updatedAt": "2025-07-31T15:05:07.331Z",
+      "id": "ll6nQPf39fN1OEeM",
+      "name": "threat-intelligence"
+    }
+  ]
+}

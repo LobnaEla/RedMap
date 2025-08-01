@@ -267,6 +267,7 @@ services:
       - GENERIC_TIMEZONE=UTC
     volumes:
       - n8n_data:/home/node/.n8n
+      - ../data/MITRE_ATT&CK:/data/MITRE_ATT&CK
       - ${N8N_PROJ_DIR:-./n8n}/workflows:/home/node/.n8n/workflows
     depends_on:
       - redis
