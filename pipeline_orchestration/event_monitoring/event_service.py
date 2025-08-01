@@ -13,6 +13,7 @@ import aiohttp
 import feedparser
 import hashlib
 import redis
+import sys
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Set
@@ -24,11 +25,20 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+# Add the project root for Docker imports
+sys.path.append("/opt/project/cti_pipeline")
+
+# === Path Configuration ===
+BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
+CONFIG_PATH = os.path.join(BASE_PROJECT_PATH, "config")
 
 
 class EventType(Enum):
@@ -77,14 +87,14 @@ class CTIEventService:
         n8n_webhook_url: str = None,
         redis_host: str = None,
         redis_port: int = None,
-        config_dir: str = "config",
+        config_dir: str = CONFIG_PATH,
     ):
 
         # Load configuration from environment
         self.n8n_webhook_url = n8n_webhook_url or os.getenv(
             "N8N_WEBHOOK_URL", "http://n8n:5678/webhook/cti-event"
         )
-        redis_host = redis_host or os.getenv("REDIS_HOST", "localhost")
+        redis_host = redis_host or os.getenv("REDIS_HOST", "redis")
         redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
 
         self.config_dir = Path(config_dir)

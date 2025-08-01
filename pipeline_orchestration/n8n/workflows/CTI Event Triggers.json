@@ -25,19 +25,19 @@
             {
               "id": "613ceb04-7ada-4ffd-9a43-575bb9fee66a",
               "name": "source_name",
-              "value": "={{$json.source_name}}",
+              "value": "={{$json.body.source_name}}",
               "type": "string"
             },
             {
               "id": "5e260ad0-1bf7-4d71-86be-17713ac7c0f6",
               "name": "event_type",
-              "value": "`={{$json.event_type",
+              "value": "={{$json.body.event_type}}",
               "type": "string"
             },
             {
               "id": "12ac219b-76f1-4bae-87b3-71253e40da87",
               "name": "trigger_reason",
-              "value": "`={{$json.reason",
+              "value": "={{$json.body.reason}}",
               "type": "string"
             },
             {
@@ -49,7 +49,7 @@
             {
               "id": "6358fbaf-3c3f-4451-a47b-e68fadb781ac",
               "name": "priority",
-              "value": "`={{$json.priority",
+              "value": "={{$json.body.priority}}",
               "type": "string"
             }
           ]
@@ -208,7 +208,6 @@
     },
     {
       "parameters": {
-        "mode": "runOnceForEachItem",
         "jsCode": "const sourceConfigs = {\n  'otx': { cooldown_minutes: 60, max_concurrent: 2 },\n  'rss': { cooldown_minutes: 30, max_concurrent: 3 },\n  'tuncert': { cooldown_minutes: 120, max_concurrent: 1 },\n  'twitter': { cooldown_minutes: 15, max_concurrent: 5 },\n  'blog': { cooldown_minutes: 45, max_concurrent: 2 }\n};\n\nconst sourceName = $input.all()[0].json.source_name;\nconst config = sourceConfigs[sourceName] || { cooldown_minutes: 30, max_concurrent: 1 };\n\nreturn [{\n  json: {\n    ...$input.all()[0].json,\n    cooldown_minutes: config.cooldown_minutes,\n    max_concurrent: config.max_concurrent\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
@@ -219,33 +218,6 @@
       ],
       "id": "aa464b33-107f-4087-94ac-bc628aa4f194",
       "name": "Apply Source Config"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://redis:6379",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"command\": \"GET\",\n  \"args\": [\"last_trigger_{{$json.source_name}}\"]\n}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        848,
-        0
-      ],
-      "id": "ffff52cf-6c5e-41d7-a4da-5b00c82eb381",
-      "name": "Get Last Trigger Time"
     },
     {
       "parameters": {
@@ -262,9 +234,8 @@
               "leftValue": "={{new Date($json.last_check_timestamp || '2020-01-01').getTime()}}",
               "rightValue": "={{new Date().getTime() - (($json.cooldown_minutes || 30) * 60 * 1000)}}",
               "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
+                "type": "number",
+                "operation": "lt"
               }
             }
           ],
@@ -284,7 +255,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://airflow-webserver:8080/api/v1/dags/cti_pipeline_{{$json.source_name}}/dagRuns",
+        "url": "=http://airflow-webserver:8080/api/v1/dags/cti_pipeline_{{ $json.source_name }}/dagRuns",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendHeaders": true,
@@ -304,8 +275,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1264,
-        -96
+        1664,
+        -80
       ],
       "id": "ff05c630-ffc7-49f2-83b9-8a8f43181481",
       "name": "Trigger Airflow DAG",
@@ -325,8 +296,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1472,
-        -96
+        1856,
+        -80
       ],
       "id": "4ebdf116-6629-4729-b53b-1b1f07c1b194",
       "name": "Success Response"
@@ -345,6 +316,62 @@
       ],
       "id": "8a0b0dcd-43f2-464a-a97d-a8b40eb69598",
       "name": "Rate Limited Response"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "last_check_timestamp",
+        "key": "last_trigger_${{json.source_name}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        848,
+        0
+      ],
+      "id": "f6f496e9-467a-463d-98ef-35a42e001801",
+      "name": "Redis",
+      "credentials": {
+        "redis": {
+          "id": "5B9qPAFXXpBH11Ky",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=last_trigger_{{ $json.source_name }}",
+        "value": "={{ $json.last_check_timestamp || new Date().toISOString() }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -80
+      ],
+      "id": "ada8494b-4911-4f96-b0af-0f9d310a5711",
+      "name": "Redis1",
+      "credentials": {
+        "redis": {
+          "id": "5B9qPAFXXpBH11Ky",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1264,
+        -80
+      ],
+      "id": "01f69b5b-590a-4199-95d1-925fa9b1b6f2",
+      "name": "Merge"
     }
   ],
   "pinData": {},
@@ -414,18 +441,12 @@
       "main": [
         [
           {
-            "node": "Get Last Trigger Time",
+            "node": "Redis",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Last Trigger Time": {
-      "main": [
-        [
+          },
           {
-            "node": "Rate Limiter",
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -436,9 +457,9 @@
       "main": [
         [
           {
-            "node": "Trigger Airflow DAG",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ],
         [
@@ -460,14 +481,48 @@
           }
         ]
       ]
+    },
+    "Redis": {
+      "main": [
+        [
+          {
+            "node": "Rate Limiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis1": {
+      "main": [
+        [
+          {
+            "node": "Trigger Airflow DAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Redis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "4c39134a-bcba-40b4-acbe-750c53d97f72",
+  "versionId": "00bfc990-2852-404c-9300-a4435f53f408",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "60744c3b045463febae9743c7ad9ffb44a07f63de1967c43d10295ce7d3082ae"
   },
   "id": "GXriEHQExcyVcoDp",

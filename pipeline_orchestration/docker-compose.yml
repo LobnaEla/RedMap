@@ -84,7 +84,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
     networks:
-      - rag_shared_network
+      - airflow_default
 
   airflow-webserver:
     <<: *airflow-common
@@ -306,6 +306,7 @@ services:
     volumes:
       - ./config:/app/config:ro
       - ./event_monitoring/logs:/app/logs
+      - ../:/opt/project
     depends_on:
       redis:
         condition: service_healthy
@@ -318,6 +319,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - airflow_default
 
 
 volumes:
