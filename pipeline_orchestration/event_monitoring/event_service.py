@@ -33,10 +33,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# Add the project root for Docker imports
+# The project root for Docker imports
 sys.path.append("/opt/project/cti_pipeline")
 
-# === Path Configuration ===
+# Path Configuration
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 CONFIG_PATH = os.path.join(BASE_PROJECT_PATH, "config")
 
