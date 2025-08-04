@@ -9,8 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 sys.path.append("/opt/project/cti_pipeline")
-from core import TechniqueValidator
-from utils import save_judge_results, TechniqueAnalysis
+from llm_as_a_judge import TechniqueValidator, save_judge_results, TechniqueAnalysis
 
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
@@ -137,7 +136,7 @@ def example_advanced_analysis():
     """Exemple d'analyse avancée des résultats"""
 
     # Supposons qu'on ait des résultats de validation
-    from utils.validation_utils import calculate_validation_metrics
+    from llm_as_a_judge.utils.validation_utils import calculate_validation_metrics
 
     # Données d'exemple de résultats de validation
     mock_validations = [

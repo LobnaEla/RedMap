@@ -22,10 +22,10 @@ def save_judge_results(
 
     # Création du répertoire si nécessaire
     if output_path is None:
-        os.makedirs(PATH_CONFIG["validated_results"], exist_ok=True)
+        os.makedirs(PATH_CONFIG["judge_results"], exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = os.path.join(
-            PATH_CONFIG["validated_results"], f"validation_results_{timestamp}.json"
+            PATH_CONFIG["judge_results"], f"judge_results_{timestamp}.json"
         )
 
     # Préparer les données pour la sauvegarde
