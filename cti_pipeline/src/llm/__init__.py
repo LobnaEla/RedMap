@@ -1,8 +1,8 @@
-from core.gemini_client import GeminiClient
-from core.chunk_processor import ChunkProcessor
-from core.config import PATH_CONFIG, LLM_CONFIG
-from core.file_utils import save_processing_results, load_chunk_files
-from core.prompt_utils import create_mitre_prompt
+from .core.gemini_client import GeminiClient
+from .core.chunk_processor import ChunkProcessor
+from .core.config import PATH_CONFIG, LLM_CONFIG
+from .core.file_utils import save_processing_results, load_chunk_files
+from .core.prompt_utils import create_gemini_prompt
 
 __all__ = [
     "GeminiClient",
@@ -11,7 +11,7 @@ __all__ = [
     "LLM_CONFIG",
     "save_processing_results",
     "load_chunk_files",
-    "create_mitre_prompt",
+    "create_gemini_prompt",
 ]
 
 # Package metadata

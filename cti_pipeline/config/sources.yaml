@@ -2,19 +2,34 @@ sources:
   - name: otx
     module: src.ingestion.ingest_otx
     function: ingest_otx_pulses  
+    description: "AlienVault OTX threat intelligence"
+    cooldown_minutes: 60
+    max_concurrent: 2
 
   - name: rss
     module: src.ingestion.ingest_rss
     function: ingest_rss
+    description: "RSS feed monitoring"
+    cooldown_minutes: 30
+    max_concurrent: 3
 
   - name: tuncert
     module: src.ingestion.ingest_tuncert
     function: ingest_tuncert_vulnerabilities
+    description: "Turkey CERT vulnerability data"
+    cooldown_minutes: 120
+    max_concurrent: 1
 
   - name: twitter
     module: src.ingestion.ingest_twitter_users
     function: ingest_all_twitter_users
+    description: "Twitter threat intelligence monitoring"
+    cooldown_minutes: 15
+    max_concurrent: 5
 
   - name: blog
     module: src.ingestion.scraper_blog
     function: ingest_all_blog
+    description: "Security blog monitoring"
+    cooldown_minutes: 45
+    max_concurrent: 2
