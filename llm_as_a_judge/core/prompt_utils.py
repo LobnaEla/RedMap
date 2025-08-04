@@ -87,8 +87,6 @@ You will validate techniques through retroactive verification - for each techniq
 
 ## Output Format
 Provide your validation as a JSON object:
-
-```json
 {{
     "validated_techniques": [
         "list of techniques that pass validation with evidence"
@@ -130,7 +128,6 @@ Provide your validation as a JSON object:
         "actionable recommendations for SOC teams based on validated techniques"
     ]
 }}
-```
 
 ## Critical Validation Guidelines
 
