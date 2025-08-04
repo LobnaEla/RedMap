@@ -33,10 +33,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# The project root for Docker imports
+# Add the project root for Docker imports
 sys.path.append("/opt/project/cti_pipeline")
 
-# Path Configuration
+# === Path Configuration ===
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 CONFIG_PATH = os.path.join(BASE_PROJECT_PATH, "config")
 
@@ -400,8 +400,8 @@ class BlogMonitor(EventMonitor):
     def _load_blog_sources(self) -> List[Dict]:
         """Load blog sources configuration"""
         try:
-            from ...cti_pipeline.config.blog_sources import BLOG_SOURCES
-
+            BLOG_SOURCES = os.path.join(CONFIG_PATH, "blog_sources.py")
+            logger.info(f"Loading blog sources from {BLOG_SOURCES}")
             return BLOG_SOURCES
         except ImportError:
             logger.warning("Blog sources not found")

@@ -94,8 +94,8 @@ print(json.dumps(result, indent=2))
 
 show_monitoring() {
     echo "📈 Opening..."
-    echo "n8n: http://localhost:5678 (admin/admin)"
-    echo "Airflow: http://localhost:8080 (admin/admin)"
+    echo "n8n: http://localhost:5678 (admin/admin123)"
+    echo "Airflow: http://localhost:8080 (airflow/airflow)"
 }
 
 cleanup_system() {
