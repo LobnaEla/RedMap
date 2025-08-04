@@ -132,75 +132,111 @@ def example_batch_validation():
     return results
 
 
-def example_advanced_analysis():
-    """Exemple d'analyse avancée des résultats"""
+def example_advanced_analysis(validation_results=None):
+    """Exemple d'analyse avancée des résultats obtenus du judge LLM"""
 
-    # Supposons qu'on ait des résultats de validation
+    if validation_results is None:
+        print("No validation results provided. Running batch validation first...")
+        # Si aucun résultat n'est fourni, on fait une validation pour obtenir de vrais résultats
+        validation_results = example_batch_validation()
+
     from llm_as_a_judge.utils.validation_utils import calculate_validation_metrics
 
-    # Données d'exemple de résultats de validation
-    mock_validations = [
-        {
-            "success": True,
-            "chunk_id": "001",
-            "input_analysis": {
-                "total_unique_techniques": 4,
-                "common_techniques": ["T1059.001", "T1053.005"],
-                "rag_only_techniques": ["T1105"],
-                "llm_only_techniques": ["T1547.001"],
-            },
-            "final_validated_techniques": ["T1059.001", "T1053.005", "T1105"],
-        },
-        {
-            "success": True,
-            "chunk_id": "002",
-            "input_analysis": {
-                "total_unique_techniques": 5,
-                "common_techniques": ["T1021.001"],
-                "rag_only_techniques": ["T1078", "T1003"],
-                "llm_only_techniques": ["T1090", "T1110"],
-            },
-            "final_validated_techniques": ["T1021.001", "T1078"],
-        },
-    ]
+    # Extraire les résultats de validation du batch
+    if "validations" in validation_results:
+        actual_validations = validation_results["validations"]
+        print(f"\n=== ANALYZING LLM JUDGE RESULTS ===")
+        print(f"Number of validation results: {len(actual_validations)}")
 
-    metrics = calculate_validation_metrics(mock_validations)
+        # Afficher les techniques finales validées par le judge LLM
+        print(f"\n--- FINAL TECHNIQUES FROM JUDGE LLM ---")
+        for validation in actual_validations:
+            chunk_id = validation.get("chunk_id", "unknown")
+            final_techniques = validation.get("final_validated_techniques", [])
+            success = validation.get("success", False)
+            print(
+                f"{chunk_id}: {'SUCCESS' if success else 'FAILED'} - {final_techniques}"
+            )
 
-    print("\n=== ADVANCED ANALYSIS ===")
+            # Afficher le détail de l'analyse du judge si disponible
+            judge_result = validation.get("judge_result", {})
+            if "reasoning" in judge_result:
+                print(f"  Judge reasoning: {judge_result['reasoning'][:100]}...")
+
+        metrics = calculate_validation_metrics(actual_validations)
+    else:
+        print(
+            "ERROR: No validations found in results. Cannot perform advanced analysis."
+        )
+        return
+
+    print(f"\n=== ADVANCED ANALYSIS OF JUDGE RESULTS ===")
     if "error" not in metrics:
         overall = metrics["overall_metrics"]
         source_analysis = metrics["source_analysis"]
         insights = metrics["insights"]
 
-        print(f"Overall validation rate: {overall['overall_validation_rate']:.2%}")
-        print(f"Consensus accuracy: {overall['consensus_accuracy']:.2%}")
-
         print(
-            f"\nCommon techniques validation: {source_analysis['common_techniques']['validation_rate']:.2%}"
+            f"Overall validation rate by Judge LLM: {overall['overall_validation_rate']:.2%}"
         )
         print(
-            f"RAG-only validation: {source_analysis['rag_only_techniques']['validation_rate']:.2%}"
-        )
-        print(
-            f"LLM-only validation: {source_analysis['llm_only_techniques']['validation_rate']:.2%}"
+            f"Consensus accuracy (Judge agrees with both RAG+LLM): {overall['consensus_accuracy']:.2%}"
         )
 
-        print(f"\nConsensus reliability: {insights['consensus_reliability']}")
-        print(f"RAG contribution: {insights['rag_contribution']}")
-        print(f"LLM contribution: {insights['llm_contribution']}")
+        print(f"\nTechnique Source Analysis:")
+        print(
+            f"  Common techniques validation: {source_analysis['common_techniques']['validation_rate']:.2%}"
+        )
+        print(
+            f"  RAG-only validation: {source_analysis['rag_only_techniques']['validation_rate']:.2%}"
+        )
+        print(
+            f"  LLM-only validation: {source_analysis['llm_only_techniques']['validation_rate']:.2%}"
+        )
+
+        print(f"\nJudge Insights:")
+        print(f"  Consensus reliability: {insights['consensus_reliability']}")
+        print(f"  RAG contribution: {insights['rag_contribution']}")
+        print(f"  LLM contribution: {insights['llm_contribution']}")
+
+        # Afficher les statistiques sur la performance du judge
+        print(f"\n--- JUDGE PERFORMANCE STATS ---")
+        total_input_techniques = sum(
+            v.get("input_analysis", {}).get("total_unique_techniques", 0)
+            for v in actual_validations
+            if v.get("success")
+        )
+        total_validated = sum(
+            len(v.get("final_validated_techniques", []))
+            for v in actual_validations
+            if v.get("success")
+        )
+
+        if total_input_techniques > 0:
+            validation_rate = (total_validated / total_input_techniques) * 100
+            print(
+                f"Judge validation rate: {validation_rate:.1f}% ({total_validated}/{total_input_techniques})"
+            )
+    else:
+        print(f"Error in metrics calculation: {metrics['error']}")
+
+    return metrics
 
 
 if __name__ == "__main__":
     print("=== LLM-as-a-Judge Validation Examples ===\n")
 
     # Exemple de validation unique
+    print("1. Running single validation example...")
     single_result = example_single_validation()
 
     # Exemple de validation batch
+    print("\n2. Running batch validation example...")
     batch_results = example_batch_validation()
 
-    # Analyse avancée
-    example_advanced_analysis()
+    # Analyse avancée avec les vrais résultats du judge LLM
+    print("\n3. Running advanced analysis on actual judge results...")
+    example_advanced_analysis(batch_results)
 
     # Sauvegarde des résultats
     if batch_results:
