@@ -57,7 +57,7 @@ print(json.dumps(status, indent=2))
 }
 
 show_logs() {
-    docker-compose logs -f cti-event-service
+    docker-compose logs -f airflow-eventmonitor-1
 }
 
 show_all_logs() {
@@ -66,7 +66,7 @@ show_all_logs() {
 
 access_shell() {
     echo "🐚 Accessing event service shell..."
-    docker-compose exec cti-event-service /bin/bash
+    docker-compose exec airflow-eventmonitor-1 /bin/bash
 }
 
 access_redis() {
