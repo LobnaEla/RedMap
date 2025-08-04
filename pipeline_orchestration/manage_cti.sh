@@ -51,13 +51,16 @@ show_status() {
 from event_service import CTIEventService
 import json
 service = CTIEventService()
-status = service.get_all_sources_status()
+sources = ['otx', 'rss', 'tuncert', 'twitter', 'blog']
+status = {}
+for source in sources:
+    status[source] = service.get_source_status(source)
 print(json.dumps(status, indent=2))
 " 2>/dev/null || echo "Event service not ready"
 }
 
 show_logs() {
-    docker-compose logs -f airflow-eventmonitor-1
+    docker-compose logs -f cti-event-service
 }
 
 show_all_logs() {
@@ -66,7 +69,7 @@ show_all_logs() {
 
 access_shell() {
     echo "🐚 Accessing event service shell..."
-    docker-compose exec airflow-eventmonitor-1 /bin/bash
+    docker-compose exec cti-event-service /bin/bash
 }
 
 access_redis() {
@@ -84,10 +87,17 @@ trigger_source() {
     fi
     
     docker-compose exec cti-event-service python -c "
-from event_service import CTIEventService
+from event_service import CTIEventService, CTIEvent
+from datetime import datetime
 import json
 service = CTIEventService()
-result = service.trigger_source('$source', reason='$reason')
+event = CTIEvent(
+    source_name='$source',
+    event_type='manual_trigger',
+    timestamp=datetime.utcnow().isoformat(),
+    reason='$reason'
+)
+result = service.trigger_event(event)
 print(json.dumps(result, indent=2))
 "
 }

@@ -23,8 +23,6 @@ cti_pipeline/metadata/
 
 folder/
 
-llm-as-a-judge/
-
 cti_pipeline/results/
 cti_pipeline/samples/
 cti_pipeline/src/preprocess/tests/test/
