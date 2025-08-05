@@ -1,8 +1,8 @@
-Ce module implémente un système de **validation croisée** des techniques MITRE ATT&CK en utilisant un LLM comme juge pour analyser et valider les résultats combinés du RAG (Retrieval Augmented Search) et du premier LLM (In-Context Learning).
+Ce module implémente un système de validation croisée des techniques MITRE ATT&CK en utilisant un LLM comme juge pour analyser et valider les résultats combinés du RAG (Retrieval Augmented Search) et du premier LLM (In-Context Learning).
 
 ## Concept Clé
 
-**Objectif** : Au lieu de comparer RAG vs LLM pour déclarer un gagnant, le module :
+**Objectif** : Au lieu d'utiliser directement les résultats issus du RAG ou du LLM, le module :
 1. **Analyse les deux sorties** (RAG + LLM) par rapport au chunk CTI original
 2. **Effectue une vérification rétroactive** : "Pourquoi cette technique a-t-elle été proposée/rejetée ?"
 3. **Produit une liste finale** des techniques validées après croisement des approches
@@ -19,8 +19,7 @@ Ce module implémente un système de **validation croisée** des techniques MITR
 ├── utils/
 │   ├── validation_utils.py    # Analyses et métriques
 │   └── file_utils.py          # Gestion des fichiers
-├── tests/                     # Tests unitaires
-├── examples/                  # Exemples d'utilisation
+├── tests/                     # Exemples d'utilisation
 └── main.py                   # Script principal
 ```
 
@@ -190,22 +189,9 @@ Chunks CTI → RAG System → Techniques RAG
 ## Tests et Validation
 
 ```bash
-# Tests unitaires
-python -m pytest llm-as-a-judge/tests/
-
 # Exemple d'utilisation
-python llm-as-a-judge/examples/usage_example.py
+python -m llm_as_a_judge.tests.usage_example.py
 
 # Exécution complète
-python llm-as-a-judge/main.py
+python -m llm_as_a_judge.main.py
 ```
-
-## Avantages de l'Approche
-
-1. **Pas de "gagnant"** : Combine les forces des deux approches
-2. **Validation evidence-based** : Chaque décision est justifiée
-3. **Analyse rétroactive** : Comprend pourquoi chaque technique est proposée/rejetée
-4. **Métriques détaillées** : Insights sur la performance de chaque approche
-5. **Output actionnable** : Liste finale prête pour les équipes SOC
-
-Cette approche de validation croisée permet d'obtenir des résultats plus robustes et fiables en exploitant les complémentarités entre RAG et LLM, tout en maintenant une traçabilité complète des décisions de validation.
