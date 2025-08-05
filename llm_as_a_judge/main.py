@@ -1,5 +1,5 @@
 """
-Script principal pour exécuter la validation croisée LLM-as-a-Judge
+Main script to execute LLM-as-a-Judge cross-validation
 """
 
 import os
@@ -7,72 +7,140 @@ import sys
 import json
 from typing import List, Dict
 
-# Ajout du chemin pour les imports
+# Add path for imports
 sys.path.append("/opt/project/cti_pipeline")
 
-from core.technique_validator import TechniqueValidator
-from core.config import PATH_CONFIG
-from utils.validation_utils import calculate_validation_metrics, TechniqueAnalysis
-from utils.file_utils import save_validation_results, save_final_techniques_only
+from llm_as_a_judge import (
+    TechniqueValidator,
+    TechniqueAnalysis,
+    save_judge_results,
+    PATH_CONFIG,
+    calculate_validation_metrics,
+    save_final_techniques_only,
+)
 
 
 def load_chunk_data(chunks_dir: str) -> List[Dict]:
-    """Charge les données des chunks"""
+    """Load chunk data"""
     import glob
 
     chunk_files = glob.glob(os.path.join(chunks_dir, "chunks_*.json"))
     chunks = []
+    print(f"Found {len(chunk_files)} chunk files")
 
     for file_path in chunk_files:
-        with open(file_path, "r", encoding="utf-8") as f:
-            file_data = json.load(f)
-            if isinstance(file_data, list):
-                chunks.extend(file_data)
-            else:
-                chunks.append(file_data)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_data = json.load(f)
+                print(f"Processing chunk file: {os.path.basename(file_path)}")
 
+                if isinstance(file_data, dict) and "chunks" in file_data:
+                    chunks_list = file_data["chunks"]
+                    print(f"  Found {len(chunks_list)} chunks in 'chunks' key")
+
+                    for chunk in chunks_list:
+                        # Check that each chunk has required fields
+                        if "chunk_id" in chunk and "text" in chunk:
+                            if "iocs" not in chunk:
+                                chunk["iocs"] = chunk.get("iocs", "")
+                            chunks.append(chunk)
+
+                    print(f"  Loaded {len(chunks_list)} chunks from file")
+
+                elif isinstance(file_data, list):
+                    # Direct list format
+                    for chunk in file_data:
+                        if "chunk_id" in chunk:
+                            chunks.append(chunk)
+                    print(f"  Loaded {len(file_data)} chunks from list")
+
+                elif isinstance(file_data, dict) and "chunk_id" in file_data:
+                    # Direct chunk
+                    chunks.append(file_data)
+                    print(f"  Loaded 1 chunk directly")
+
+                else:
+                    print(f"  Unknown format in file {file_path}")
+
+        except Exception as e:
+            print(f"Error loading chunk file {file_path}: {e}")
+            continue
+
+    # Ensure all chunks have chunk_id as string
+    for chunk in chunks:
+        if "chunk_id" in chunk:
+            chunk["chunk_id"] = str(chunk["chunk_id"])
+
+    print(f"Total chunks loaded: {len(chunks)}")
     return chunks
 
 
 def load_rag_results(rag_results_dir: str) -> Dict[str, List[str]]:
-    """Charge les résultats RAG/RAS"""
+    """Load RAG/RAS results"""
     import glob
 
     rag_results = {}
 
-    # Cherche les fichiers de résultats RAG (format à adapter selon votre implémentation)
+    # Search for RAG result files
     result_files = glob.glob(os.path.join(rag_results_dir, "*.json"))
+    print(f"Found {len(result_files)} RAG result files")
 
     for file_path in result_files:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                print(f"Processing RAG file: {os.path.basename(file_path)}")
 
-                # Adapter selon le format de vos résultats RAG
-                if isinstance(data, dict):
-                    chunk_id = data.get("chunk_id") or data.get("id")
-                    techniques = data.get("techniques") or data.get(
-                        "mitre_techniques", []
-                    )
-                    if chunk_id:
-                        rag_results[chunk_id] = techniques
-                elif isinstance(data, list):
-                    for item in data:
-                        chunk_id = item.get("chunk_id") or item.get("id")
-                        techniques = item.get("techniques") or item.get(
-                            "mitre_techniques", []
-                        )
-                        if chunk_id:
+                if isinstance(data, dict) and "rag_results" in data:
+                    rag_results_list = data["rag_results"]
+                    processed_count = 0
+
+                    for item in rag_results_list:
+                        chunk_id = str(
+                            item.get("chunk_id")
+                        )  # Convert to string for consistency
+                        techniques = item.get("mitre_techniques", [])
+                        status = item.get("status", "unknown")
+
+                        # Only process chunks with success and valid techniques
+                        if status != "network_error" and techniques:
                             rag_results[chunk_id] = techniques
+                            processed_count += 1
+                        elif status == "network_error":
+                            print(f"  Chunk {chunk_id}: Network error - skipping")
+                        else:
+                            # Even for chunks without techniques, keep them with empty list
+                            rag_results[chunk_id] = []
+
+                    print(
+                        f"  Processed {processed_count} chunks with techniques from {len(rag_results_list)} total chunks"
+                    )
+
+                elif isinstance(data, dict):
+                    # Direct chunk_id
+                    chunk_id = data.get("chunk_id")
+                    techniques = data.get("mitre_techniques", [])
+                    if chunk_id:
+                        rag_results[str(chunk_id)] = techniques
+
+                elif isinstance(data, list):
+                    # Direct list format
+                    for item in data:
+                        chunk_id = item.get("chunk_id")
+                        techniques = item.get("mitre_techniques", [])
+                        if chunk_id:
+                            rag_results[str(chunk_id)] = techniques
+
         except Exception as e:
             print(f"Error loading RAG result file {file_path}: {e}")
             continue
 
+    print(f"Total RAG results loaded: {len(rag_results)} chunks")
     return rag_results
 
 
 def load_llm_results(llm_results_dir: str) -> Dict[str, List[str]]:
-    """Charge les résultats du premier LLM (ICL)"""
+    """Load first LLM (ICL) results"""
     import glob
 
     llm_results = {}
@@ -94,7 +162,7 @@ def load_llm_results(llm_results_dir: str) -> Dict[str, List[str]]:
 
 
 def analyze_input_overlap(rag_results: Dict, llm_results: Dict) -> None:
-    """Analyse le chevauchement entre les résultats RAG et LLM"""
+    """Analyze overlap between RAG and LLM results"""
 
     common_chunks = set(rag_results.keys()).intersection(set(llm_results.keys()))
     print(f"\n=== INPUT ANALYSIS ===")
@@ -103,7 +171,7 @@ def analyze_input_overlap(rag_results: Dict, llm_results: Dict) -> None:
     print(f"Common chunks: {len(common_chunks)} chunks")
 
     if common_chunks:
-        # Analyse de quelques exemples
+        # Analysis of a few examples
         sample_chunks = list(common_chunks)[:3]
 
         for chunk_id in sample_chunks:
@@ -121,21 +189,21 @@ def analyze_input_overlap(rag_results: Dict, llm_results: Dict) -> None:
 
 
 def main():
-    """Fonction principale"""
+    """Main function"""
     # Configuration
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         print("GEMINI_API_KEY environment variable not set")
         sys.exit(1)
 
-    # Chemins des données
-    chunks_dir = "/opt/project/cti_pipeline/chunks"
-    rag_results_dir = "/opt/project/cti_pipeline/rag_results"
-    llm_results_dir = "/opt/project/cti_pipeline/llm_results"
+    # Data paths
+    chunks_dir = "cti_pipeline/data/chunks"
+    rag_results_dir = "cti_pipeline/data/rag_results"
+    llm_results_dir = "cti_pipeline/data/llm_results"
 
     print("Loading data...")
 
-    # Chargement des données
+    # Data loading
     chunks = load_chunk_data(chunks_dir)
     rag_results = load_rag_results(rag_results_dir)
     llm_results = load_llm_results(llm_results_dir)
@@ -144,10 +212,10 @@ def main():
     print(f"RAG results for {len(rag_results)} chunks")
     print(f"LLM results for {len(llm_results)} chunks")
 
-    # Analyse des chevauchements
+    # Overlap analysis
     analyze_input_overlap(rag_results, llm_results)
 
-    # Préparation des données pour la validation
+    # Data preparation for validation
     validation_data = []
     rag_results_list = []
     llm_results_list = []
@@ -167,31 +235,31 @@ def main():
         print("No chunks with both RAG and LLM results found")
         sys.exit(1)
 
-    # Initialisation du validateur
+    # Validator initialization
     validator = TechniqueValidator(api_key=api_key)
 
     print("Starting cross-validation...")
 
-    # Validation croisée
+    # Cross-validation
     results = validator.batch_validate(
         chunks=validation_data,
         rag_results_list=rag_results_list,
         llm_results_list=llm_results_list,
     )
 
-    # Calcul des métriques de validation
+    # Validation metrics calculation
     validation_metrics = calculate_validation_metrics(results["validations"])
     results["validation_metrics"] = validation_metrics
 
-    # Sauvegarde des résultats complets
-    full_results_file = save_validation_results(results, include_detailed=True)
+    # Save complete results
+    full_results_file = save_judge_results(results, include_detailed=True)
     print(f"Detailed results saved to: {full_results_file}")
 
-    # Sauvegarde des techniques finales uniquement
+    # Save final techniques only
     final_techniques_file = save_final_techniques_only(results)
     print(f"Final validated techniques saved to: {final_techniques_file}")
 
-    # Affichage des résultats principaux
+    # Display main results
     print("\n" + "=" * 60)
     print("CROSS-VALIDATION SUMMARY")
     print("=" * 60)
@@ -239,7 +307,7 @@ def main():
             print(f"RAG contribution: {insights['rag_contribution']}")
             print(f"LLM contribution: {insights['llm_contribution']}")
 
-    # Extraction des techniques finales pour utilisation
+    # Extract final techniques for use
     final_techniques = validator.extract_final_techniques(results)
     print(f"\n--- FINAL VALIDATED TECHNIQUES ---")
     print(f"Chunks with validated techniques: {len(final_techniques)}")
@@ -247,7 +315,7 @@ def main():
     total_final_techniques = sum(len(techs) for techs in final_techniques.values())
     print(f"Total final validated techniques: {total_final_techniques}")
 
-    # Affichage de quelques exemples
+    # Display some examples
     sample_chunks = list(final_techniques.keys())[:3]
     for chunk_id in sample_chunks:
         techniques = final_techniques[chunk_id]
