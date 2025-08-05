@@ -19,6 +19,7 @@ x-airflow-common:
     # Enhanced logging configuration to prevent recursion
     AIRFLOW__LOGGING__LOGGING_LEVEL: 'INFO'
     AIRFLOW__LOGGING__FAB_LOGGING_LEVEL: 'WARN'
+    AIRFLOW__LOGGING__BASE_URL: http://localhost:8080
     AIRFLOW__LOGGING__LOGGING_CONFIG_CLASS: ''
     AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
     # Python logging configuration
