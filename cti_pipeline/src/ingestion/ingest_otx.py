@@ -101,12 +101,12 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
         output_file = os.path.join(
             otx_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
         )
-        
+
         with open(output_file, "w", encoding="utf-8") as f:
             for doc in valid_docs:
                 json.dump(doc, f, ensure_ascii=False)
                 f.write("\n")
-        
+
         print(f"[OTX] Saved {len(valid_docs)} new pulses to {output_file}")
     else:
         print("[OTX] No new pulses to save - all were duplicates or invalid")

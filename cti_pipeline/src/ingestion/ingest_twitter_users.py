@@ -6,13 +6,14 @@ from datetime import datetime
 import time, json, os
 import yaml
 
+from config.twitter_users import twitter_users
+
 from ..utilities import (
     get_content_hash,
     load_processed_items,
     save_processed_items,
     is_duplicate,
     METADATA_DIR,
-    PDF_DIR,
 )
 
 
@@ -31,15 +32,6 @@ CTI_KEYWORDS = [
     "vulnerability",
     "attack",
 ]
-
-
-def load_twitter_users(
-    config_path: str = "cti_pipeline/config/twitter_users.yaml",
-) -> List[str]:
-    """Charge la liste des utilisateurs Twitter depuis un fichier YAML"""
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-    return config.get("users", [])
 
 
 def initialize_driver() -> webdriver.Chrome:
@@ -160,10 +152,10 @@ def save_twitter_data(tweets: List[Dict], username: str, data_dir: str):
 
 
 def ingest_all_twitter_users(
-    data_dir: str, metadata_dir: str = "cti_pipeline/data/metadata"
+    data_dir: str, metadata_dir: str = METADATA_DIR
 ) -> Dict[str, int]:
     """Point d'entrée principal pour l'ingestion Twitter"""
-    users = load_twitter_users()
+    users = twitter_users
     stats = {"processed": 0, "users": len(users)}
     processed_data = load_processed_items("twitter")
 

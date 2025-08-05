@@ -400,9 +400,11 @@ class BlogMonitor(EventMonitor):
     def _load_blog_sources(self) -> List[Dict]:
         """Load blog sources configuration"""
         try:
-            BLOG_SOURCES = os.path.join(CONFIG_PATH, "blog_sources.py")
-            logger.info(f"Loading blog sources from {BLOG_SOURCES}")
+            from ...cti_pipeline.config.blog_sources import BLOG_SOURCES
+
+            logger.info("Loaded blog sources from config")
             return BLOG_SOURCES
+
         except ImportError:
             logger.warning("Blog sources not found")
             return []
@@ -598,8 +600,6 @@ class TwitterMonitor(EventMonitor):
 
     async def monitor(self):
         """Monitor Twitter accounts for new security content"""
-        # Note: Twitter API v2 requires authentication and has rate limits
-        # This is a placeholder implementation
 
         twitter_config = self._load_twitter_config()
         if not twitter_config:
@@ -609,16 +609,17 @@ class TwitterMonitor(EventMonitor):
         # Implement Twitter API monitoring here
         logger.debug("Twitter monitoring requires API v2 implementation")
 
-    def _load_twitter_config(self) -> Optional[Dict]:
-        """Load Twitter configuration"""
+    def _load_twitter_config(self) -> Optional[List[Dict]]:
+        """Load Twitter configuration from python module"""
         try:
-            config_file = self.event_service.config_dir / "twitter_users.yaml"
-            if config_file.exists():
-                with open(config_file, "r") as f:
-                    return yaml.safe_load(f)
-        except Exception as e:
+            from ...cti_pipeline.config.twitter_users import TWITTER_USERS
+
+            logger.info(f"loading Twitter users: {TWITTER_USERS}")
+
+            return TWITTER_USERS
+        except ImportError as e:
             logger.error(f"Error loading Twitter config: {e}")
-        return None
+            return None
 
 
 class EventOrchestrator:
