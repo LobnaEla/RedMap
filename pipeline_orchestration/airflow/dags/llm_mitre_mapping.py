@@ -168,6 +168,11 @@ def process_all_chunks():
                 with open(chunk_file, "r", encoding="utf-8") as f:
                     chunk_data = json.load(f)
 
+                # Check if LLM processing already completed for this file
+                if chunk_data.get("llm_mapping_complete", False):
+                    print(f"[LLM] Skipping {chunk_file} - LLM mapping already completed")
+                    continue
+
                 filename = os.path.basename(chunk_file)
                 chunks = chunk_data.get("chunks", [])
                 print(f"Found {len(chunks)} chunks in {filename}")
@@ -273,6 +278,12 @@ def process_all_chunks():
                         }, f, indent=2, ensure_ascii=False)
                     
                     print(f"✅ Saved incremental results to {incremental_path}")
+                    
+                    # Mark LLM processing as complete in the original chunk file
+                    chunk_data["llm_mapping_complete"] = True
+                    with open(chunk_file, "w", encoding="utf-8") as f:
+                        json.dump(chunk_data, f, indent=2, ensure_ascii=False)
+                    print(f"✅ Marked {filename} as LLM mapping complete")
                     
                     # Save error logs incrementally
                     file_errors = [m for m in file_mappings if not m.get("success", True)]

@@ -27,13 +27,18 @@ def extract_all_files():
 
     os.makedirs(EXTRACT_DIR, exist_ok=True)
     raw_files = glob.glob(f"{RAW_DIR}/**/*.*", recursive=True)
+    
+    # Check if extraction already completed
     for file_path in raw_files:
+        base_name = os.path.basename(file_path)
+        name_without_ext = os.path.splitext(base_name)[0]
+        output_file = os.path.join(EXTRACT_DIR, f"extracted_{name_without_ext}.txt")
+        if os.path.exists(output_file):
+            print(f"[Extract] Skipping {file_path} - already extracted")
+            continue
+            
         try:
             extracted = extract_text(file_path)
-            base_name = os.path.basename(file_path)
-            # Remove original extension and add .txt
-            name_without_ext = os.path.splitext(base_name)[0]
-            output_file = os.path.join(EXTRACT_DIR, f"extracted_{name_without_ext}.txt")
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(extracted)
         except Exception as e:
@@ -46,17 +51,24 @@ def clean_all_files():
 
     os.makedirs(CLEAN_DIR, exist_ok=True)
     extracted_files = glob.glob(f"{EXTRACT_DIR}/extracted_*.txt")
+    
     for file_path in extracted_files:
+        base_name = os.path.basename(file_path)
+        # Remove 'extracted_' prefix and replace with 'cleaned_'
+        if base_name.startswith("extracted_"):
+            clean_name = base_name.replace("extracted_", "cleaned_", 1)
+        else:
+            clean_name = f"cleaned_{base_name}"
+
+        output_file = os.path.join(CLEAN_DIR, clean_name)
+        
+        # Check if cleaning already completed
+        if os.path.exists(output_file):
+            print(f"[Clean] Skipping {file_path} - already cleaned")
+            continue
+            
         try:
             cleaned = clean_text(file_path)
-            base_name = os.path.basename(file_path)
-            # Remove 'extracted_' prefix and replace with 'cleaned_'
-            if base_name.startswith("extracted_"):
-                clean_name = base_name.replace("extracted_", "cleaned_", 1)
-            else:
-                clean_name = f"cleaned_{base_name}"
-
-            output_file = os.path.join(CLEAN_DIR, clean_name)
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(cleaned)
         except Exception as e:
@@ -71,17 +83,22 @@ def normalize_all_files():
     cleaned_files = glob.glob(f"{CLEAN_DIR}/cleaned_*.txt")
 
     for file_path in cleaned_files:
+        base_name = os.path.basename(file_path)
+        # Replace 'cleaned_' with 'normalized_' only at the beginning
+        normalized_name = base_name.replace("cleaned_", "normalized_", 1)
+        output_file = os.path.join(NORMALIZE_DIR, normalized_name)
+        
+        # Check if normalization already completed
+        if os.path.exists(output_file):
+            print(f"[Normalize] Skipping {file_path} - already normalized")
+            continue
+            
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             normalized = normalize_text(content)  # Pass content, not file path
 
-            base_name = os.path.basename(file_path)
-            # Replace 'cleaned_' with 'normalized_' only at the beginning
-            normalized_name = base_name.replace("cleaned_", "normalized_", 1)
-
-            output_file = os.path.join(NORMALIZE_DIR, normalized_name)
             with open(output_file, "w", encoding="utf-8") as f_out:
                 f_out.write(normalized)
 
@@ -123,11 +140,20 @@ def chunk_data():
                     base_name = os.path.splitext(os.path.basename(file_path))[0]
                     output_file = os.path.join(CHUNKS_DIR, f"chunks_{base_name}.json")
 
+                    # Check if already processed
+                    if os.path.exists(output_file):
+                        with open(output_file, "r", encoding="utf-8") as f:
+                            existing_data = json.load(f)
+                            if existing_data.get("preprocessing_complete", False):
+                                print(f"[Chunk] Skipping {file_path} - already processed")
+                                continue
+
                     chunk_data = {
                         "original_file": file_path,
                         "processing_time": "N/A",
                         "strategy_used": "ioc_based",
                         "total_chunks": len(chunks),
+                        "preprocessing_complete": True,
                         "chunks": [
                             {
                                 "chunk_id": i,

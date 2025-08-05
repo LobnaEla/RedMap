@@ -71,11 +71,31 @@ def apply_rag():
 
             # Prepare results structure
             base_name = os.path.splitext(os.path.basename(chunk_file))[0]
+            
+            # Check if already processed
+            output_file = os.path.join(RAG_OUTPUT_DIR, f"rag_{base_name}.json")
+            if os.path.exists(output_file):
+                with open(output_file, "r", encoding="utf-8") as f:
+                    existing_data = json.load(f)
+                    if existing_data.get("rag_processing_complete", False):
+                        print(f"[RAG] Skipping {chunk_file} - RAG processing already completed")
+                        continue
+            
+            # Check if prerequisites are met
+            if not chunk_data.get("preprocessing_complete", False):
+                print(f"[RAG] Skipping {chunk_file} - preprocessing not complete")
+                continue
+                
+            if not chunk_data.get("llm_mapping_complete", False):
+                print(f"[RAG] Skipping {chunk_file} - LLM mapping not complete")
+                continue
+            
             results = {
                 "original_chunk_file": chunk_file,
                 "processing_timestamp": datetime.now().isoformat(),
                 "total_chunks": chunk_data.get("total_chunks", 0),
                 "processed_chunks": 0,
+                "rag_processing_complete": False,
                 "rag_results": [],
             }
 
@@ -163,6 +183,9 @@ def apply_rag():
                 # Small delay to avoid overwhelming the API
                 time.sleep(0.1)
 
+            # Mark RAG processing as complete
+            results["rag_processing_complete"] = True
+
             # Save results for this chunk file
             output_file = os.path.join(RAG_OUTPUT_DIR, f"rag_{base_name}.json")
             with open(output_file, "w", encoding="utf-8") as f:
@@ -235,6 +258,7 @@ def validate_format():
                 "processing_timestamp",
                 "total_chunks",
                 "processed_chunks",
+                "rag_processing_complete",
                 "rag_results",
             ]
             missing_fields = [
