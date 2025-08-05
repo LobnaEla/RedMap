@@ -3,6 +3,8 @@ import time
 from datetime import datetime
 from typing import List, Dict, Optional
 
+import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
 
 # Import des utilitaires de prompt
 from .prompt_utils import create_gemini_prompt
@@ -18,7 +20,6 @@ class GeminiClient:
             api_key: Clé API Gemini
             model_config: Configuration du modèle LLM (optionnel, utilise LLM_CONFIG par défaut)
         """
-        import google.generativeai as genai
         genai.configure(api_key=api_key)
         self.config = model_config or LLM_CONFIG
         self.model = genai.GenerativeModel(self.config["model"])
@@ -35,7 +36,6 @@ class GeminiClient:
         Returns:
             Dictionnaire contenant les résultats du mapping
         """
-        from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
         if not text.strip():
             return self._create_error_result(chunk_id, "Empty text")
 

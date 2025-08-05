@@ -8,12 +8,16 @@ __pycache__/
 .env
 *.log
 
-airflow/logs/
-airflow/__pycache__/
-airflow/.mypy_cache/
-airflow/.pytest_cache/
-airflow/tmp/
-airflow/db.sqlite3
+pipeline_orchestration/airflow/logs/
+pipeline_orchestration/airflow/__pycache__/
+pipeline_orchestration/airflow/.mypy_cache/
+pipeline_orchestration/airflow/.pytest_cache/
+pipeline_orchestration/airflow/tmp/
+pipeline_orchestration/airflow/db.sqlite3
+
+pipeline_orchestration/event_service/logs/
+pipeline_orchestration/event_service/__pycache__/
+
 
 entity-based-chunking/output/*
 entity-based-chunking/cti_processing.log
@@ -22,8 +26,6 @@ cti_pipeline.log
 cti_pipeline/metadata/
 
 folder/
-
-llm-as-a-judge/
 
 cti_pipeline/results/
 cti_pipeline/samples/
