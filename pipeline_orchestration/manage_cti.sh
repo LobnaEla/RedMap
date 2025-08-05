@@ -47,7 +47,7 @@ show_status() {
     docker-compose ps
     echo ""
     echo "🔍 Service Health:"
-    docker-compose exec cti-event-service python -c "
+    docker-compose exec eventmonitor python -c "
 from event_service import CTIEventService
 import json
 service = CTIEventService()
@@ -60,7 +60,7 @@ print(json.dumps(status, indent=2))
 }
 
 show_logs() {
-    docker-compose logs -f cti-event-service
+    docker-compose logs -f eventmonitor
 }
 
 show_all_logs() {
@@ -69,7 +69,7 @@ show_all_logs() {
 
 access_shell() {
     echo "🐚 Accessing event service shell..."
-    docker-compose exec cti-event-service /bin/bash
+    docker-compose exec eventmonitor /bin/bash
 }
 
 access_redis() {
@@ -86,7 +86,7 @@ trigger_source() {
         reason="Manual trigger via management script"
     fi
     
-    docker-compose exec cti-event-service python -c "
+    docker-compose exec eventmonitor python -c "
 from event_service import CTIEventService, CTIEvent
 from datetime import datetime
 import json
@@ -95,7 +95,8 @@ event = CTIEvent(
     source_name='$source',
     event_type='manual_trigger',
     timestamp=datetime.utcnow().isoformat(),
-    reason='$reason'
+    reason='$reason',
+    priority='normal'
 )
 result = service.trigger_event(event)
 print(json.dumps(result, indent=2))

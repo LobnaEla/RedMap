@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Complete Event-Driven CTI Service
 Monitors external sources and triggers ingestion pipelines automatically
@@ -598,27 +597,203 @@ class TunCertMonitor(EventMonitor):
 class TwitterMonitor(EventMonitor):
     """Monitor Twitter for security-related content"""
 
+    def __init__(self, event_service: CTIEventService):
+        super().__init__(event_service)
+        self.twitter_users = self._load_twitter_config()
+
     async def monitor(self):
         """Monitor Twitter accounts for new security content"""
 
-        twitter_config = self._load_twitter_config()
-        if not twitter_config:
+        if not self.twitter_users:
             logger.debug("Twitter configuration not found, skipping Twitter monitoring")
             return
 
-        # Implement Twitter API monitoring here
-        logger.debug("Twitter monitoring requires API v2 implementation")
+        # Check each configured Twitter user
+        new_content_detected = False
+        users_with_updates = []
 
-    def _load_twitter_config(self) -> Optional[List[Dict]]:
+        for username in self.twitter_users:
+            try:
+                # Check for new content from this user
+                has_new_content = await self._check_user_for_updates(username)
+
+                if has_new_content:
+                    new_content_detected = True
+                    users_with_updates.append(username)
+                    logger.info(f"New content detected for Twitter user: {username}")
+
+            except Exception as e:
+                logger.error(f"Error checking Twitter user {username}: {e}")
+                continue
+
+        # If any user has new content, trigger the Twitter ingestion pipeline
+        if new_content_detected:
+            event = CTIEvent(
+                source_name="twitter",
+                event_type=EventType.NEW_CONTENT.value,
+                reason=f"New tweets detected from {len(users_with_updates)} users",
+                priority=Priority.MEDIUM.value,
+                source_metadata={
+                    "users_with_updates": users_with_updates,
+                    "total_users_checked": len(self.twitter_users),
+                    "update_type": "new_tweets",
+                },
+            )
+
+            result = self.event_service.trigger_event(event)
+            logger.info(f"Twitter trigger result: {result.get('status')}")
+
+    async def _check_user_for_updates(self, username: str) -> bool:
+        """Check if a specific Twitter user has new content"""
+        try:
+            # Use a lightweight approach to check for new content
+            # We'll simulate scraping by getting basic timeline info
+            latest_tweet_data = await self._get_latest_tweet_info(username)
+
+            if not latest_tweet_data:
+                logger.debug(f"No tweet data retrieved for {username}")
+                return False
+
+            # Create a hash key for this user
+            source_key = f"twitter_user_{username}"
+
+            # Create hash of latest tweet info
+            tweet_hash = self._create_tweet_hash(latest_tweet_data)
+
+            # Check if this is different from last check
+            if source_key in self.last_check_hashes:
+                if tweet_hash != self.last_check_hashes[source_key]:
+                    # New content detected
+                    self.last_check_hashes[source_key] = tweet_hash
+                    self._save_hash(source_key, tweet_hash)
+                    return True
+                else:
+                    # No change
+                    return False
+            else:
+                # First time checking this user
+                self.last_check_hashes[source_key] = tweet_hash
+                self._save_hash(source_key, tweet_hash)
+                # Don't trigger on first check to avoid false positives
+                return False
+
+        except Exception as e:
+            logger.error(f"Error checking updates for user {username}: {e}")
+            return False
+
+    async def _get_latest_tweet_info(self, username: str) -> Optional[Dict]:
+        """Get latest tweet information for a user using a lightweight method"""
+        try:
+            # Using aiohttp to make async HTTP requests
+            timeout = aiohttp.ClientTimeout(total=30)
+
+            # Twitter's public timeline (no auth required, but limited)
+            # This is a simplified approach - in production you'd want to use Twitter API v2
+            url = f"https://twitter.com/{username}"
+
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                }
+
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        content = await response.text()
+
+                        # Extract basic info from the page
+                        # This is a simplified approach - in a real implementation,
+                        # you'd want to parse the HTML properly or use Twitter API
+
+                        # Look for tweet timestamps or content changes
+                        import re
+
+                        # Try to find recent timestamp patterns
+                        timestamp_patterns = [
+                            r'"created_at":"([^"]+)"',
+                            r'data-time="(\d+)"',
+                            r'datetime="([^"]+)"',
+                        ]
+
+                        timestamps = []
+                        for pattern in timestamp_patterns:
+                            matches = re.findall(pattern, content)
+                            timestamps.extend(matches)
+
+                        if timestamps:
+                            # Use the first/most recent timestamp found
+                            latest_timestamp = timestamps[0]
+
+                            return {
+                                "username": username,
+                                "latest_timestamp": latest_timestamp,
+                                "content_length": len(
+                                    content[:5000]
+                                ),  # Use first 5k chars
+                                "check_time": datetime.utcnow().isoformat(),
+                            }
+                        else:
+                            # Fallback: use content hash of a portion of the page
+                            return {
+                                "username": username,
+                                "content_sample": content[:2000],  # First 2k characters
+                                "content_length": len(content),
+                                "check_time": datetime.utcnow().isoformat(),
+                            }
+                    else:
+                        logger.warning(
+                            f"HTTP {response.status} when checking {username}"
+                        )
+                        return None
+
+        except asyncio.TimeoutError:
+            logger.warning(f"Timeout when checking Twitter user {username}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting latest tweet info for {username}: {e}")
+            return None
+
+    def _create_tweet_hash(self, tweet_data: Dict) -> str:
+        """Create a hash from tweet data to detect changes"""
+        # Create a string from the key data points
+        hash_content = ""
+
+        if "latest_timestamp" in tweet_data:
+            hash_content += tweet_data["latest_timestamp"]
+
+        if "content_sample" in tweet_data:
+            hash_content += tweet_data["content_sample"]
+
+        if "content_length" in tweet_data:
+            hash_content += str(tweet_data["content_length"])
+
+        # Add username to make hash unique per user
+        hash_content += tweet_data.get("username", "")
+
+        return hashlib.md5(hash_content.encode()).hexdigest()
+
+    def _load_twitter_config(self) -> Optional[List[str]]:
         """Load Twitter configuration from python module"""
         try:
-            from ...cti_pipeline.config.twitter_users import TWITTER_USERS
+            # Import the twitter_users from the first script's config
+            # Adjust the import path based on your actual structure
+            sys.path.append(BASE_PROJECT_PATH)
+            from ...cti_pipeline.config.twitter_users import twitter_users
 
-            logger.info(f"loading Twitter users: {TWITTER_USERS}")
+            if isinstance(twitter_users, list):
+                logger.info(f"Loaded {len(twitter_users)} Twitter users for monitoring")
+                return twitter_users
+            else:
+                logger.warning("twitter_users is not a list")
+                return None
 
-            return TWITTER_USERS
         except ImportError as e:
             logger.error(f"Error loading Twitter config: {e}")
+            logger.debug(
+                "Make sure config/twitter_users.py exists with twitter_users list"
+            )
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error loading Twitter config: {e}")
             return None
 
 
