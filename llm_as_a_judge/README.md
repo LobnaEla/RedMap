@@ -190,8 +190,8 @@ Chunks CTI → RAG System → Techniques RAG
 
 ```bash
 # Exemple d'utilisation
-python -m llm_as_a_judge.tests.usage_example.py
+python -m llm_as_a_judge.tests.usage_example
 
 # Exécution complète
-python -m llm_as_a_judge.main.py
+python -m llm_as_a_judge.main
 ```
