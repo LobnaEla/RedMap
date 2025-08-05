@@ -213,42 +213,52 @@ def ingest_tuncert_vulnerabilities(data_dir, metadata_dir):
     tuncert_dir = os.path.join(data_dir, "raw_scraped_data", "tuncert")
     os.makedirs(tuncert_dir, exist_ok=True)
 
-    output_file = os.path.join(
-        tuncert_dir, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
-    )
-
     try:
         vuln_urls = fetch_vulnerability_list()
         if not vuln_urls:
             return 0
 
-        new_count = 0
-        with open(output_file, "a", encoding="utf-8") as f:
-            for url in vuln_urls:
-                vuln_details = extract_vulnerability_details(url)
-                if not vuln_details:
-                    continue
+        # First pass: collect valid documents
+        valid_docs = []
+        for url in vuln_urls:
+            vuln_details = extract_vulnerability_details(url)
+            if not vuln_details:
+                continue
 
-                content_str = json.dumps(vuln_details, sort_keys=True)
+            content_str = json.dumps(vuln_details, sort_keys=True)
 
-                if is_duplicate(
-                    content_str, url, processed_data, content_type="generic"
-                ):
-                    continue
+            if is_duplicate(
+                content_str, url, processed_data, content_type="generic"
+            ):
+                continue
 
-                content_hash = get_content_hash(content_str)
+            content_hash = get_content_hash(content_str)
+            vuln_details["hash"] = content_hash
+            
+            valid_docs.append(vuln_details)
+            processed_data.setdefault("hashes", []).append(content_hash)
+            processed_data.setdefault("urls", []).append(url)
 
-                vuln_details["hash"] = content_hash
-                json.dump(vuln_details, f, ensure_ascii=False)
-                f.write("\n")
+        # Only create file if we have valid documents to save
+        if valid_docs:
+            output_file = os.path.join(
+                tuncert_dir, f"tuncert_vulns_{datetime.now().strftime('%Y%m%d')}.jsonl"
+            )
+            
+            with open(output_file, "w", encoding="utf-8") as f:
+                for doc in valid_docs:
+                    json.dump(doc, f, ensure_ascii=False)
+                    f.write("\n")
+            
+            print(f"[TUNCERT] Saved {len(valid_docs)} new vulnerabilities")
+            save_processed_items("tuncert", processed_data)
+            return len(valid_docs)
+        else:
+            print("[TUNCERT] No new vulnerabilities to save - all were duplicates or invalid")
+            return 0
 
-                processed_data.setdefault("hashes", []).append(content_hash)
-                processed_data.setdefault("urls", []).append(url)
-                new_count += 1
-
-        save_processed_items("tuncert", processed_data)
-        return new_count
     except Exception as e:
+        print(f"[ERROR] TunCERT ingestion failed: {str(e)}")
         return 0
 
 

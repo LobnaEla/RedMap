@@ -73,17 +73,12 @@ def ingest_single_rss_source(
     rss_dir = os.path.join(data_dir, "raw_scraped_data", "rss")
     os.makedirs(rss_dir, exist_ok=True)
 
-    output_file = f"raw_rss_{source_config['name']}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
-
-    with open(os.path.join(rss_dir, output_file), "w", encoding="utf-8") as f:
-        for entry in feed.entries:
-            doc = process_rss_entry(entry, processed_data, source_config)
-            if not doc:
-                continue
-
-            json.dump(doc, f, ensure_ascii=False)
-            f.write("\n")
-
+    # First pass: collect valid documents
+    valid_docs = []
+    for entry in feed.entries:
+        doc = process_rss_entry(entry, processed_data, source_config)
+        if doc:
+            valid_docs.append(doc)
             # Update processed items
             processed_data.setdefault("hashes", []).append(
                 get_content_hash(doc["content"], "rss")
@@ -91,8 +86,22 @@ def ingest_single_rss_source(
             processed_data.setdefault("urls", []).append(doc["link"])
             stats["processed"] += 1
 
-    # Save processed items for this specific source
-    save_processed_items(f"rss_{source_config['name']}", processed_data)
+    # Only create file if we have valid documents to save
+    if valid_docs:
+        output_file = f"raw_rss_{source_config['name']}_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+        
+        with open(os.path.join(rss_dir, output_file), "w", encoding="utf-8") as f:
+            for doc in valid_docs:
+                json.dump(doc, f, ensure_ascii=False)
+                f.write("\n")
+        
+        print(f"[RSS] Saved {len(valid_docs)} new entries from {source_config['name']}")
+    else:
+        print(f"[RSS] No new entries to save from {source_config['name']} - all were duplicates or invalid")
+
+    # Only save processed items if we actually processed something new
+    if stats["processed"] > 0:
+        save_processed_items(f"rss_{source_config['name']}", processed_data)
     return stats
 
 

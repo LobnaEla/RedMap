@@ -86,24 +86,35 @@ def ingest_otx_pulses(data_dir: str, metadata_dir: str) -> Dict[str, int]:
     otx_dir = os.path.join(data_dir, "raw_scraped_data", "otx")
     os.makedirs(otx_dir, exist_ok=True)
 
-    output_file = os.path.join(
-        otx_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
-    )
-
-    with open(output_file, "w", encoding="utf-8") as f:
-        for pulse in pulses:
-            doc = process_otx_pulse(pulse, processed_data)
-            if not doc:
-                continue
-
-            json.dump(doc, f, ensure_ascii=False)
-            f.write("\n")
-
+    # First pass: collect valid documents
+    valid_docs = []
+    for pulse in pulses:
+        doc = process_otx_pulse(pulse, processed_data)
+        if doc:
+            valid_docs.append(doc)
             processed_data.setdefault("hashes", []).append(doc["hash"])
             processed_data.setdefault("urls", []).append(doc["pulse_id"])
             stats["processed"] += 1
 
-    save_processed_items("otx", processed_data)
+    # Only create file if we have valid documents to save
+    if valid_docs:
+        output_file = os.path.join(
+            otx_dir, f"raw_otx_pulses_{datetime.now().strftime('%Y%m%d_%H%M')}.jsonl"
+        )
+        
+        with open(output_file, "w", encoding="utf-8") as f:
+            for doc in valid_docs:
+                json.dump(doc, f, ensure_ascii=False)
+                f.write("\n")
+        
+        print(f"[OTX] Saved {len(valid_docs)} new pulses to {output_file}")
+    else:
+        print("[OTX] No new pulses to save - all were duplicates or invalid")
+
+    # Only save processed items if we actually processed something new
+    if stats["processed"] > 0:
+        save_processed_items("otx", processed_data)
+
     return stats
 
 
