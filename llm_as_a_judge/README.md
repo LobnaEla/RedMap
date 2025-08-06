@@ -1,13 +1,20 @@
-Ce module implémente un système de validation croisée des techniques MITRE ATT&CK en utilisant un LLM comme juge pour analyser et valider les résultats combinés du RAG (Retrieval Augmented Search) et du premier LLM (In-Context Learning).
+# LLM-as-a-Judge: Cross-Validation Framework for MITRE ATT&CK TTP Mapping
 
-## Concept Clé
+This module implements a **cross-validation system** for MITRE ATT&CK technique extraction from Cyber Threat Intelligence (CTI) using an LLM as a judge to analyze and validate results from **RAG (Retrieval-Augmented Search)** and **LLM (In-Context Learning)**.
 
-**Objectif** : Au lieu d'utiliser directement les résultats issus du RAG ou du LLM, le module :
-1. **Analyse les deux sorties** (RAG + LLM) par rapport au chunk CTI original
-2. **Effectue une vérification rétroactive** : "Pourquoi cette technique a-t-elle été proposée/rejetée ?"
-3. **Produit une liste finale** des techniques validées après croisement des approches
+## 🔍 Key Concept
 
-## Architecture
+Instead of directly using results from RAG or LLM, this system performs **retroactive validation** by:
+
+- ✅ Cross-analyzing RAG and LLM outputs against the original CTI text  
+- ✅ Answering: *"Why was this technique proposed? Why was it rejected?"*
+- ✅ Producing a final list of **validated techniques** based on evidence and context
+
+This ensures **precision**, **explainability**, and **operational readiness**.
+
+---
+
+## 🏗️ Architecture
 
 ```
 /llm-as-a-judge/

@@ -1,0 +1,260 @@
+{
+  "validations": [
+    {
+      "chunk_id": "batch_001",
+      "original_chunk": "The attacker used RDP to move laterally across the network after obtaining valid credentials through credential dumping.",
+      "iocs": "mstsc.exe, 3389/tcp, lsadump",
+      "input_analysis": {
+        "llm_predicted_techniques": [
+          "T1021.001",
+          "T1078",
+          "T1090"
+        ],
+        "ras_evidence_techniques": [
+          "T1021.001",
+          "T1078",
+          "T1003"
+        ],
+        "common_techniques": [
+          "T1021.001",
+          "T1078"
+        ],
+        "llm_only_techniques": [
+          "T1090"
+        ],
+        "ras_only_techniques": [
+          "T1003"
+        ],
+        "total_predicted": 3,
+        "total_unique_techniques": 4,
+        "in_ras_support": 2,
+        "not_in_ras": [
+          "T1090"
+        ]
+      },
+      "judge_result": {
+        "validated_techniques": [
+          "T1021.001",
+          "T1078"
+        ],
+        "rejected_techniques": [
+          "T1090"
+        ],
+        "technique_analysis": {
+          "T1021.001": {
+            "status": "validated",
+            "confidence": 0.95,
+            "evidence": "The attacker used RDP to move laterally across the network after obtaining valid credentials through credential dumping.",
+            "reasoning": "The text explicitly mentions lateral movement via RDP, directly supporting T1021.001.  This is also present in the RAS results.",
+            "in_ras": true,
+            "alternative": null
+          },
+          "T1078": {
+            "status": "validated",
+            "confidence": 0.9,
+            "evidence": "The attacker used RDP to move laterally across the network after obtaining valid credentials through credential dumping. IOCs include mstsc.exe and 3389/tcp.",
+            "reasoning": "Credential dumping is explicitly mentioned, strongly implying T1078.  The presence of mstsc.exe and port 3389 further supports this.  This is also present in the RAS results.",
+            "in_ras": true,
+            "alternative": null
+          },
+          "T1090": {
+            "status": "rejected",
+            "confidence": 0.1,
+            "evidence": null,
+            "reasoning": "While credential dumping could potentially involve T1090 (as it might involve accessing files), there is no explicit mention of this in the text.  The text focuses on the RDP lateral movement.  T1090 is not present in the RAS results, and there is no strong contextual justification for its inclusion.",
+            "in_ras": false,
+            "alternative": null
+          }
+        },
+        "validation_summary": {
+          "total_analyzed": 3,
+          "validated_count": 2,
+          "rejected_count": 1,
+          "validation_rate": 0.6666666666666666,
+          "supported_by_ras_count": 2,
+          "hallucinated_count": 1
+        },
+        "success": true,
+        "raw_response": "{\"validated_techniques\": [\"T1021.001\", \"T1078\"], \"rejected_techniques\": [\"T1090\"], \"technique_analysis\": {\"T1021.001\": {\"status\": \"validated\", \"confidence\": 0.95, \"evidence\": \"The attacker used RDP to move laterally across the network after obtaining valid credentials through credential dumping.\", \"reasoning\": \"The text explicitly mentions lateral movement via RDP, directly supporting T1021.001.  This is also present in the RAS results.\", \"in_ras\": true, \"alternative\": null}, \"T1078\": {\"status\": \"validated\", \"confidence\": 0.9, \"evidence\": \"The attacker used RDP to move laterally across the network after obtaining valid credentials through credential dumping. IOCs include mstsc.exe and 3389/tcp.\", \"reasoning\": \"Credential dumping is explicitly mentioned, strongly implying T1078.  The presence of mstsc.exe and port 3389 further supports this.  This is also present in the RAS results.\", \"in_ras\": true, \"alternative\": null}, \"T1090\": {\"status\": \"rejected\", \"confidence\": 0.1, \"evidence\": null, \"reasoning\": \"While credential dumping could potentially involve T1090 (as it might involve accessing files), there is no explicit mention of this in the text.  The text focuses on the RDP lateral movement.  T1090 is not present in the RAS results, and there is no strong contextual justification for its inclusion.\", \"in_ras\": false, \"alternative\": null}}, \"validation_summary\": {\"total_analyzed\": 3, \"validated_count\": 2, \"rejected_count\": 1, \"validation_rate\": 0.6666666666666666, \"supported_by_ras_count\": 2, \"hallucinated_count\": 1}}"
+      },
+      "final_validated_techniques": [
+        "T1021.001",
+        "T1078"
+      ],
+      "success": true,
+      "timestamp": "2025-08-06T11:55:59.678185",
+      "chunk_metadata": {
+        "source_file": "",
+        "processing_time": "2025-08-06T11:55:59.678185",
+        "validation_config": {
+          "model": "gemini-1.5-flash",
+          "temperature": 0.1,
+          "max_tokens": 800,
+          "max_retries": 3,
+          "validation_threshold": 0.7
+        }
+      }
+    },
+    {
+      "chunk_id": "batch_002",
+      "original_chunk": "Sensitive data was collected from file shares and compressed using WinRAR before being exfiltrated to cloud storage services.",
+      "iocs": "winrar.exe, *.rar files, network uploads",
+      "input_analysis": {
+        "llm_predicted_techniques": [
+          "T1560.001",
+          "T1567.002",
+          "T1041"
+        ],
+        "ras_evidence_techniques": [
+          "T1005",
+          "T1560.001",
+          "T1567.002"
+        ],
+        "common_techniques": [
+          "T1560.001",
+          "T1567.002"
+        ],
+        "llm_only_techniques": [
+          "T1041"
+        ],
+        "ras_only_techniques": [
+          "T1005"
+        ],
+        "total_predicted": 3,
+        "total_unique_techniques": 4,
+        "in_ras_support": 2,
+        "not_in_ras": [
+          "T1041"
+        ]
+      },
+      "judge_result": {
+        "validated_techniques": [
+          "T1560.001",
+          "T1567.002"
+        ],
+        "rejected_techniques": [
+          "T1041"
+        ],
+        "technique_analysis": {
+          "T1560.001": {
+            "status": "validated",
+            "confidence": 0.95,
+            "evidence": "Sensitive data was collected from file shares and compressed using WinRAR before being exfiltrated to cloud storage services.",
+            "reasoning": "The text explicitly mentions data being collected and compressed using WinRAR, directly supporting T1560.001 (Data from Local System).  This is also present in the RAS results.",
+            "in_ras": true,
+            "alternative": null
+          },
+          "T1567.002": {
+            "status": "validated",
+            "confidence": 0.9,
+            "evidence": "Sensitive data...exfiltrated to cloud storage services.",
+            "reasoning": "The exfiltration of data to cloud storage aligns with T1567.002 (Exfiltration over C2). This is also present in the RAS results.",
+            "in_ras": true,
+            "alternative": null
+          },
+          "T1041": {
+            "status": "rejected",
+            "confidence": 0.1,
+            "evidence": null,
+            "reasoning": "There is no mention of data being encrypted in the provided text.  The LLM may have hallucinated this technique due to the presence of compression (WinRAR), confusing compression with encryption.  T1041 (Data Encrypted) is not supported by the text or the RAS results.",
+            "in_ras": false,
+            "alternative": null
+          }
+        },
+        "validation_summary": {
+          "total_analyzed": 3,
+          "validated_count": 2,
+          "rejected_count": 1,
+          "validation_rate": 0.6666666666666666,
+          "supported_by_ras_count": 2,
+          "hallucinated_count": 1
+        },
+        "success": true,
+        "raw_response": "{\"validated_techniques\": [\"T1560.001\", \"T1567.002\"], \"rejected_techniques\": [\"T1041\"], \"technique_analysis\": {\"T1560.001\": {\"status\": \"validated\", \"confidence\": 0.95, \"evidence\": \"Sensitive data was collected from file shares and compressed using WinRAR before being exfiltrated to cloud storage services.\", \"reasoning\": \"The text explicitly mentions data being collected and compressed using WinRAR, directly supporting T1560.001 (Data from Local System).  This is also present in the RAS results.\", \"in_ras\": true, \"alternative\": null}, \"T1567.002\": {\"status\": \"validated\", \"confidence\": 0.9, \"evidence\": \"Sensitive data...exfiltrated to cloud storage services.\", \"reasoning\": \"The exfiltration of data to cloud storage aligns with T1567.002 (Exfiltration over C2). This is also present in the RAS results.\", \"in_ras\": true, \"alternative\": null}, \"T1041\": {\"status\": \"rejected\", \"confidence\": 0.1, \"evidence\": null, \"reasoning\": \"There is no mention of data being encrypted in the provided text.  The LLM may have hallucinated this technique due to the presence of compression (WinRAR), confusing compression with encryption.  T1041 (Data Encrypted) is not supported by the text or the RAS results.\", \"in_ras\": false, \"alternative\": null}}, \"validation_summary\": {\"total_analyzed\": 3, \"validated_count\": 2, \"rejected_count\": 1, \"validation_rate\": 0.6666666666666666, \"supported_by_ras_count\": 2, \"hallucinated_count\": 1}}"
+      },
+      "final_validated_techniques": [
+        "T1560.001",
+        "T1567.002"
+      ],
+      "success": true,
+      "timestamp": "2025-08-06T11:56:03.156885",
+      "chunk_metadata": {
+        "source_file": "",
+        "processing_time": "2025-08-06T11:56:03.156885",
+        "validation_config": {
+          "model": "gemini-1.5-flash",
+          "temperature": 0.1,
+          "max_tokens": 800,
+          "max_retries": 3,
+          "validation_threshold": 0.7
+        }
+      }
+    }
+  ],
+  "statistics": {
+    "total_chunks": 2,
+    "successful_validations": 2,
+    "total_techniques_analyzed": 8,
+    "total_techniques_validated": 4,
+    "average_validation_rate": 0.5,
+    "consensus_accuracy": 1.0,
+    "rag_only_contribution": 0.0,
+    "llm_only_contribution": 0.0,
+    "errors": 0,
+    "start_time": "2025-08-06T11:55:55.891818",
+    "end_time": "2025-08-06T11:56:03.156885",
+    "success_rate": 1.0
+  },
+  "metadata": {
+    "validation_config": {
+      "model": "gemini-1.5-flash",
+      "temperature": 0.1,
+      "max_tokens": 800,
+      "max_retries": 3,
+      "validation_threshold": 0.7
+    },
+    "generated_at": "2025-08-06T11:56:03.156885",
+    "total_processed": 2
+  },
+  "detailed_metrics": {
+    "overall_metrics": {
+      "total_chunks": 2,
+      "successful_chunks": 2,
+      "success_rate": 1.0,
+      "total_techniques_analyzed": 8,
+      "total_techniques_validated": 4,
+      "overall_validation_rate": 0.5,
+      "average_validation_rate": 0.5,
+      "consensus_accuracy": 1.0
+    },
+    "source_analysis": {
+      "common": {
+        "total": 4,
+        "validated": 4,
+        "validation_rate": 1.0
+      },
+      "llm_only": {
+        "total": 2,
+        "validated": 0,
+        "validation_rate": 0.0
+      },
+      "ras_only": {
+        "total": 2,
+        "validated": 0,
+        "validation_rate": 0.0
+      }
+    },
+    "insights": {
+      "consensus_reliability": "High - Strong agreement between RAG and LLM",
+      "rag_contribution": "Low - RAG unique techniques often invalid",
+      "llm_contribution": "Low - LLM prone to hallucination",
+      "system_performance": "Poor - Many techniques rejected by judge"
+    },
+    "validation_rates_distribution": {
+      "min": 0.5,
+      "max": 0.5,
+      "avg": 0.5,
+      "count": 2
+    }
+  }
+}
