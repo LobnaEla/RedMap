@@ -1,14 +1,18 @@
 from py2neo import Graph, Node, Relationship
 import os
+from dotenv import load_dotenv
 import json
 import glob
 import networkx as nx
 import matplotlib.pyplot as plt
 
+load_dotenv()
+NEO4J_USER = os.getenv("NEO4J_USER")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
 def build_cti_graph():
     # Connexion à Neo4j (à adapter)
-    graph = Graph("bolt://localhost:7687", auth=("neo4j", "neo4j123"))
-
+    graph_db = Graph("bolt://localhost:7687", auth=(NEO4J_USER, NEO4J_PASSWORD))
     rag_dir = "C:/Users/USER/Desktop/Stage-WEVIOO/data/rag_results"
     rag_files = glob.glob(os.path.join(rag_dir, "rag_*.json"))
 
@@ -42,7 +46,7 @@ def build_cti_graph():
 
 
 def draw_cti_graph():
-    graph_db = Graph("bolt://localhost:7687", auth=("neo4j", "neo4j123"))
+    graph_db = Graph("bolt://localhost:7687", auth=(NEO4J_USER, NEO4J_PASSWORD))
     
     query = """
     MATCH (c:Chunk)-[r:MENTIONS]->(t:Technique)
