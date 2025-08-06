@@ -1,220 +1,233 @@
+# llm_as_a_judge/core/technique_validator.py
+
+import os
 import json
-import time
 from datetime import datetime
-from typing import List, Dict, Optional, Set
+from typing import Dict, List, Optional
 
-import google.generativeai as genai
-from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
-
-from .prompt_utils import create_judge_prompt
+from .judge_client import JudgeClient
+from .config import VALIDATION_CONFIG
 
 
-class JudgeClient:
-    """Client LLM pour la validation croisée des techniques MITRE"""
+class TechniqueValidator:
+    """Validateur principal pour le système LLM-as-a-Judge de validation croisée.
 
-    def __init__(self, api_key: str, model_config: Optional[Dict] = None):
+    Intégration Pipeline:
+    Chunks CTI → RAG System → Techniques RAG
+         ↓            ↓
+         → LLM ICL → Techniques LLM
+                        ↓
+                  LLM-as-a-Judge
+                        ↓
+                Techniques Validées
+    """
+
+    def __init__(self, api_key: str = None):
         """
-        Initialise le client de llm-as-a-judge
+        Initialise le validateur.
 
         Args:
-            api_key: Clé API Gemini
-            model_config: Configuration du modèle
+            api_key: Clé API Gemini. Si non fournie, utilise GEMINI_API_KEY.
         """
-        genai.configure(api_key=api_key)
-        self.config = model_config or {
-            "model": "gemini-2.0-flash",
-            "temperature": 0.1,
-            "max_retries": 3,
-        }
-        self.model = genai.GenerativeModel(self.config["model"])
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError(
+                "GEMINI_API_KEY not configured. Set it in environment or pass as argument."
+            )
 
-    def validate_techniques_cross_reference(
-        self,
-        original_chunk: str,
-        rag_techniques: List[str],
-        llm_techniques: List[str],
-        chunk_id: str,
-        iocs: str = "",
+        self.judge_client = JudgeClient(
+            api_key=self.api_key, model_config=VALIDATION_CONFIG
+        )
+
+    def validate_single_chunk(
+        self, chunk_data: Dict, rag_results: List[str], llm_results: List[str]
     ) -> Dict:
         """
-        Valide les techniques en croisant RAG et LLM par rapport au chunk original
+        Valide un seul chunk en croisant les résultats RAG et LLM.
 
         Args:
-            original_chunk: Texte original du chunk CTI
-            rag_techniques: Techniques proposées par le RAG/RAS
-            llm_techniques: Techniques proposées par le premier LLM
-            chunk_id: Identifiant du chunk
-            iocs: Indicateurs de compromission
+            chunk_data: Données du chunk CTI (text, iocs, chunk_id, etc.)
+            rag_results: Techniques MITRE extraites par le système RAG/RAS
+            llm_results: Techniques MITRE prédites par le LLM (via ICL)
 
         Returns:
-            Dictionnaire contenant la validation croisée
+            Dictionnaire contenant les résultats de validation croisée.
         """
-        if not original_chunk.strip():
-            return self._create_error_result(chunk_id, "Empty original chunk")
+        chunk_id = chunk_data.get("chunk_id", "unknown")
+        original_text = chunk_data.get("text", "")
+        iocs = chunk_data.get("iocs", "")
 
-        # Nettoyage et validation des techniques
-        rag_clean = self._clean_techniques(rag_techniques)
-        llm_clean = self._clean_techniques(llm_techniques)
+        if not original_text.strip():
+            return self._create_error_result(chunk_id, "Empty chunk text")
 
-        # Création des ensembles pour l'analyse
-        rag_set = set(rag_clean)
-        llm_set = set(llm_clean)
-
-        # Techniques communes (intersection)
-        common_techniques = list(rag_set.intersection(llm_set))
-
-        # Techniques uniquement dans RAG
-        rag_only = list(rag_set - llm_set)
-
-        # Techniques uniquement dans LLM
-        llm_only = list(llm_set - rag_set)
-
-        # Union de toutes les techniques à analyser
-        all_techniques = list(rag_set.union(llm_set))
-
-        prompt = create_judge_prompt(
-            original_text=original_chunk,
-            iocs=iocs,
-            common_techniques=common_techniques,
-            rag_only_techniques=rag_only,
-            llm_only_techniques=llm_only,
-            all_techniques=all_techniques,
-        )
-
-        for attempt in range(1, self.config["max_retries"] + 1):
-            try:
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config={
-                        "temperature": self.config["temperature"],
-                    },
-                )
-
-                content = (
-                    response.text.strip()
-                    if response and hasattr(response, "text")
-                    else ""
-                )
-
-                if content:
-                    judge_result = self._parse_judge_response(content)
-                    return self._create_success_result(
-                        chunk_id=chunk_id,
-                        original_chunk=original_chunk,
-                        iocs=iocs,
-                        rag_techniques=rag_clean,
-                        llm_techniques=llm_clean,
-                        common_techniques=common_techniques,
-                        rag_only=rag_only,
-                        llm_only=llm_only,
-                        validation=judge_result,
-                    )
-                else:
-                    return self._create_error_result(
-                        chunk_id, "Empty response from Judge LLM"
-                    )
-
-            except ResourceExhausted:
-                wait_time = 2**attempt
-                print(f"Rate limit exceeded. Retrying in {wait_time}s...")
-                time.sleep(wait_time)
-                continue
-
-            except GoogleAPIError as e:
-                error_msg = f"API error: {str(e)}"
-                print(error_msg)
-                return self._create_error_result(chunk_id, error_msg)
-
-            except Exception as e:
-                return self._create_error_result(
-                    chunk_id, f"Unexpected error: {str(e)}"
-                )
-
-        return self._create_error_result(
-            chunk_id, f"Failed after {self.config['max_retries']} attempts"
-        )
-
-    def _clean_techniques(self, techniques: List[str]) -> List[str]:
-        """Nettoie et valide la liste des techniques"""
-        if not isinstance(techniques, list):
-            return []
-
-        cleaned = []
-        for tech in techniques:
-            if isinstance(tech, str) and tech.strip():
-                # Validation basique du format T1234 ou T1234.001
-                tech = tech.strip().upper()
-                if tech.startswith("T") and any(c.isdigit() for c in tech):
-                    cleaned.append(tech)
-
-        return cleaned
-
-    def _parse_judge_response(self, response: str) -> Dict:
-        """Parse la réponse du LLM de jugement"""
         try:
-            # Essaie de parser comme JSON d'abord
-            if response.startswith("{") and response.endswith("}"):
-                return json.loads(response)
+            # Appel au juge pour validation croisée
+            validation_result = self.judge_client.validate_techniques_cross_reference(
+                original_chunk=original_text,
+                rag_techniques=rag_results,
+                llm_techniques=llm_results,
+                chunk_id=chunk_id,
+                iocs=iocs,
+            )
 
-            # Extraction manuelle si pas de JSON valide
-            validation = {
-                "validated_techniques": [],
-                "rejected_techniques": [],
-                "technique_analysis": {},
-                "reasoning": response,
-                "confidence_scores": {},
-            }
+            # Ajouter les métadonnées du chunk
+            if validation_result.get("success", False):
+                validation_result["chunk_metadata"] = {
+                    "source_file": chunk_data.get("source_file", ""),
+                    "processing_time": datetime.now().isoformat(),
+                    "validation_config": VALIDATION_CONFIG.copy(),
+                }
 
-            # Extraction basique des techniques validées
-            import re
+            return validation_result
 
-            techniques_found = re.findall(r"T\d+(?:\.\d+)?", response)
-            validation["validated_techniques"] = list(set(techniques_found))
+        except Exception as e:
+            return self._create_error_result(chunk_id, f"Validation error: {str(e)}")
 
-            return validation
-
-        except json.JSONDecodeError:
-            return {
-                "validated_techniques": [],
-                "rejected_techniques": [],
-                "technique_analysis": {},
-                "reasoning": response,
-                "parse_error": True,
-            }
-
-    def _create_success_result(
+    def batch_validate(
         self,
-        chunk_id: str,
-        original_chunk: str,
-        iocs: str,
-        rag_techniques: List[str],
-        llm_techniques: List[str],
-        common_techniques: List[str],
-        rag_only: List[str],
-        llm_only: List[str],
-        validation: Dict,
+        chunks: List[Dict],
+        rag_results_list: List[List[str]],
+        llm_results_list: List[List[str]],
     ) -> Dict:
-        """Crée un résultat de succès"""
+        """
+        Valide un batch de chunks.
+
+        Args:
+            chunks: Liste des chunks CTI
+            rag_results_list: Liste des techniques RAG pour chaque chunk
+            llm_results_list: Liste des techniques LLM pour chaque chunk
+
+        Returns:
+            Résultats agrégés avec statistiques.
+        """
+        if not (len(chunks) == len(rag_results_list) == len(llm_results_list)):
+            raise ValueError(
+                "Length mismatch between chunks, rag_results_list, and llm_results_list"
+            )
+
+        validations = []
+        stats = {
+            "total_chunks": len(chunks),
+            "successful_validations": 0,
+            "total_techniques_analyzed": 0,
+            "total_techniques_validated": 0,
+            "average_validation_rate": 0.0,
+            "consensus_accuracy": 0.0,
+            "rag_only_contribution": 0.0,
+            "llm_only_contribution": 0.0,
+            "errors": 0,
+            "start_time": datetime.now().isoformat(),
+        }
+
+        validation_rates = []
+        consensus_scores = []
+        rag_only_contributions = []
+        llm_only_contributions = []
+
+        for i, (chunk, rag_results, llm_results) in enumerate(
+            zip(chunks, rag_results_list, llm_results_list)
+        ):
+            print(
+                f"🟡 Validating chunk {i+1}/{len(chunks)} - ID: {chunk.get('chunk_id', 'N/A')}"
+            )
+
+            validation = self.validate_single_chunk(chunk, rag_results, llm_results)
+            validations.append(validation)
+
+            if validation.get("success", False):
+                stats["successful_validations"] += 1
+
+                input_analysis = validation.get("input_analysis", {})
+                validated_techniques = set(
+                    validation.get("final_validated_techniques", [])
+                )
+
+                total_analyzed = input_analysis.get("total_unique_techniques", 0)
+                validated_count = len(validated_techniques)
+
+                stats["total_techniques_analyzed"] += total_analyzed
+                stats["total_techniques_validated"] += validated_count
+
+                if total_analyzed > 0:
+                    validation_rates.append(validated_count / total_analyzed)
+
+                # Consensus accuracy: % of common techniques validated
+                common_techniques = set(input_analysis.get("common_techniques", []))
+                if common_techniques:
+                    consensus_validated = len(
+                        common_techniques.intersection(validated_techniques)
+                    )
+                    consensus_scores.append(
+                        consensus_validated / len(common_techniques)
+                    )
+
+                # RAG-only contribution
+                rag_only = set(input_analysis.get("rag_only_techniques", []))
+                if rag_only:
+                    rag_only_validated = len(
+                        rag_only.intersection(validated_techniques)
+                    )
+                    rag_only_contributions.append(rag_only_validated / len(rag_only))
+
+                # LLM-only contribution
+                llm_only = set(input_analysis.get("llm_only_techniques", []))
+                if llm_only:
+                    llm_only_validated = len(
+                        llm_only.intersection(validated_techniques)
+                    )
+                    llm_only_contributions.append(llm_only_validated / len(llm_only))
+            else:
+                stats["errors"] += 1
+
+        # Compute averages
+        stats["average_validation_rate"] = (
+            sum(validation_rates) / len(validation_rates) if validation_rates else 0.0
+        )
+        stats["consensus_accuracy"] = (
+            sum(consensus_scores) / len(consensus_scores) if consensus_scores else 0.0
+        )
+        stats["rag_only_contribution"] = (
+            sum(rag_only_contributions) / len(rag_only_contributions)
+            if rag_only_contributions
+            else 0.0
+        )
+        stats["llm_only_contribution"] = (
+            sum(llm_only_contributions) / len(llm_only_contributions)
+            if llm_only_contributions
+            else 0.0
+        )
+
+        stats["end_time"] = datetime.now().isoformat()
+        stats["success_rate"] = stats["successful_validations"] / stats["total_chunks"]
+
         return {
-            "chunk_id": chunk_id,
-            "original_chunk": original_chunk,
-            "iocs": iocs,
-            "input_analysis": {
-                "rag_techniques": rag_techniques,
-                "llm_techniques": llm_techniques,
-                "common_techniques": common_techniques,
-                "rag_only_techniques": rag_only,
-                "llm_only_techniques": llm_only,
-                "total_unique_techniques": len(set(rag_techniques + llm_techniques)),
+            "validations": validations,
+            "statistics": stats,
+            "metadata": {
+                "validation_config": VALIDATION_CONFIG,
+                "generated_at": stats["end_time"],
+                "total_processed": len(chunks),
             },
-            "judge_result": validation,
-            "final_validated_techniques": validation.get("validated_techniques", []),
-            "success": True,
-            "timestamp": datetime.now().isoformat(),
+        }
+
+    def extract_final_techniques(self, judge_results: Dict) -> Dict[str, List[str]]:
+        """
+        Extrait les techniques finales validées pour chaque chunk.
+
+        Args:
+            judge_results: Résultats de `batch_validate()`
+
+        Returns:
+            Dictionnaire: chunk_id → liste des techniques validées
+        """
+        return {
+            validation["chunk_id"]: validation.get("final_validated_techniques", [])
+            for validation in judge_results.get("validations", [])
+            if validation.get("success", False)
         }
 
     def _create_error_result(self, chunk_id: str, error: str) -> Dict:
-        """Crée un résultat d'erreur"""
+        """Crée un résultat d'erreur standardisé."""
         return {
             "chunk_id": chunk_id,
             "error": error,

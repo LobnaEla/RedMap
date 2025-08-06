@@ -1,0 +1,3 @@
+approach,evaluation_type,exact_match,partial_match,precision,recall,f1,jaccard_similarity,total_samples,timestamp
+Judge_Validated,strict,0.0,0.8,0.1155891330891331,0.8,0.1996897546897547,0.1155891330891331,10,20250806_100030
+Judge_Validated,lenient,0.0,0.8,0.14027777777777778,0.8,0.23564213564213565,0.14027777777777778,10,20250806_100030
