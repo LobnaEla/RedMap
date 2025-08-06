@@ -1,0 +1,258 @@
+{
+  "validations": [
+    {
+      "chunk_id": "1",
+      "original_chunk": "there s nothing more rewarding than knowing that people found value in the work you ve created. but for every comment of appreciation, there s been a flood of negativity, frustration, and misunderstanding. and let s be honest medium is a platform that s become more about complaints and gripes than actual discussion or knowledge-sharing. it s not just that the majority of people don t get the intricacies of ai, scripting, and cybersecurity it s that many of them don t want to. the general population has been sold the idea that ai is a threat, something to fear, something to blame for every job that s been lost or every idea that s been copied. and honestly, it s exhausting. it s exhausting because i ve seen firsthand how ai can be leveraged to improve productivity, push boundaries, and make us more efficient. from fine-tuning models for my own use cases to crafting shell scripts that solve real-world problems, ai isn t the enemy it s the tool that can help us innovate.",
+      "iocs": "",
+      "input_analysis": {
+        "llm_predicted_techniques": [
+          "T1078",
+          "T1567",
+          "T1021"
+        ],
+        "ras_evidence_techniques": [],
+        "common_techniques": [],
+        "llm_only_techniques": [
+          "T1021",
+          "T1567",
+          "T1078"
+        ],
+        "ras_only_techniques": [],
+        "total_predicted": 3,
+        "total_unique_techniques": 3,
+        "in_ras_support": 0,
+        "not_in_ras": [
+          "T1021",
+          "T1567",
+          "T1078"
+        ]
+      },
+      "judge_result": {
+        "validated_techniques": [],
+        "rejected_techniques": [
+          "T1078",
+          "T1567",
+          "T1021"
+        ],
+        "technique_analysis": {
+          "T1078": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "The text discusses negative user feedback on AI and cybersecurity, but there is no indication of the use of valid accounts to access systems (T1078).  The LLM likely hallucinated this technique due to the mention of AI and cybersecurity.",
+            "in_ras": false,
+            "alternative": null
+          },
+          "T1567": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "The text does not describe any actions related to external remote services. The LLM likely hallucinated this technique due to the general context of cybersecurity.",
+            "in_ras": false,
+            "alternative": null
+          },
+          "T1021": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "The text mentions AI and scripting, but there is no description of any data exfiltration or transfer. The LLM likely hallucinated this technique due to the mention of AI and scripting in a cybersecurity context.",
+            "in_ras": false,
+            "alternative": null
+          }
+        },
+        "validation_summary": {
+          "total_analyzed": 3,
+          "validated_count": 0,
+          "rejected_count": 3,
+          "validation_rate": 0.0,
+          "supported_by_ras_count": 0,
+          "hallucinated_count": 3
+        },
+        "success": true,
+        "raw_response": "{\"validated_techniques\": [], \"rejected_techniques\": [\"T1078\", \"T1567\", \"T1021\"], \"technique_analysis\": {\"T1078\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"The text discusses negative user feedback on AI and cybersecurity, but there is no indication of the use of valid accounts to access systems (T1078).  The LLM likely hallucinated this technique due to the mention of AI and cybersecurity.\", \"in_ras\": false, \"alternative\": null}, \"T1567\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"The text does not describe any actions related to external remote services. The LLM likely hallucinated this technique due to the general context of cybersecurity.\", \"in_ras\": false, \"alternative\": null}, \"T1021\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"The text mentions AI and scripting, but there is no description of any data exfiltration or transfer. The LLM likely hallucinated this technique due to the mention of AI and scripting in a cybersecurity context.\", \"in_ras\": false, \"alternative\": null}}, \"validation_summary\": {\"total_analyzed\": 3, \"validated_count\": 0, \"rejected_count\": 3, \"validation_rate\": 0.0, \"supported_by_ras_count\": 0, \"hallucinated_count\": 3}}"
+      },
+      "final_validated_techniques": [],
+      "success": true,
+      "timestamp": "2025-08-06T11:50:57.692289",
+      "chunk_metadata": {
+        "source_file": "",
+        "processing_time": "2025-08-06T11:50:57.692289",
+        "validation_config": {
+          "model": "gemini-1.5-flash",
+          "temperature": 0.1,
+          "max_tokens": 800,
+          "max_retries": 3,
+          "validation_threshold": 0.7
+        }
+      }
+    },
+    {
+      "chunk_id": "3",
+      "original_chunk": "that s the irony i can t get past. the same people who ll happily use basic gpt models to check for spam or generate routine content are the same ones telling you that ai-driven writing is some kind of moral hazard. it s laughable. i ve spent countless hours creating my own models, making sure the content i share is valuable, factual, and functional. i ve never been one to just throw a prompt into a generator and call it a day. my content whether it s the PowerShell networking scripts or my deep dives into cybersecurity has always been tested, fine-tuned, and thoroughly fact-checked. yet despite my efforts, the broader sentiment on this platform and many others remains one of disdain and fear towards ai. it s as though the moment ai is involved, no matter how carefully or responsibly it s used, the content is automatically dismissed as inferior.",
+      "iocs": "",
+      "input_analysis": {
+        "llm_predicted_techniques": [
+          "T1110",
+          "T1078",
+          "T1110.002",
+          "T28",
+          "T1078",
+          "T28"
+        ],
+        "ras_evidence_techniques": [],
+        "common_techniques": [],
+        "llm_only_techniques": [
+          "T1110",
+          "T1110.002",
+          "T28",
+          "T1078"
+        ],
+        "ras_only_techniques": [],
+        "total_predicted": 6,
+        "total_unique_techniques": 4,
+        "in_ras_support": 0,
+        "not_in_ras": [
+          "T1110",
+          "T1110.002",
+          "T28",
+          "T1078"
+        ]
+      },
+      "judge_result": {
+        "validated_techniques": [],
+        "rejected_techniques": [
+          "T1110",
+          "T1078",
+          "T1110.002",
+          "T28",
+          "T1078",
+          "T28"
+        ],
+        "technique_analysis": {
+          "T1110": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "The text discusses AI-generated content and its perception, not the exploitation of systems.  T1110 (Moving Files and Directories) is irrelevant.",
+            "in_ras": false,
+            "alternative": null
+          },
+          "T1078": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "The text focuses on the ethical and societal implications of AI-generated content, not on the use of valid accounts. T1078 (Valid Accounts) is not applicable.",
+            "in_ras": false,
+            "alternative": null
+          },
+          "T1110.002": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "This sub-technique is as irrelevant as its parent technique T1110.",
+            "in_ras": false,
+            "alternative": null
+          },
+          "T28": {
+            "status": "rejected",
+            "confidence": 0.0,
+            "evidence": "No evidence in text or RAS",
+            "reasoning": "The text does not describe any data exfiltration or data staging activities. T28 (Data Exfiltration) is not supported.",
+            "in_ras": false,
+            "alternative": null
+          }
+        },
+        "validation_summary": {
+          "total_analyzed": 6,
+          "validated_count": 0,
+          "rejected_count": 6,
+          "validation_rate": 0.0,
+          "supported_by_ras_count": 0,
+          "hallucinated_count": 6
+        },
+        "success": true,
+        "raw_response": "{\"validated_techniques\": [], \"rejected_techniques\": [\"T1110\", \"T1078\", \"T1110.002\", \"T28\", \"T1078\", \"T28\"], \"technique_analysis\": {\"T1110\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"The text discusses AI-generated content and its perception, not the exploitation of systems.  T1110 (Moving Files and Directories) is irrelevant.\", \"in_ras\": false, \"alternative\": null}, \"T1078\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"The text focuses on the ethical and societal implications of AI-generated content, not on the use of valid accounts. T1078 (Valid Accounts) is not applicable.\", \"in_ras\": false, \"alternative\": null}, \"T1110.002\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"This sub-technique is as irrelevant as its parent technique T1110.\", \"in_ras\": false, \"alternative\": null}, \"T28\": {\"status\": \"rejected\", \"confidence\": 0.0, \"evidence\": \"No evidence in text or RAS\", \"reasoning\": \"The text does not describe any data exfiltration or data staging activities. T28 (Data Exfiltration) is not supported.\", \"in_ras\": false, \"alternative\": null}}, \"validation_summary\": {\"total_analyzed\": 6, \"validated_count\": 0, \"rejected_count\": 6, \"validation_rate\": 0.0, \"supported_by_ras_count\": 0, \"hallucinated_count\": 6}}"
+      },
+      "final_validated_techniques": [],
+      "success": true,
+      "timestamp": "2025-08-06T11:52:43.677806",
+      "chunk_metadata": {
+        "source_file": "",
+        "processing_time": "2025-08-06T11:52:43.677806",
+        "validation_config": {
+          "model": "gemini-1.5-flash",
+          "temperature": 0.1,
+          "max_tokens": 800,
+          "max_retries": 3,
+          "validation_threshold": 0.7
+        }
+      }
+    }
+  ],
+  "statistics": {
+    "total_chunks": 2,
+    "successful_validations": 2,
+    "total_techniques_analyzed": 7,
+    "total_techniques_validated": 0,
+    "average_validation_rate": 0.0,
+    "consensus_accuracy": 0.0,
+    "rag_only_contribution": 0.0,
+    "llm_only_contribution": 0.0,
+    "errors": 0,
+    "start_time": "2025-08-06T11:50:44.023831",
+    "end_time": "2025-08-06T11:52:43.677806",
+    "success_rate": 1.0
+  },
+  "metadata": {
+    "validation_config": {
+      "model": "gemini-1.5-flash",
+      "temperature": 0.1,
+      "max_tokens": 800,
+      "max_retries": 3,
+      "validation_threshold": 0.7
+    },
+    "generated_at": "2025-08-06T11:52:43.677806",
+    "total_processed": 2
+  },
+  "detailed_metrics": {
+    "overall_metrics": {
+      "total_chunks": 2,
+      "successful_chunks": 2,
+      "success_rate": 1.0,
+      "total_techniques_analyzed": 7,
+      "total_techniques_validated": 0,
+      "overall_validation_rate": 0.0,
+      "average_validation_rate": 0.0,
+      "consensus_accuracy": 0.0
+    },
+    "source_analysis": {
+      "common": {
+        "total": 0,
+        "validated": 0,
+        "validation_rate": 0.0
+      },
+      "llm_only": {
+        "total": 7,
+        "validated": 0,
+        "validation_rate": 0.0
+      },
+      "ras_only": {
+        "total": 0,
+        "validated": 0,
+        "validation_rate": 0.0
+      }
+    },
+    "insights": {
+      "consensus_reliability": "Low - Significant disagreement between systems",
+      "rag_contribution": "Low - RAG unique techniques often invalid",
+      "llm_contribution": "Low - LLM prone to hallucination",
+      "system_performance": "Poor - Many techniques rejected by judge"
+    },
+    "validation_rates_distribution": {
+      "min": 0.0,
+      "max": 0.0,
+      "avg": 0.0,
+      "count": 2
+    }
+  }
+}
