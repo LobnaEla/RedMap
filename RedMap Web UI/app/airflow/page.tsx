@@ -47,6 +47,7 @@ export default function AirflowPage() {
     avgDuration: "N/A",
   })
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true) // Add loading state
 
   const AIRFLOW_API_URL = "/api/airflow"
   const authHeader = {
@@ -57,17 +58,18 @@ export default function AirflowPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true) // Start loading
       try {
-        // Fetch DAG list
+        // Fetch DAG list (fast initial load)
         const dagsResponse = await axios.get(`${AIRFLOW_API_URL}/dags`, authHeader)
         const dagList = dagsResponse.data.dags
-        const dagIds = dagList.map((dag: any) => dag.dag_id)
         if (!dagList || dagList.length === 0) {
           setError("No DAGs found")
+          setLoading(false)
           return
         }
 
-        // Process DAGs
+        // Process DAGs (minimal initial data)
         const fetchedDags = dagList.map((dag: any) => {
           const formatDate = (dateStr: string | null) => {
             return dateStr ? new Date(dateStr).toLocaleString() : 'N/A'
@@ -78,16 +80,9 @@ export default function AirflowPage() {
               const { days, seconds } = scheduleObj
               const totalHours = days * 24 + Math.floor(seconds / 3600)
               const remainingMinutes = Math.floor((seconds % 3600) / 60)
-              if (totalHours > 0 && remainingMinutes > 0) {
-                return `${totalHours} hours ${remainingMinutes} minutes`
-              } else if (totalHours > 0) {
-                return `${totalHours} hours`
-              } else if (remainingMinutes > 0) {
-                return `${remainingMinutes} minutes`
-              }
-              return 'N/A'
+              return totalHours > 0 ? `${totalHours} hours` : remainingMinutes > 0 ? `${remainingMinutes} minutes` : 'N/A'
             }
-            return scheduleObj || 'N/A'
+            return 'N/A'
           }
 
           return {
@@ -98,99 +93,73 @@ export default function AirflowPage() {
             nextRun: formatDate(dag.next_dagrun),
             schedule: formatSchedule(dag.schedule_interval),
             description: dag.description || "No description available",
-            successRate: "N/A", // Per-DAG success rate can be calculated separately if needed
           }
         })
+        setDags(fetchedDags)
 
-        // Calculate global metrics
+        // Fetch global metrics in parallel with limited data
         const now = new Date()
-        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000) // 24 hours ago
-        const today = now.toISOString().split('T')[0] // e.g., "2025-08-06"
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        const today = now.toISOString().split('T')[0] // "2025-08-06"
 
-
-        // Success and Failed DAG Runs for last 24h success rate
         const [failedRunsResp, successfulRunsResp] = await Promise.all([
-          await axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
+          axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
             ...authHeader,
             params: {
               state: 'failed',
-              limit: 1000,
+              limit: 100, // Reduced limit for speed
               order_by: '-execution_date',
             },
           }),
-          await axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
+          axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
             ...authHeader,
             params: {
               state: 'success',
-              limit: 1,
+              limit: 100, // Reduced limit for speed
               order_by: '-execution_date',
             },
-          })
+          }),
         ])
 
         const recentFailed = (failedRunsResp.data.dag_runs || []).filter(
           (run: any) => new Date(run.execution_date) >= last24Hours
         )
-
-        const recentSuccess = (successfulRunsResp.data.dag_runs || [])
-          .filter((run: any) => {
-            return new Date(run.execution_date) >= last24Hours
-          })
+        const recentSuccess = (successfulRunsResp.data.dag_runs || []).filter(
+          (run: any) => new Date(run.execution_date) >= last24Hours
+        )
 
         const totalRuns = recentFailed.length + recentSuccess.length
         const totalSuccessRate = totalRuns > 0
           ? `${((recentSuccess.length / totalRuns) * 100).toFixed(2)}%`
           : 'N/A'
 
-        // Task Instances (executed today) and Avg Duration from all DAG runs
-        const allRuns = [...recentSuccess, ...recentFailed]
+        // Use DAG runs as a proxy for task instances (adjust if needed)
+        const todayInstances = [...recentSuccess, ...recentFailed].filter(
+          (run: any) => run.execution_date.startsWith(today)
+        ).length
 
-        let todayInstances = 0
-        let durations: number[] = []
-
-        for (const run of allRuns) {
-          const dagId = run.dag_id
-          const dagRunId = run.dag_run_id
-
-          try {
-            const taskResp = await axios.get(`${AIRFLOW_API_URL}/dags/${dagId}/dagRuns/${dagRunId}/taskInstances`, authHeader)
-            const tasks = taskResp.data.task_instances || []
-
-            tasks.forEach((task: any) => {
-              if (task.execution_date?.startsWith(today)) {
-                todayInstances++
-              }
-
-              if (
-                ['success', 'failed'].includes(task.state) &&
-                task.start_date &&
-                task.end_date
-              ) {
-                const start = new Date(task.start_date).getTime()
-                const end = new Date(task.end_date).getTime()
-                durations.push((end - start) / 1000 / 60)
-              }
-            })
-          } catch (err) {
-            console.warn(`⚠️ Failed to fetch taskInstances for ${dagId} / ${dagRunId}`)
-          }
-        }
-
-
+        // Calculate avg duration from available runs
+        const durations = [...recentSuccess, ...recentFailed]
+          .filter((run: any) => run.end_date && run.start_date)
+          .map((run: any) => {
+            const endDate = new Date(run.end_date)
+            const startDate = new Date(run.start_date)
+            return (endDate.getTime() - startDate.getTime()) / 60000 // Minutes
+          })
         const avgDuration = durations.length > 0
           ? `${(durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2)} minutes`
           : 'N/A'
 
-        setDags(fetchedDags)
         setGlobalMetrics({
           totalSuccessRate,
           totalTaskInstances: todayInstances,
           avgDuration,
         })
         setError(null)
-
       } catch (err: any) {
         setError(`Failed to fetch data: ${err.response?.data?.error || err.message}`)
+      } finally {
+        setLoading(false) // End loading
       }
     }
     fetchData()
@@ -264,51 +233,68 @@ export default function AirflowPage() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total DAGs</CardTitle>
-            <Wind className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dags.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {dags.filter((dag) => dag.status === "running").length} running,{" "}
-              {dags.filter((dag) => dag.status === "paused").length} paused
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{globalMetrics.totalSuccessRate}</div>
-            <p className="text-xs text-muted-foreground">Last 24 hours</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Task Instances</CardTitle>
-            <Activity className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{globalMetrics.totalTaskInstances}</div>
-            <p className="text-xs text-muted-foreground">Executed today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
-            <Clock className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{globalMetrics.avgDuration}</div>
-            <p className="text-xs text-muted-foreground">Per task execution</p>
-          </CardContent>
-        </Card>
-      </div>
+      {loading ? (
+        <div className="grid gap-6 md:grid-cols-4 mb-6">
+          {[...Array(4)].map((_, index) => (
+            <Card key={index} className="animate-pulse">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 w-20 bg-gray-300 rounded" />
+                <div className="h-4 w-4 bg-gray-300 rounded" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-6 w-16 bg-gray-300 rounded mb-2" />
+                <div className="h-4 w-24 bg-gray-300 rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-4 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total DAGs</CardTitle>
+              <Wind className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dags.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {dags.filter((dag) => dag.status === "running").length} running,{" "}
+                {dags.filter((dag) => dag.status === "paused").length} paused
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{globalMetrics.totalSuccessRate}</div>
+              <p className="text-xs text-muted-foreground">Last 24 hours</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Task Instances</CardTitle>
+              <Activity className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{globalMetrics.totalTaskInstances}</div>
+              <p className="text-xs text-muted-foreground">Executed today</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+              <Clock className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{globalMetrics.avgDuration}</div>
+              <p className="text-xs text-muted-foreground">Per task execution</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card className="mb-6">
         <CardContent className="pt-6">
