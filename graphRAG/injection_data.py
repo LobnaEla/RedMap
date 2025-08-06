@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 def build_cti_graph():
     # Connexion à Neo4j (à adapter)
-    graph = Graph("bolt://localhost:7687", auth=("neo4j", "password"))
+    graph = Graph("bolt://localhost:7687", auth=("neo4j", "neo4j123"))
 
-    rag_dir = "/opt/project/cti_pipeline/data/rag_results"
+    rag_dir = "C:/Users/USER/Desktop/Stage-WEVIOO/data/rag_results"
     rag_files = glob.glob(os.path.join(rag_dir, "rag_*.json"))
 
     for file in rag_files:
@@ -42,7 +42,7 @@ def build_cti_graph():
 
 
 def draw_cti_graph():
-    graph_db = Graph("bolt://localhost:7687", auth=("neo4j", "password"))
+    graph_db = Graph("bolt://localhost:7687", auth=("neo4j", "neo4j123"))
     
     query = """
     MATCH (c:Chunk)-[r:MENTIONS]->(t:Technique)
