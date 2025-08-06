@@ -18,64 +18,183 @@ import {
   Activity,
   RotateCcw,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import axios from "axios"
+
+interface Dag {
+  id: string
+  name: string
+  status: string
+  lastRun: string
+  nextRun: string
+  schedule: string
+  description: string
+}
+
+interface GlobalMetrics {
+  totalSuccessRate: string
+  totalTaskInstances: number
+  avgDuration: string
+}
 
 export default function AirflowPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [dags, setDags] = useState<Dag[]>([])
+  const [globalMetrics, setGlobalMetrics] = useState<GlobalMetrics>({
+    totalSuccessRate: "N/A",
+    totalTaskInstances: 0,
+    avgDuration: "N/A",
+  })
+  const [error, setError] = useState<string | null>(null)
 
-  const dags = [
-    {
-      id: "security_log_processing",
-      name: "Security Log Processing",
-      status: "running",
-      lastRun: "1 minute ago",
-      nextRun: "in 4 minutes",
-      schedule: "*/5 * * * *",
-      description: "Process and analyze security logs from multiple sources",
-      successRate: "98.5%",
+  const AIRFLOW_API_URL = "/api/airflow"
+  const authHeader = {
+    headers: {
+      "Content-Type": "application/json",
     },
-    {
-      id: "threat_intel_update",
-      name: "Threat Intelligence Update",
-      status: "success",
-      lastRun: "30 minutes ago",
-      nextRun: "in 30 minutes",
-      schedule: "0 * * * *",
-      description: "Update threat intelligence feeds and indicators",
-      successRate: "99.2%",
-    },
-    {
-      id: "vulnerability_scan",
-      name: "Vulnerability Scanning",
-      status: "paused",
-      lastRun: "2 hours ago",
-      nextRun: "paused",
-      schedule: "0 2 * * *",
-      description: "Automated vulnerability assessment and reporting",
-      successRate: "95.8%",
-    },
-    {
-      id: "incident_response",
-      name: "Incident Response Pipeline",
-      status: "failed",
-      lastRun: "15 minutes ago",
-      nextRun: "in 45 minutes",
-      schedule: "*/15 * * * *",
-      description: "Automated incident detection and response workflows",
-      successRate: "92.1%",
-    },
-    {
-      id: "compliance_reporting",
-      name: "Compliance Reporting",
-      status: "success",
-      lastRun: "1 hour ago",
-      nextRun: "tomorrow 9:00 AM",
-      schedule: "0 9 * * *",
-      description: "Generate compliance reports and audit trails",
-      successRate: "100%",
-    },
-  ]
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch DAG list
+        const dagsResponse = await axios.get(`${AIRFLOW_API_URL}/dags`, authHeader)
+        const dagList = dagsResponse.data.dags
+        const dagIds = dagList.map((dag: any) => dag.dag_id)
+        if (!dagList || dagList.length === 0) {
+          setError("No DAGs found")
+          return
+        }
+
+        // Process DAGs
+        const fetchedDags = dagList.map((dag: any) => {
+          const formatDate = (dateStr: string | null) => {
+            return dateStr ? new Date(dateStr).toLocaleString() : 'N/A'
+          }
+
+          const formatSchedule = (scheduleObj: any) => {
+            if (scheduleObj && typeof scheduleObj === 'object' && '__type' in scheduleObj) {
+              const { days, seconds } = scheduleObj
+              const totalHours = days * 24 + Math.floor(seconds / 3600)
+              const remainingMinutes = Math.floor((seconds % 3600) / 60)
+              if (totalHours > 0 && remainingMinutes > 0) {
+                return `${totalHours} hours ${remainingMinutes} minutes`
+              } else if (totalHours > 0) {
+                return `${totalHours} hours`
+              } else if (remainingMinutes > 0) {
+                return `${remainingMinutes} minutes`
+              }
+              return 'N/A'
+            }
+            return scheduleObj || 'N/A'
+          }
+
+          return {
+            id: dag.dag_id,
+            name: dag.dag_display_name || dag.dag_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            status: dag.is_paused ? "paused" : "running",
+            lastRun: formatDate(dag.last_parsed_time),
+            nextRun: formatDate(dag.next_dagrun),
+            schedule: formatSchedule(dag.schedule_interval),
+            description: dag.description || "No description available",
+            successRate: "N/A", // Per-DAG success rate can be calculated separately if needed
+          }
+        })
+
+        // Calculate global metrics
+        const now = new Date()
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000) // 24 hours ago
+        const today = now.toISOString().split('T')[0] // e.g., "2025-08-06"
+
+
+        // Success and Failed DAG Runs for last 24h success rate
+        const [failedRunsResp, successfulRunsResp] = await Promise.all([
+          await axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
+            ...authHeader,
+            params: {
+              state: 'failed',
+              limit: 1000,
+              order_by: '-execution_date',
+            },
+          }),
+          await axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
+            ...authHeader,
+            params: {
+              state: 'success',
+              limit: 1,
+              order_by: '-execution_date',
+            },
+          })
+        ])
+
+        const recentFailed = (failedRunsResp.data.dag_runs || []).filter(
+          (run: any) => new Date(run.execution_date) >= last24Hours
+        )
+
+        const recentSuccess = (successfulRunsResp.data.dag_runs || [])
+          .filter((run: any) => {
+            return new Date(run.execution_date) >= last24Hours
+          })
+
+        const totalRuns = recentFailed.length + recentSuccess.length
+        const totalSuccessRate = totalRuns > 0
+          ? `${((recentSuccess.length / totalRuns) * 100).toFixed(2)}%`
+          : 'N/A'
+
+        // Task Instances (executed today) and Avg Duration from all DAG runs
+        const allRuns = [...recentSuccess, ...recentFailed]
+
+        let todayInstances = 0
+        let durations: number[] = []
+
+        for (const run of allRuns) {
+          const dagId = run.dag_id
+          const dagRunId = run.dag_run_id
+
+          try {
+            const taskResp = await axios.get(`${AIRFLOW_API_URL}/dags/${dagId}/dagRuns/${dagRunId}/taskInstances`, authHeader)
+            const tasks = taskResp.data.task_instances || []
+
+            tasks.forEach((task: any) => {
+              if (task.execution_date?.startsWith(today)) {
+                todayInstances++
+              }
+
+              if (
+                ['success', 'failed'].includes(task.state) &&
+                task.start_date &&
+                task.end_date
+              ) {
+                const start = new Date(task.start_date).getTime()
+                const end = new Date(task.end_date).getTime()
+                durations.push((end - start) / 1000 / 60)
+              }
+            })
+          } catch (err) {
+            console.warn(`⚠️ Failed to fetch taskInstances for ${dagId} / ${dagRunId}`)
+          }
+        }
+
+
+        const avgDuration = durations.length > 0
+          ? `${(durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2)} minutes`
+          : 'N/A'
+
+        setDags(fetchedDags)
+        setGlobalMetrics({
+          totalSuccessRate,
+          totalTaskInstances: todayInstances,
+          avgDuration,
+        })
+        setError(null)
+
+      } catch (err: any) {
+        setError(`Failed to fetch data: ${err.response?.data?.error || err.message}`)
+      }
+    }
+    fetchData()
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -107,9 +226,18 @@ export default function AirflowPage() {
     }
   }
 
-  const handleTriggerDag = (dagId: string) => {
-    console.log(`Triggering DAG: ${dagId}`)
-    // Here you would make an API call to trigger the DAG
+  const handleTriggerDag = async (dagId: string) => {
+    try {
+      await axios.post(
+        `${AIRFLOW_API_URL}/dags/${dagId}/dagRuns`,
+        { conf: {} },
+        authHeader
+      )
+      console.log(`Triggered DAG: ${dagId}`)
+    } catch (err: any) {
+      console.error(`Failed to trigger DAG ${dagId}: ${err.response?.data?.error || err.message}`)
+      setError(`Failed to trigger DAG ${dagId}: ${err.response?.data?.error || err.message}`)
+    }
   }
 
   const filteredDags = dags.filter((dag) => {
@@ -130,7 +258,12 @@ export default function AirflowPage() {
         <p className="text-muted-foreground">Monitor and manage your security data pipelines</p>
       </div>
 
-      {/* Statistics */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+          {error}
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -138,46 +271,45 @@ export default function AirflowPage() {
             <Wind className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">2 running, 1 paused, 2 scheduled</p>
+            <div className="text-2xl font-bold">{dags.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {dags.filter((dag) => dag.status === "running").length} running,{" "}
+              {dags.filter((dag) => dag.status === "paused").length} paused
+            </p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">97.1%</div>
+            <div className="text-2xl font-bold">{globalMetrics.totalSuccessRate}</div>
             <p className="text-xs text-muted-foreground">Last 24 hours</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Task Instances</CardTitle>
             <Activity className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,247</div>
+            <div className="text-2xl font-bold">{globalMetrics.totalTaskInstances}</div>
             <p className="text-xs text-muted-foreground">Executed today</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
             <Clock className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4.2m</div>
+            <div className="text-2xl font-bold">{globalMetrics.avgDuration}</div>
             <p className="text-xs text-muted-foreground">Per task execution</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
       <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4 items-center">
@@ -185,7 +317,6 @@ export default function AirflowPage() {
               <Filter className="h-4 w-4" />
               <span className="text-sm font-medium">Filters:</span>
             </div>
-
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -198,7 +329,6 @@ export default function AirflowPage() {
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
             </Select>
-
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -212,7 +342,6 @@ export default function AirflowPage() {
         </CardContent>
       </Card>
 
-      {/* DAGs List */}
       <Card>
         <CardHeader>
           <CardTitle>Security Data Pipelines (DAGs)</CardTitle>
@@ -244,14 +373,9 @@ export default function AirflowPage() {
                           <RotateCcw className="h-3 w-3" />
                           {dag.schedule}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          {dag.successRate}
-                        </span>
                       </div>
                     </div>
                   </div>
-
                   <div className="flex items-center space-x-2 ml-4">
                     <Button
                       variant="outline"

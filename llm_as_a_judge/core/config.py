@@ -1,8 +1,6 @@
 import os
-from pathlib import Path
 
-# Get the actual project root dynamically
-BASE_PROJECT_PATH = str(Path(__file__).parent.parent.parent)
+BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 
 VALIDATION_CONFIG = {
     "model": "gemini-1.5-flash",  # Fixed consistency
