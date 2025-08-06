@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
+from airflow.operators.python import get_current_context
 
 # ================================
 # PATH CONFIGURATION
@@ -103,17 +104,37 @@ def save_processing_results(mappings: List[Dict], stats: Dict, paths: Dict):
 
         # Fichiers individuels pour les chunks
         print("Saving individual chunk results")
-        successful_saves = 0
+        
+        # Group mappings by source file
+        mappings_by_file = {}
         for mapping in mappings:
             if mapping.get("success", False):
-                file_path = os.path.join(
-                    paths["llm_results"], f"{mapping['chunk_id']}.json"
-                )
-                with open(file_path, "w", encoding="utf-8") as f:
-                    json.dump(mapping, f, indent=2, ensure_ascii=False)
-                successful_saves += 1
+                source_file = mapping.get("source_file", "unknown_source")
+                if source_file not in mappings_by_file:
+                    mappings_by_file[source_file] = []
+                mappings_by_file[source_file].append(mapping)
+        
+        successful_saves = 0
+        for source_file, file_mappings in mappings_by_file.items():
+            # Extract base filename without extension and prefixes
+            base_name = source_file.replace("chunks_normalized_", "").replace(".json", "")
+            llm_filename = f"llm_{base_name}.json"
+            file_path = os.path.join(paths["llm_results"], llm_filename)
+            
+            # Save all successful mappings for this file
+            file_results = {
+                "source_file": source_file,
+                "total_chunks": len(file_mappings),
+                "successful_chunks": len(file_mappings),
+                "timestamp": datetime.now().isoformat(),
+                "mappings": file_mappings
+            }
+            
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(file_results, f, indent=2, ensure_ascii=False)
+            successful_saves += 1
 
-        print(f"Saved {successful_saves} individual chunk results")
+        print(f"Saved {successful_saves} LLM result files")
 
         # Logs d'erreurs
         errors = [m for m in mappings if not m.get("success", True)]
@@ -255,19 +276,32 @@ def process_all_chunks():
                     file_mappings = [
                         m for m in all_mappings if m.get("source_file") == filename
                     ]
-                    successful_saves = 0
                     os.makedirs(LLM_RESULTS_DIR, exist_ok=True)
 
-                    for mapping in file_mappings:
-                        if mapping.get("success", False):
-                            file_path = os.path.join(
-                                LLM_RESULTS_DIR, f"{mapping['chunk_id']}.json"
-                            )
-                            with open(file_path, "w", encoding="utf-8") as f:
-                                json.dump(mapping, f, indent=2, ensure_ascii=False)
-                            successful_saves += 1
-
-                    print(f"✅ Saved {successful_saves} chunk results for {filename}")
+                    # Save all successful mappings for this file in a single llm_{filename}.json file
+                    successful_mappings = [m for m in file_mappings if m.get("success", False)]
+                    
+                    if successful_mappings:
+                        # Extract base filename without extension and prefixes
+                        base_name = filename.replace("chunks_normalized_", "").replace(".json", "")
+                        llm_filename = f"llm_{base_name}.json"
+                        file_path = os.path.join(LLM_RESULTS_DIR, llm_filename)
+                        
+                        # Save all successful mappings for this file
+                        file_results = {
+                            "source_file": filename,
+                            "total_chunks": len(file_mappings),
+                            "successful_chunks": len(successful_mappings),
+                            "timestamp": datetime.now().isoformat(),
+                            "mappings": successful_mappings
+                        }
+                        
+                        with open(file_path, "w", encoding="utf-8") as f:
+                            json.dump(file_results, f, indent=2, ensure_ascii=False)
+                        
+                        print(f"✅ Saved {len(successful_mappings)} chunk results to {llm_filename}")
+                    else:
+                        print(f"⚠️ No successful mappings found for {filename}")
 
                     # Save incremental comprehensive file with current progress
                     os.makedirs(MITRE_MAPPING_DIR, exist_ok=True)
@@ -544,12 +578,66 @@ def validate_llm_results():
 
 
 def llm_completion():
-    """Final completion task"""
-    return {
-        "status": "completed",
-        "timestamp": datetime.now().isoformat(),
-        "message": "LLM processing pipeline finished successfully",
-    }
+    """Final completion task with webhook notification"""
+    import requests
+    from airflow.models import DagRun
+    from airflow import DAG
+    
+    try:
+        # Get current DAG run information
+        context = get_current_context()
+        dag_run = context['dag_run']
+        
+        completion_data = {
+            "dag_type": "llm_mitre",
+            "dag_run_id": dag_run.dag_id,
+            "completion_time": datetime.now().isoformat(),
+            "status": "success",
+            "execution_date": dag_run.execution_date.isoformat() if dag_run.execution_date else None,
+            "triggered_by": "airflow_llm_pipeline"
+        }
+        
+        # Send webhook notification to n8n
+        n8n_webhook_url = os.getenv("N8N_WEBHOOK_URL", "http://n8n:5678/webhook/llm-completion")
+        
+        print(f"[LLM Completion] Sending completion notification to: {n8n_webhook_url}")
+        print(f"[LLM Completion] Payload: {completion_data}")
+        
+        try:
+            response = requests.post(
+                n8n_webhook_url,
+                json=completion_data,
+                timeout=30,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code in [200, 201, 202]:
+                print(f"[LLM Completion] ✅ Webhook notification sent successfully: {response.status_code}")
+                print(f"[LLM Completion] Response: {response.text}")
+            else:
+                print(f"[LLM Completion] ⚠️ Webhook notification failed: {response.status_code}")
+                print(f"[LLM Completion] Response: {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[LLM Completion] ❌ Failed to send webhook notification: {str(e)}")
+            # Don't fail the DAG if webhook fails
+            
+        return {
+            "status": "completed",
+            "timestamp": datetime.now().isoformat(),
+            "message": "LLM processing pipeline finished successfully",
+            "webhook_sent": True,
+            "completion_data": completion_data
+        }
+        
+    except Exception as e:
+        print(f"[LLM Completion] Error in completion task: {str(e)}")
+        return {
+            "status": "completed_with_errors",
+            "timestamp": datetime.now().isoformat(),
+            "message": f"LLM processing completed but notification failed: {str(e)}",
+            "webhook_sent": False
+        }
 
 
 # ================================

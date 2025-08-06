@@ -1,8 +1,9 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, get_current_context
 from datetime import datetime
 import os
 import sys
+import requests
 
 sys.path.append("/opt/project")
 import importlib.util
@@ -72,23 +73,42 @@ def apply_rag():
             # Prepare results structure
             base_name = os.path.splitext(os.path.basename(chunk_file))[0]
             
-            # Check if already processed
+            # Check if already processed and if reprocessing is needed
             output_file = os.path.join(RAG_OUTPUT_DIR, f"rag_{base_name}.json")
+            should_reprocess = False
+            
             if os.path.exists(output_file):
                 with open(output_file, "r", encoding="utf-8") as f:
                     existing_data = json.load(f)
-                    if existing_data.get("rag_processing_complete", False):
+                    
+                # Check if RAG processing is complete
+                if existing_data.get("rag_processing_complete", False):
+                    # Check if we should reprocess because LLM mapping has completed since last run
+                    processing_notes = existing_data.get("processing_notes", {})
+                    was_llm_incomplete = not processing_notes.get("llm_mapping_complete", True)
+                    is_llm_complete_now = chunk_data.get("llm_mapping_complete", False)
+                    
+                    if was_llm_incomplete and is_llm_complete_now:
+                        print(f"[RAG] Reprocessing {chunk_file} - LLM mapping now complete")
+                        should_reprocess = True
+                    else:
                         print(f"[RAG] Skipping {chunk_file} - RAG processing already completed")
                         continue
+                        
+            if not should_reprocess and os.path.exists(output_file):
+                continue
             
             # Check if prerequisites are met
             if not chunk_data.get("preprocessing_complete", False):
                 print(f"[RAG] Skipping {chunk_file} - preprocessing not complete")
                 continue
                 
-            if not chunk_data.get("llm_mapping_complete", False):
-                print(f"[RAG] Skipping {chunk_file} - LLM mapping not complete")
-                continue
+            # Note: We don't skip if LLM mapping isn't complete - we'll process available chunks
+            
+            llm_mapping_status = chunk_data.get("llm_mapping_complete", False)
+            print(f"[RAG] Processing {chunk_file} - LLM mapping complete: {llm_mapping_status}")
+            if not llm_mapping_status:
+                print(f"[RAG] Will process available chunks and can reprocess later when LLM mapping completes")
             
             results = {
                 "original_chunk_file": chunk_file,
@@ -107,6 +127,11 @@ def apply_rag():
                 if not chunk_text.strip():
                     print(f"[RAG] Skipping empty chunk {chunk_id}")
                     continue
+
+                # Check if this chunk has been processed by LLM (optional check)
+                chunk_has_llm_mapping = chunk.get("llm_mapping_complete", False)
+                if not chunk_has_llm_mapping:
+                    print(f"[RAG] Processing chunk {chunk_id} - LLM mapping not yet complete but proceeding with RAG")
 
                 try:
                     # Prepare query for RAG API
@@ -132,6 +157,7 @@ def apply_rag():
                             "mitre_techniques": rag_response,
                             "retrieval_timestamp": datetime.now().isoformat(),
                             "status": "success",
+                            "llm_mapping_available": chunk.get("llm_mapping_complete", False),
                         }
 
                         results["rag_results"].append(chunk_result)
@@ -153,6 +179,7 @@ def apply_rag():
                             "retrieval_timestamp": datetime.now().isoformat(),
                             "status": "api_error",
                             "error": f"HTTP {response.status_code}: {response.text}",
+                            "llm_mapping_available": chunk.get("llm_mapping_complete", False),
                         }
                         results["rag_results"].append(error_result)
 
@@ -165,6 +192,7 @@ def apply_rag():
                         "retrieval_timestamp": datetime.now().isoformat(),
                         "status": "network_error",
                         "error": str(e),
+                        "llm_mapping_available": chunk.get("llm_mapping_complete", False),
                     }
                     results["rag_results"].append(error_result)
 
@@ -177,14 +205,22 @@ def apply_rag():
                         "retrieval_timestamp": datetime.now().isoformat(),
                         "status": "processing_error",
                         "error": str(e),
+                        "llm_mapping_available": chunk.get("llm_mapping_complete", False),
                     }
                     results["rag_results"].append(error_result)
 
                 # Small delay to avoid overwhelming the API
                 time.sleep(0.1)
 
-            # Mark RAG processing as complete
+            # Mark RAG processing as complete for this iteration
+            # RAG is considered complete when we've processed all available chunks
+            # (regardless of LLM mapping status)
             results["rag_processing_complete"] = True
+            results["processing_notes"] = {
+                "llm_mapping_complete": chunk_data.get("llm_mapping_complete", False),
+                "processed_all_available_chunks": True,
+                "can_reprocess_after_llm": not chunk_data.get("llm_mapping_complete", False)
+            }
 
             # Save results for this chunk file
             output_file = os.path.join(RAG_OUTPUT_DIR, f"rag_{base_name}.json")
@@ -342,6 +378,65 @@ def validate_format():
     return validation_stats
 
 
+def send_completion_notification():
+    """Send webhook notification to n8n when RAG pipeline completes"""
+    try:
+        # Get current DAG run information
+        context = get_current_context()
+        dag_run = context['dag_run']
+        
+        completion_data = {
+            "dag_type": "rag_pipeline", 
+            "dag_run_id": dag_run.dag_id,
+            "completion_time": datetime.now().isoformat(),
+            "status": "success",
+            "execution_date": dag_run.execution_date.isoformat() if dag_run.execution_date else None,
+            "triggered_by": "airflow_rag_pipeline"
+        }
+        
+        # Send webhook notification to n8n
+        n8n_webhook_url = os.getenv("N8N_WEBHOOK_URL_RAG", "http://n8n:5678/webhook/rag-completion")
+        
+        print(f"[RAG Completion] Sending completion notification to: {n8n_webhook_url}")
+        print(f"[RAG Completion] Payload: {completion_data}")
+        
+        try:
+            response = requests.post(
+                n8n_webhook_url,
+                json=completion_data,
+                timeout=30,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code in [200, 201, 202]:
+                print(f"[RAG Completion] ✅ Webhook notification sent successfully: {response.status_code}")
+                print(f"[RAG Completion] Response: {response.text}")
+            else:
+                print(f"[RAG Completion] ⚠️ Webhook notification failed: {response.status_code}")
+                print(f"[RAG Completion] Response: {response.text}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[RAG Completion] ❌ Failed to send webhook notification: {str(e)}")
+            # Don't fail the DAG if webhook fails
+            
+        return {
+            "status": "completed_with_notification",
+            "timestamp": datetime.now().isoformat(),
+            "message": "RAG pipeline finished successfully, notification sent",
+            "webhook_sent": True,
+            "completion_data": completion_data
+        }
+        
+    except Exception as e:
+        print(f"[RAG Completion] Error in completion notification: {str(e)}")
+        return {
+            "status": "completed_with_errors",
+            "timestamp": datetime.now().isoformat(),
+            "message": f"RAG processing completed but notification failed: {str(e)}",
+            "webhook_sent": False
+        }
+
+
 with DAG(
     dag_id="rag_pipeline",
     start_date=datetime(2025, 7, 23),
@@ -367,4 +462,9 @@ with DAG(
         python_callable=validate_format,
     )
 
-    task_get_chunk >> task_rag >> task_validate
+    task_notification = PythonOperator(
+        task_id="send_completion_notification",
+        python_callable=send_completion_notification,
+    )
+
+    task_get_chunk >> task_rag >> task_validate >> task_notification
