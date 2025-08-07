@@ -162,7 +162,10 @@ export default function AirflowPage() {
         setLoading(false) // End loading
       }
     }
-    fetchData()
+    fetchData() // Initial fetch
+    const interval = setInterval(fetchData, 30000) // Fetch every 30 seconds
+
+    return () => clearInterval(interval) // Cleanup on unmount
   }, [])
 
   const getStatusColor = (status: string) => {
