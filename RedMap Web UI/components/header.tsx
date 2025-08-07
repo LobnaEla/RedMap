@@ -12,6 +12,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard" },
   { name: "n8n", href: "/n8n" },
   { name: "Airflow", href: "/airflow" },
+  { name: "Full Pipeline", href: "/full-pipeline" },
   { name: "CTI Analysis", href: "/cti-analysis" },
   { name: "API Keys", href: "/api-keys" },
   { name: "About", href: "/about" },
