@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator, get_current_context
+from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
 from datetime import datetime, timedelta
 import os
@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 
 # Add project paths
 sys.path.append("/opt/project")
+sys.path.append("/opt/airflow/scripts")
 import importlib.util
 
 # Load shared utilities
@@ -22,6 +23,9 @@ shared = importlib.util.module_from_spec(shared_spec)
 shared_spec.loader.exec_module(shared)
 load_chunk_files = shared.load_chunk_files
 
+# Import database manager
+from db_manager import save_cti_results
+
 # === Path Configuration ===
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = os.path.join(BASE_PROJECT_PATH, "data")
@@ -29,7 +33,6 @@ CHUNKS_DIR = os.path.join(DATA_DIR, "chunks")
 RAG_RESULTS_DIR = os.path.join(DATA_DIR, "rag_results")
 LLM_RESULTS_DIR = os.path.join(DATA_DIR, "llm_results")
 JUDGE_RESULTS_DIR = os.path.join(DATA_DIR, "judge_results")
-MITRE_MAPPING_DIR = os.path.join(DATA_DIR, "mitre_mappings")
 LOGS_DIR = os.path.join(BASE_PROJECT_PATH, "logs")
 UNIFIED_RESULTS_DIR = os.path.join(DATA_DIR, "unified_analysis_results")
 
@@ -117,8 +120,9 @@ def prepare_chunks_for_analysis():
         "timestamp": datetime.now().isoformat()
     }
     
-    # Save chunk info for other tasks to use
-    chunk_info_file = os.path.join(UNIFIED_RESULTS_DIR, "chunk_preparation_info.json")
+    # Save chunk info for other tasks to use with timestamp in filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    chunk_info_file = os.path.join(UNIFIED_RESULTS_DIR, f"chunk_preparation_info_{timestamp}.json")
     with open(chunk_info_file, "w", encoding="utf-8") as f:
         json.dump(chunk_info, f, indent=2, ensure_ascii=False)
     
@@ -128,8 +132,14 @@ def process_llm_icl(**context):
     """Process chunks with LLM In-Context Learning using existing ChunkProcessor"""
     print("[UNIFIED-LLM] Starting LLM In-Context Learning processing...")
     
-    # Load chunk preparation info
-    chunk_info_file = os.path.join(UNIFIED_RESULTS_DIR, "chunk_preparation_info.json")
+    # Load chunk preparation info (find the most recent one)
+    chunk_info_files = glob.glob(os.path.join(UNIFIED_RESULTS_DIR, "chunk_preparation_info_*.json"))
+    if not chunk_info_files:
+        print("[UNIFIED-LLM] No chunk preparation info found")
+        return {"status": "error", "message": "Could not find chunk preparation info"}
+    
+    # Use the most recent chunk info file
+    chunk_info_file = max(chunk_info_files, key=os.path.getmtime)
     try:
         with open(chunk_info_file, "r", encoding="utf-8") as f:
             chunk_info = json.load(f)
@@ -195,10 +205,15 @@ def process_llm_icl(**context):
             except Exception as e:
                 print(f"[UNIFIED-LLM] Error processing chunk {chunk_id}: {e}")
         
-        # Save results using existing format
+        # Save results 
         if successful_mappings:
-            base_name = filename.replace("chunks_normalized_", "").replace(".json", "")
-            llm_filename = f"llm_{base_name}.json"
+            if filename.startswith("chunks_normalized_"):
+                source_identifier = filename.replace("chunks_normalized_", "").replace(".json", "")
+                llm_filename = f"llm_chunks_normalized_{source_identifier}.json"
+            else:
+                # Fallback for other naming patterns
+                base_name = filename.replace(".json", "")
+                llm_filename = f"llm_{base_name}.json"
             file_path = os.path.join(LLM_RESULTS_DIR, llm_filename)
             
             file_results = {
@@ -227,8 +242,9 @@ def process_llm_icl(**context):
         
         llm_results["total_files_processed"] += 1
     
-    # Save unified LLM results summary
-    llm_results_file = os.path.join(UNIFIED_RESULTS_DIR, "llm_icl_results.json")
+    # Save unified LLM results summary with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    llm_results_file = os.path.join(UNIFIED_RESULTS_DIR, f"llm_icl_results_{timestamp}.json")
     with open(llm_results_file, "w", encoding="utf-8") as f:
         json.dump(llm_results, f, indent=2, ensure_ascii=False)
     
@@ -239,8 +255,14 @@ def process_rag_retrieval(**context):
     """Process chunks with RAG retrieval using existing pattern"""
     print("[UNIFIED-RAG] Starting RAG retrieval processing...")
     
-    # Load chunk preparation info
-    chunk_info_file = os.path.join(UNIFIED_RESULTS_DIR, "chunk_preparation_info.json")
+    # Load chunk preparation info (find the most recent one)
+    chunk_info_files = glob.glob(os.path.join(UNIFIED_RESULTS_DIR, "chunk_preparation_info_*.json"))
+    if not chunk_info_files:
+        print("[UNIFIED-RAG] No chunk preparation info found")
+        return {"status": "error", "message": "Could not find chunk preparation info"}
+    
+    # Use the most recent chunk info file
+    chunk_info_file = max(chunk_info_files, key=os.path.getmtime)
     try:
         with open(chunk_info_file, "r", encoding="utf-8") as f:
             chunk_info = json.load(f)
@@ -266,6 +288,16 @@ def process_rag_retrieval(**context):
             base_name = file_info["base_name"]
             
             # Prepare results structure (matching existing RAG DAG format)
+            # Extract source identifier from chunk file for proper naming
+            chunk_filename = os.path.basename(file_info["file_path"])
+            if chunk_filename.startswith("chunks_normalized_"):
+                source_identifier = chunk_filename.replace("chunks_normalized_", "").replace(".json", "")
+                rag_output_filename = f"rag_chunks_normalized_{source_identifier}.json"
+            else:
+                # Fallback for other naming patterns
+                base_name = os.path.splitext(chunk_filename)[0]
+                rag_output_filename = f"rag_{base_name}.json"
+            
             results = {
                 "original_chunk_file": file_info["file_path"],
                 "processing_timestamp": datetime.now().isoformat(),
@@ -364,7 +396,7 @@ def process_rag_retrieval(**context):
             }
             
             # Save results for this chunk file (same format as existing RAG DAG)
-            output_file = os.path.join(RAG_RESULTS_DIR, f"rag_{base_name}.json")
+            output_file = os.path.join(RAG_RESULTS_DIR, rag_output_filename)
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
             
@@ -385,7 +417,9 @@ def process_rag_retrieval(**context):
         "status": "completed",
     }
     
-    rag_results_file = os.path.join(UNIFIED_RESULTS_DIR, "rag_retrieval_results.json")
+    # Save unified RAG results summary with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    rag_results_file = os.path.join(UNIFIED_RESULTS_DIR, f"rag_retrieval_results_{timestamp}.json")
     with open(rag_results_file, "w", encoding="utf-8") as f:
         json.dump(rag_results, f, indent=2, ensure_ascii=False)
     
@@ -426,8 +460,16 @@ def run_judge_validation(**context):
                 continue
                 
             # Check if corresponding RAG results exist
-            base_name = os.path.splitext(os.path.basename(chunk_file))[0]
-            rag_result_file = os.path.join(RAG_RESULTS_DIR, f"rag_{base_name}.json")
+            chunk_filename = os.path.basename(chunk_file)
+            source_identifier = None
+            if chunk_filename.startswith("chunks_normalized_"):
+                source_identifier = chunk_filename.replace("chunks_normalized_", "").replace(".json", "")
+                rag_result_file = os.path.join(RAG_RESULTS_DIR, f"rag_chunks_normalized_{source_identifier}.json")
+                base_name = f"chunks_normalized_{source_identifier}"
+            else:
+                # Fallback for other naming patterns
+                base_name = os.path.splitext(chunk_filename)[0]
+                rag_result_file = os.path.join(RAG_RESULTS_DIR, f"rag_{base_name}.json")
             
             if not os.path.exists(rag_result_file):
                 continue
@@ -441,18 +483,27 @@ def run_judge_validation(**context):
             
             # Check if LLM results exist
             chunk_ids = [str(chunk.get("chunk_id", "")) for chunk in chunk_data.get("chunks", [])]
-            missing_llm_results = []
-            
-            for chunk_id in chunk_ids:
+            if chunk_filename.startswith("chunks_normalized_"):
+                source_identifier = chunk_filename.replace("chunks_normalized_", "").replace(".json", "")
+                llm_result_file = os.path.join(LLM_RESULTS_DIR, f"llm_chunks_normalized_{source_identifier}.json")
+            else:
+                # Fallback for other naming patterns
                 llm_result_file = os.path.join(LLM_RESULTS_DIR, f"llm_{base_name}.json")
-                if not os.path.exists(llm_result_file):
-                    missing_llm_results.append(chunk_id)
+            
+            missing_llm_results = []
+            if not os.path.exists(llm_result_file):
+                missing_llm_results = chunk_ids
             
             if missing_llm_results:
                 continue
             
             # Check if already processed by judge
-            judge_result_file = os.path.join(JUDGE_RESULTS_DIR, f"judge_{base_name}.json")
+            if chunk_filename.startswith("chunks_normalized_"):
+                source_identifier = chunk_filename.replace("chunks_normalized_", "").replace(".json", "")
+                judge_result_file = os.path.join(JUDGE_RESULTS_DIR, f"judge_chunks_normalized_{source_identifier}.json")
+            else:
+                # Fallback for other naming patterns  
+                judge_result_file = os.path.join(JUDGE_RESULTS_DIR, f"judge_{base_name}.json")
             
             if os.path.exists(judge_result_file):
                 with open(judge_result_file, "r", encoding="utf-8") as f:
@@ -465,9 +516,11 @@ def run_judge_validation(**context):
             processable_files.append({
                 "chunk_file": chunk_file,
                 "rag_file": rag_result_file,
+                "llm_file": llm_result_file, 
                 "chunk_ids": chunk_ids,
                 "judge_file": judge_result_file,
-                "base_name": base_name
+                "base_name": base_name,
+                "source_identifier": source_identifier if source_identifier else base_name
             })
             
         except Exception as e:
@@ -494,8 +547,7 @@ def run_judge_validation(**context):
             rag_data = load_file_data(file_info["rag_file"])
             
             # Load LLM results from the unified format
-            llm_result_file = os.path.join(LLM_RESULTS_DIR, f"llm_{file_info['base_name']}.json")
-            llm_data = load_file_data(llm_result_file)
+            llm_data = load_file_data(file_info["llm_file"])
             
             if not all([chunk_data, rag_data, llm_data]):
                 print(f"[UNIFIED-JUDGE] Failed to load required data for {file_info['base_name']}")
@@ -536,11 +588,11 @@ def run_judge_validation(**context):
                 llm_results_list=llm_results_list,
             )
             
-            # Prepare output structure (matching existing format)
+            # Prepare output structure 
             output_results = {
                 "original_chunk_file": file_info["chunk_file"],
                 "rag_results_file": file_info["rag_file"],
-                "llm_results_file": llm_result_file,
+                "llm_results_file": file_info["llm_file"],
                 "processing_timestamp": datetime.now().isoformat(),
                 "total_chunks": len(validation_chunks),
                 "processed_chunks": len(results.get("validations", [])),
@@ -548,8 +600,11 @@ def run_judge_validation(**context):
                 "validation_results": results,
             }
             
-            # Save results (matching existing naming convention)
-            judge_output_file = os.path.join(JUDGE_RESULTS_DIR, f"judge_{file_info['base_name']}.json")
+            if file_info["source_identifier"].startswith("chunks_normalized_"):
+                judge_output_filename = f"judge_{file_info['source_identifier']}.json"
+            else:
+                judge_output_filename = f"judge_chunks_normalized_{file_info['source_identifier']}.json"
+            judge_output_file = os.path.join(JUDGE_RESULTS_DIR, judge_output_filename)
             with open(judge_output_file, "w", encoding="utf-8") as f:
                 json.dump(output_results, f, indent=2, ensure_ascii=False)
             
@@ -563,7 +618,11 @@ def run_judge_validation(**context):
             print(f"[UNIFIED-JUDGE] Error processing file {file_info['base_name']}: {e}")
             
             # Create error result file
-            judge_output_file = os.path.join(JUDGE_RESULTS_DIR, f"judge_{file_info['base_name']}.json")
+            if file_info["source_identifier"].startswith("chunks_normalized_"):
+                error_output_filename = f"judge_{file_info['source_identifier']}.json"
+            else:
+                error_output_filename = f"judge_chunks_normalized_{file_info['source_identifier']}.json"
+            judge_output_file = os.path.join(JUDGE_RESULTS_DIR, error_output_filename)
             error_result = {
                 "original_chunk_file": file_info["chunk_file"],
                 "processing_timestamp": datetime.now().isoformat(),
@@ -586,7 +645,9 @@ def run_judge_validation(**context):
         "status": "completed",
     }
     
-    judge_results_file = os.path.join(UNIFIED_RESULTS_DIR, "judge_validation_results.json")
+    # Save unified judge results summary with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    judge_results_file = os.path.join(UNIFIED_RESULTS_DIR, f"judge_validation_results_{timestamp}.json")
     with open(judge_results_file, "w", encoding="utf-8") as f:
         json.dump(judge_results, f, indent=2, ensure_ascii=False)
     
@@ -603,36 +664,57 @@ def load_file_data(file_path: str) -> Dict:
         return {}
 
 def generate_unified_results(**context):
-    """Generate final unified analysis results"""
+    """Generate final unified analysis results and save to database"""
     print("[UNIFIED-FINAL] Generating unified analysis results...")
     
-    # Load all results
+    # Load all results using pattern matching to find the most recent files
     try:
-        files_to_load = [
-            ("chunk_preparation_info.json", "chunk_info"),
-            ("llm_icl_results.json", "llm_results"),
-            ("rag_retrieval_results.json", "rag_results"),
-            ("judge_validation_results.json", "judge_results")
+        # Find the most recent files for each type
+        file_patterns = [
+            ("chunk_preparation_info_*.json", "chunk_info"),
+            ("llm_icl_results_*.json", "llm_results"),
+            ("rag_retrieval_results_*.json", "rag_results"),
+            ("judge_validation_results_*.json", "judge_results")
         ]
         
         results = {}
-        for filename, key in files_to_load:
-            filepath = os.path.join(UNIFIED_RESULTS_DIR, filename)
-            with open(filepath, "r", encoding="utf-8") as f:
+        for pattern, key in file_patterns:
+            matching_files = glob.glob(os.path.join(UNIFIED_RESULTS_DIR, pattern))
+            if not matching_files:
+                print(f"[UNIFIED-FINAL] No files found for pattern: {pattern}")
+                return {"status": "error", "message": f"No files found for pattern: {pattern}"}
+            
+            # Use the most recent file
+            latest_file = max(matching_files, key=os.path.getmtime)
+            with open(latest_file, "r", encoding="utf-8") as f:
                 results[key] = json.load(f)
+            print(f"[UNIFIED-FINAL] Loaded {key} from: {os.path.basename(latest_file)}")
         
     except Exception as e:
         print(f"[UNIFIED-FINAL] Error loading results: {e}")
         return {"status": "error", "message": "Could not load analysis results"}
     
-    # Generate comprehensive summary
+    # Generate comprehensive summary with DAG execution info
+    dag_run = context.get('dag_run')
+    execution_date = dag_run.execution_date if dag_run else datetime.now()
+    dag_run_id = dag_run.run_id if dag_run else 'manual_test'
+    
+    # Save final unified results to file with meaningful timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    
+    final_results_filename = f"unified_analysis_results_{dag_run_id}_{timestamp}.json"
+    final_results_file = os.path.join(UNIFIED_RESULTS_DIR, final_results_filename)
+    
     final_results = {
         "analysis_metadata": {
             "dag_id": "unified_llm_analysis_dag",
+            "dag_run_id": dag_run_id,
+            "execution_date": execution_date.isoformat(),
             "processing_timestamp": datetime.now().isoformat(),
             "total_files_processed": results["judge_results"]["total_files_processed"],
             "total_chunks_analyzed": results["judge_results"]["total_chunks_validated"],
-            "pipeline_components": ["LLM_ICL", "RAG_Retrieval", "Judge_Validation"]
+            "pipeline_components": ["LLM_ICL", "RAG_Retrieval", "Judge_Validation"],
+            "results_filename": final_results_filename
         },
         "processing_summary": {
             "llm_icl_chunks": results["llm_results"]["total_chunks_processed"],
@@ -648,10 +730,24 @@ def generate_unified_results(**context):
         }
     }
     
-    # Save final unified results
-    final_results_file = os.path.join(UNIFIED_RESULTS_DIR, "unified_analysis_final_results.json")
     with open(final_results_file, "w", encoding="utf-8") as f:
         json.dump(final_results, f, indent=2, ensure_ascii=False)
+    
+    # Save to PostgreSQL database using modular function
+    try:
+        db_result = save_cti_results(
+            final_results=final_results,
+            dag_run_id=dag_run_id,
+            execution_date=execution_date
+        )
+        
+        if db_result.get("status") == "success":
+            print(f"[UNIFIED-FINAL] Successfully saved to database with ID: {db_result.get('unified_analysis_id')}")
+        else:
+            print(f"[UNIFIED-FINAL] Database save failed: {db_result.get('message')}")
+            
+    except Exception as e:
+        print(f"[UNIFIED-FINAL] Warning: Could not save to database: {e}")
     
     print(f"[UNIFIED-FINAL] Generated unified results for {final_results['analysis_metadata']['total_chunks_analyzed']} chunks")
     return final_results

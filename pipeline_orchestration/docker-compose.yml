@@ -208,7 +208,116 @@ services:
         
         echo "[INIT] Starting Airflow initialization..."
         /entrypoint airflow version
-        /entrypoint airflow version
+        /entrypoint airflow db init
+        
+        echo "[INIT] Initializing CTI database schema..."
+        python -c "
+        import psycopg2
+        try:
+            conn = psycopg2.connect(
+                host='postgres',
+                database='airflow',
+                user='airflow',
+                password='airflow'
+            )
+            cur = conn.cursor()
+            
+            # Create CTI results schema
+            cur.execute('CREATE SCHEMA IF NOT EXISTS cti_results;')
+            
+            # Create final pipeline output table
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS cti_results.final_pipeline_output (
+                id SERIAL PRIMARY KEY,
+                dag_run_id VARCHAR(255) NOT NULL,
+                execution_date TIMESTAMP NOT NULL,
+                dag_id VARCHAR(255) NOT NULL DEFAULT 'unified_llm_analysis_dag',
+                processing_timestamp TIMESTAMP NOT NULL,
+                total_files_processed INTEGER NOT NULL,
+                total_chunks_analyzed INTEGER NOT NULL,
+                llm_icl_chunks INTEGER NOT NULL,
+                rag_retrieval_chunks INTEGER NOT NULL,
+                judge_validated_chunks INTEGER NOT NULL,
+                success_rate DECIMAL(5,2) NOT NULL,
+                pipeline_components TEXT[] NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'completed',
+                results_json JSONB NOT NULL,
+                results_stix JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            ''')
+            
+            # Create LLM technique mappings table (detailed LLM outputs)
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS cti_results.llm_technique_mappings (
+                id SERIAL PRIMARY KEY,
+                pipeline_output_id INTEGER REFERENCES cti_results.final_pipeline_output(id),
+                dag_run_id VARCHAR(255) NOT NULL,
+                source_file VARCHAR(255) NOT NULL,
+                chunk_id VARCHAR(50) NOT NULL,
+                chunk_text TEXT NOT NULL,
+                mitre_techniques TEXT[] NOT NULL,
+                llm_reasoning TEXT,
+                confidence_score DECIMAL(3,2),
+                processing_timestamp TIMESTAMP NOT NULL,
+                success BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            ''')
+            
+            # Create RAG retrieval results table  
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS cti_results.rag_retrieval_results (
+                id SERIAL PRIMARY KEY,
+                pipeline_output_id INTEGER REFERENCES cti_results.final_pipeline_output(id),
+                dag_run_id VARCHAR(255) NOT NULL,
+                source_file VARCHAR(255) NOT NULL,
+                chunk_id VARCHAR(50) NOT NULL,
+                chunk_text TEXT NOT NULL,
+                retrieved_techniques JSONB,
+                similarity_scores DECIMAL[],
+                rag_status VARCHAR(20) NOT NULL,
+                processing_timestamp TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            ''')
+            
+            # Create judge validation results table
+            cur.execute('''
+            CREATE TABLE IF NOT EXISTS cti_results.judge_validation_results (
+                id SERIAL PRIMARY KEY,
+                pipeline_output_id INTEGER REFERENCES cti_results.final_pipeline_output(id),
+                dag_run_id VARCHAR(255) NOT NULL,
+                source_file VARCHAR(255) NOT NULL,
+                chunk_id VARCHAR(50) NOT NULL,
+                llm_techniques TEXT[] DEFAULT '{}',
+                rag_techniques TEXT[] DEFAULT '{}',
+                final_validated_techniques TEXT[] NOT NULL,
+                judge_reasoning TEXT,
+                judge_confidence VARCHAR(20),
+                validation_status VARCHAR(20) NOT NULL,
+                processing_timestamp TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            ''')
+            
+            # Create indexes for performance
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_pipeline_output_dag_run_id ON cti_results.final_pipeline_output(dag_run_id);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_llm_mappings_pipeline_id ON cti_results.llm_technique_mappings(pipeline_output_id);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_llm_mappings_dag_run ON cti_results.llm_technique_mappings(dag_run_id);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_rag_results_pipeline_id ON cti_results.rag_retrieval_results(pipeline_output_id);')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_judge_results_pipeline_id ON cti_results.judge_validation_results(pipeline_output_id);')
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            print('✅ CTI database schema initialized successfully!')
+        except Exception as e:
+            print('❌ Error initializing CTI database:', str(e))
+            exit(1)
+        "
+        
+        echo "[INIT] Airflow and CTI initialization completed!"
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_MIGRATE: 'true'
