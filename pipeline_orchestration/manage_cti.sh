@@ -22,7 +22,7 @@ show_help() {
 
 start_system() {
     echo "🚀 Starting CTI Event-Driven System..."
-    docker-compose up -d --build
+    docker-compose up -d --build eventmonitor event-service-api n8n redis airflow-webserver
     sleep 5
     docker-compose ps
     echo "✅ System started!"

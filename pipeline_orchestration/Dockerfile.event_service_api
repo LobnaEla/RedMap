@@ -1,0 +1,14 @@
+# C:\Lobna\STAGE_WEVIOO\Project\pipeline_orchestration\Dockerfile.event_service_api
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copier le répertoire event_monitoring
+COPY event_monitoring/ event_monitoring/
+
+RUN pip install --no-cache-dir -r event_monitoring/requirements.txt
+RUN pip install fastapi uvicorn python-dotenv
+
+ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "event_monitoring.event_service_api:app", "--host", "0.0.0.0", "--port", "8000"]

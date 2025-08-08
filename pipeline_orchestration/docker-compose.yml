@@ -323,6 +323,34 @@ services:
       start_period: 10s
     networks:
       - airflow_default
+  event-service-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.event_service_api
+    ports:
+      - "8000:8000"
+    environment:
+      - EVENT_SERVICE_API_KEY=${EVENT_SERVICE_API_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/cti-event
+      - PYTHONPATH=/app
+      - BASE_PROJECT_PATH=/app
+      - CONFIG_DIR=/app/config
+    volumes:
+      - ./event_monitoring:/app/event_monitoring
+        
+      - ../:/opt/project
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "X-API-Key: ${EVENT_SERVICE_API_KEY}", "http://localhost:8000/api/event-service/sources/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - airflow_default
 
 
 volumes:

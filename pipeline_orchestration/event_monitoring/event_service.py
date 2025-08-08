@@ -24,20 +24,111 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-
 # Add the project root for Docker imports
 sys.path.append("/opt/project/cti_pipeline")
 
 # === Path Configuration ===
-BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
+# Try to detect if we're running in Docker or local environment
+if os.path.exists("/opt/project/cti_pipeline"):
+    BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
+else:
+    # Local development environment
+    BASE_PROJECT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
 CONFIG_PATH = os.path.join(BASE_PROJECT_PATH, "config")
+logger.info(f"Using BASE_PROJECT_PATH: {BASE_PROJECT_PATH}")
+logger.info(f"Using CONFIG_PATH: {CONFIG_PATH}")
+
+# === Load Configuration Modules ===
+BLOG_SOURCES = []
+RSS_SOURCES = []
+TWITTER_USERS = []
+
+try:
+    import importlib.util
+
+    # Load blog_sources
+    blog_path = os.path.join(CONFIG_PATH, "blog_sources.py")
+    if os.path.exists(blog_path):
+        blog_spec = importlib.util.spec_from_file_location("blog_sources", blog_path)
+        if blog_spec and blog_spec.loader:
+            blog_module = importlib.util.module_from_spec(blog_spec)
+            blog_spec.loader.exec_module(blog_module)
+            BLOG_SOURCES = getattr(blog_module, "BLOG_SOURCES", [])
+
+    # Load rss_sources
+    rss_path = os.path.join(CONFIG_PATH, "rss_sources.py")
+    if os.path.exists(rss_path):
+        rss_spec = importlib.util.spec_from_file_location("rss_sources", rss_path)
+        if rss_spec and rss_spec.loader:
+            rss_module = importlib.util.module_from_spec(rss_spec)
+            rss_spec.loader.exec_module(rss_module)
+            RSS_SOURCES = getattr(rss_module, "RSS_SOURCES", [])
+
+    # Load twitter_users
+    twitter_path = os.path.join(CONFIG_PATH, "twitter_users.py")
+    if os.path.exists(twitter_path):
+        twitter_spec = importlib.util.spec_from_file_location(
+            "twitter_users", twitter_path
+        )
+        if twitter_spec and twitter_spec.loader:
+            twitter_module = importlib.util.module_from_spec(twitter_spec)
+            twitter_spec.loader.exec_module(twitter_module)
+            TWITTER_USERS = getattr(twitter_module, "twitter_users", [])
+
+    logger.info("Loaded configuration modules via importlib")
+    logger.info(
+        f"Loaded {len(BLOG_SOURCES)} blog sources, {len(RSS_SOURCES)} RSS sources, {len(TWITTER_USERS)} Twitter users"
+    )
+
+except Exception as load_error:
+    logger.warning(f"Could not load configuration modules: {load_error}")
+    BLOG_SOURCES = []
+    RSS_SOURCES = []
+    TWITTER_USERS = []
+
+# === N8N Configuration ===
+N8N_BASE_URL = "http://n8n:5678"
+
+
+# === Load sources Config ===
+def load_sources_config():
+    # Try multiple possible locations for sources.yaml
+    possible_paths = [
+        os.path.join(CONFIG_PATH, "sources.yaml"),
+        os.path.join("/opt/project/cti_pipeline/config", "sources.yaml"),
+        os.path.join("/app/config", "sources.yaml"),
+        os.path.join(
+            os.path.dirname(__file__), "../../cti_pipeline/config/sources.yaml"
+        ),
+        os.path.join(os.path.dirname(__file__), "../config/sources.yaml"),
+    ]
+
+    for sources_yaml_path in possible_paths:
+        try:
+            if os.path.exists(sources_yaml_path):
+                logger.info(f"Loading sources config from: {sources_yaml_path}")
+                with open(sources_yaml_path, "r") as f:
+                    config = yaml.safe_load(f)
+                    if config and "sources" in config:
+                        return config["sources"]
+                    else:
+                        logger.warning(f"No 'sources' key found in {sources_yaml_path}")
+                        continue
+        except Exception as e:
+            logger.warning(f"Failed to load from {sources_yaml_path}: {e}")
+            continue
+
+    # If no config file found, raise an error - do not use static fallback
+    error_msg = "No sources.yaml found in any location. Please ensure sources.yaml exists in the config directory."
+    logger.error(error_msg)
+    raise FileNotFoundError(error_msg)
 
 
 class EventType(Enum):
@@ -49,6 +140,8 @@ class EventType(Enum):
     VULNERABILITY = "vulnerability"
     SCHEDULED = "scheduled"
     MANUAL = "manual"
+    MANUAL_TRIGGER = "manual_trigger"
+    AUTOMATIC = "automatic"
 
 
 class Priority(Enum):
@@ -56,14 +149,13 @@ class Priority(Enum):
 
     LOW = "low"
     MEDIUM = "medium"
+    NORMAL = "normal"
     HIGH = "high"
     CRITICAL = "critical"
 
 
 @dataclass
 class CTIEvent:
-    """CTI Event data structure"""
-
     source_name: str
     event_type: str
     reason: str
@@ -72,6 +164,10 @@ class CTIEvent:
     source_metadata: Dict[str, Any] = None
 
     def __post_init__(self):
+        if isinstance(self.event_type, Enum):
+            self.event_type = self.event_type.value
+        if isinstance(self.priority, Enum):
+            self.priority = self.priority.value
         if self.timestamp is None:
             self.timestamp = datetime.utcnow().isoformat()
         if self.source_metadata is None:
@@ -79,7 +175,19 @@ class CTIEvent:
 
 
 class CTIEventService:
-    """Core service for managing CTI events and triggers"""
+    _instance = None
+
+    def __new__(
+        cls,
+        n8n_webhook_url: str = None,
+        redis_host: str = None,
+        redis_port: int = None,
+        config_dir: str = CONFIG_PATH,
+    ):
+        if cls._instance is None:
+            cls._instance = super(CTIEventService, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
     def __init__(
         self,
@@ -88,20 +196,39 @@ class CTIEventService:
         redis_port: int = None,
         config_dir: str = CONFIG_PATH,
     ):
+        # Only initialize once for singleton
+        if self._initialized:
+            return
 
         # Load configuration from environment
         self.n8n_webhook_url = n8n_webhook_url or os.getenv(
-            "N8N_WEBHOOK_URL", "http://n8n:5678/webhook/cti-event"
+            "N8N_WEBHOOK_URL", f"{N8N_BASE_URL}/webhook/cti-event"
         )
-        redis_host = redis_host or os.getenv("REDIS_HOST", "redis")
-        redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
-
+        self.redis_host = redis_host or os.getenv("REDIS_HOST", "redis")
+        self.redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
         self.config_dir = Path(config_dir)
 
-        # Initialize Redis connection
+        # Initialize Redis connection with checks
+        self.redis_client = None
+        self._connect_redis()
+
+        # Load configurations
+        self.sources_config = self._load_sources_config()
+        self.source_limits = self._get_source_limits()
+
+        self._initialized = True
+
+    def _connect_redis(self):
+        """Connect to Redis with proper error handling"""
         try:
             self.redis_client = redis.Redis(
-                host=redis_host, port=redis_port, decode_responses=True
+                host=self.redis_host,
+                port=self.redis_port,
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5,
+                retry_on_timeout=True,
+                health_check_interval=30,
             )
             self.redis_client.ping()
             logger.info("Connected to Redis successfully")
@@ -109,19 +236,34 @@ class CTIEventService:
             logger.error(f"Failed to connect to Redis: {e}")
             self.redis_client = None
 
-        # Load configurations
-        self.sources_config = self._load_sources_config()
-        self.source_limits = self._get_source_limits()
+    def _ensure_redis_connection(self) -> bool:
+        """Ensure Redis connection is active, attempt reconnection if needed"""
+        if self.redis_client is None:
+            self._connect_redis()
+
+        if self.redis_client is not None:
+            try:
+                self.redis_client.ping()
+                return True
+            except Exception as e:
+                logger.warning(f"Redis connection lost, attempting reconnection: {e}")
+                self.redis_client = None
+                self._connect_redis()
+                return self.redis_client is not None
+
+        return False
 
     def _load_sources_config(self) -> Dict[str, Any]:
         """Load sources configuration from YAML"""
         try:
-            sources_file = self.config_dir / "sources.yaml"
-            if sources_file.exists():
-                with open(sources_file, "r") as f:
-                    return yaml.safe_load(f)
+            sources = load_sources_config()
+            # If sources is already a list (which it should be from the YAML), wrap it in a dict
+            if isinstance(sources, list):
+                return {"sources": sources}
+            elif isinstance(sources, dict) and "sources" in sources:
+                return sources
             else:
-                logger.warning(f"Sources config file not found at {sources_file}")
+                logger.error("Invalid sources configuration format")
                 return {"sources": []}
         except Exception as e:
             logger.error(f"Error loading sources config: {e}")
@@ -129,17 +271,32 @@ class CTIEventService:
 
     def _get_source_limits(self) -> Dict[str, Dict[str, int]]:
         """Get rate limiting configuration for each source"""
-        return {
-            "otx": {"cooldown_minutes": 60, "max_concurrent": 2},
-            "rss": {"cooldown_minutes": 30, "max_concurrent": 3},
-            "tuncert": {"cooldown_minutes": 120, "max_concurrent": 1},
-            "twitter": {"cooldown_minutes": 15, "max_concurrent": 5},
-            "blog": {"cooldown_minutes": 45, "max_concurrent": 2},
-        }
+        limits = {}
+
+        # Load limits from sources config if available
+        for source in self.sources_config.get("sources", []):
+            source_name = source.get("name")
+            if source_name:
+                limits[source_name] = {
+                    "cooldown_minutes": source.get("cooldown_minutes", 30),
+                    "max_concurrent": source.get("max_concurrent", 2),
+                }
+
+        # Fallback defaults if no config loaded
+        if not limits:
+            limits = {
+                "otx": {"cooldown_minutes": 60, "max_concurrent": 2},
+                "rss": {"cooldown_minutes": 30, "max_concurrent": 3},
+                "tuncert": {"cooldown_minutes": 120, "max_concurrent": 1},
+                "twitter": {"cooldown_minutes": 15, "max_concurrent": 5},
+                "blog": {"cooldown_minutes": 45, "max_concurrent": 2},
+            }
+
+        return limits
 
     def _check_rate_limit(self, source_name: str) -> bool:
         """Check if source can be triggered based on rate limits"""
-        if not self.redis_client:
+        if not self._ensure_redis_connection():
             logger.warning("Redis not available, skipping rate limit check")
             return True
 
@@ -166,17 +323,18 @@ class CTIEventService:
 
     def _update_trigger_time(self, source_name: str):
         """Update the last trigger time for a source"""
-        if self.redis_client:
+        if self._ensure_redis_connection():
             try:
                 cooldown_key = f"last_trigger_{source_name}"
                 self.redis_client.set(cooldown_key, datetime.utcnow().isoformat())
             except Exception as e:
                 logger.error(f"Error updating trigger time for {source_name}: {e}")
+        else:
+            logger.warning(
+                f"Cannot update trigger time for {source_name}: Redis not available"
+            )
 
     def trigger_event(self, event: CTIEvent) -> Dict[str, Any]:
-        """Trigger a CTI event via n8n webhook"""
-
-        # Validate source exists
         valid_sources = [s["name"] for s in self.sources_config.get("sources", [])]
         if event.source_name not in valid_sources:
             logger.error(f"Unknown source: {event.source_name}")
@@ -186,7 +344,6 @@ class CTIEventService:
                 "valid_sources": valid_sources,
             }
 
-        # Check rate limits
         if not self._check_rate_limit(event.source_name):
             limits = self.source_limits.get(event.source_name, {})
             return {
@@ -196,22 +353,16 @@ class CTIEventService:
                 "cooldown_minutes": limits.get("cooldown_minutes", 30),
             }
 
-        # Prepare payload for n8n
         payload = asdict(event)
-
         try:
-            # Send to n8n webhook
             response = requests.post(
                 self.n8n_webhook_url,
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=30,
             )
-
             if response.status_code == 200:
-                # Update trigger time on successful trigger
                 self._update_trigger_time(event.source_name)
-
                 logger.info(
                     f"Successfully triggered event for source {event.source_name}"
                 )
@@ -229,14 +380,13 @@ class CTIEventService:
                     "status": "error",
                     "message": f"HTTP {response.status_code}: {response.text}",
                 }
-
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
             return {"status": "error", "message": f"Request failed: {str(e)}"}
 
     def get_source_status(self, source_name: str) -> Dict[str, Any]:
         """Get current status of a source"""
-        if not self.redis_client:
+        if not self._ensure_redis_connection():
             return {"status": "unknown", "message": "Redis not available"}
 
         try:
@@ -270,6 +420,27 @@ class CTIEventService:
             logger.error(f"Error getting status for {source_name}: {e}")
             return {"status": "error", "message": str(e)}
 
+    def get_available_sources(self) -> List[str]:
+        """Get list of available sources from configuration"""
+        try:
+            if self.sources_config and "sources" in self.sources_config:
+                sources = self.sources_config["sources"]
+                if isinstance(sources, list):
+                    # If sources is a list of dictionaries with 'name' key
+                    return [
+                        s.get("name", s) if isinstance(s, dict) else str(s)
+                        for s in sources
+                    ]
+                elif isinstance(sources, dict):
+                    # If sources is a dictionary, return keys
+                    return list(sources.keys())
+
+            # Fallback to source limits keys
+            return list(self.source_limits.keys())
+        except Exception as e:
+            logger.error(f"Error getting available sources: {e}")
+            return list(self.source_limits.keys())
+
 
 class EventMonitor:
     """Base class for monitoring external sources for changes"""
@@ -284,7 +455,7 @@ class EventMonitor:
 
     def _load_previous_hashes(self):
         """Load previous content hashes from Redis"""
-        if self.event_service.redis_client:
+        if self.event_service._ensure_redis_connection():
             try:
                 keys = self.event_service.redis_client.keys(f"{self.redis_key_prefix}*")
                 for key in keys:
@@ -298,7 +469,7 @@ class EventMonitor:
 
     def _save_hash(self, source_key: str, hash_value: str):
         """Save content hash to Redis"""
-        if self.event_service.redis_client:
+        if self.event_service._ensure_redis_connection():
             try:
                 redis_key = f"{self.redis_key_prefix}{source_key}"
                 self.event_service.redis_client.set(
@@ -306,6 +477,8 @@ class EventMonitor:
                 )  # 24 hour expiry
             except Exception as e:
                 logger.error(f"Error saving hash for {source_key}: {e}")
+        else:
+            logger.warning(f"Cannot save hash for {source_key}: Redis not available")
 
     async def monitor(self):
         """Override in subclasses"""
@@ -321,13 +494,24 @@ class RSSMonitor(EventMonitor):
 
     def _load_rss_sources(self) -> List[Dict]:
         """Load RSS sources configuration"""
-        try:
-            from ...cti_pipeline.config.rss_sources import RSS_SOURCES
-
+        # First try to use imported RSS_SOURCES
+        if RSS_SOURCES:
             return RSS_SOURCES
-        except ImportError:
-            logger.warning("RSS sources not found")
-            return []
+
+        # Fallback: check if RSS is configured in sources.yaml
+        config = self.event_service.sources_config.get("sources", [])
+        rss_sources = [s for s in config if s.get("name") == "rss"]
+        if rss_sources:
+            # Return default RSS configuration
+            return [
+                {
+                    "name": "default_rss",
+                    "url": "https://feeds.feedburner.com/eset/blog",
+                    "description": "Default RSS feed monitoring",
+                    "source_type": "rss_feed",
+                }
+            ]
+        return []
 
     async def monitor(self):
         """Check RSS feeds for new content"""
@@ -398,15 +582,22 @@ class BlogMonitor(EventMonitor):
 
     def _load_blog_sources(self) -> List[Dict]:
         """Load blog sources configuration"""
-        try:
-            from ...cti_pipeline.config.blog_sources import BLOG_SOURCES
-
-            logger.info("Loaded blog sources from config")
+        # First try to use imported BLOG_SOURCES
+        if BLOG_SOURCES:
             return BLOG_SOURCES
 
-        except ImportError:
-            logger.warning("Blog sources not found")
-            return []
+        # Fallback: check if blog is configured in sources.yaml
+        config = self.event_service.sources_config.get("sources", [])
+        blog_sources = [s for s in config if s.get("name") == "blog"]
+        if blog_sources:
+            # Return default blog configuration
+            return [
+                {
+                    "name": "default_security_blog",
+                    "url": "https://www.welivesecurity.com/",
+                }
+            ]
+        return []
 
     async def monitor(self):
         """Check blog sources for new content"""
@@ -772,29 +963,25 @@ class TwitterMonitor(EventMonitor):
         return hashlib.md5(hash_content.encode()).hexdigest()
 
     def _load_twitter_config(self) -> Optional[List[str]]:
-        """Load Twitter configuration from python module"""
-        try:
-            # Import the twitter_users from the first script's config
-            # Adjust the import path based on your actual structure
-            sys.path.append(BASE_PROJECT_PATH)
-            from ...cti_pipeline.config.twitter_users import twitter_users
+        """Load Twitter configuration from sources config"""
+        # First try to use imported TWITTER_USERS
+        if TWITTER_USERS:
+            return TWITTER_USERS
 
-            if isinstance(twitter_users, list):
-                logger.info(f"Loaded {len(twitter_users)} Twitter users for monitoring")
-                return twitter_users
-            else:
-                logger.warning("twitter_users is not a list")
-                return None
-
-        except ImportError as e:
-            logger.error(f"Error loading Twitter config: {e}")
-            logger.debug(
-                "Make sure config/twitter_users.py exists with twitter_users list"
-            )
-            return None
-        except Exception as e:
-            logger.error(f"Unexpected error loading Twitter config: {e}")
-            return None
+        # Fallback: check if twitter is configured in sources.yaml
+        config = self.event_service.sources_config.get("sources", [])
+        twitter_sources = [s for s in config if s.get("name") == "twitter"]
+        if twitter_sources:
+            # Return default Twitter users for monitoring
+            return [
+                "vxunderground",
+                "CERT_FR",
+                "CISACyber",
+                "shadowserver",
+                "malware_traffic",
+                "USCERT_gov",
+            ]
+        return None
 
 
 class EventOrchestrator:
