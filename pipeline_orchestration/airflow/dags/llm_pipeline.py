@@ -23,9 +23,6 @@ shared = importlib.util.module_from_spec(shared_spec)
 shared_spec.loader.exec_module(shared)
 load_chunk_files = shared.load_chunk_files
 
-# Import database manager
-from db_manager import save_cti_results
-
 # === Path Configuration ===
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 DATA_DIR = os.path.join(BASE_PROJECT_PATH, "data")
@@ -436,130 +433,6 @@ def load_file_data(file_path: str) -> Dict:
         print(f"[PIPELINE] Error loading file {file_path}: {e}")
         return {}
 
-def save_results_to_database(**context):
-    """Save all LLM pipeline results to PostgreSQL database"""
-    print("[DB-SAVE] Starting database save operation...")
-    
-    # Get DAG execution info
-    dag_run = context.get('dag_run')
-    execution_date = dag_run.execution_date if dag_run else datetime.now()
-    dag_run_id = dag_run.run_id if dag_run else 'manual_test'
-    
-    # Collect all results from the three directories
-    results_summary = {
-        "dag_metadata": {
-            "dag_id": "llm_pipeline",
-            "dag_run_id": dag_run_id,
-            "execution_date": execution_date.isoformat(),
-            "processing_timestamp": datetime.now().isoformat()
-        },
-        "icl_results": [],
-        "retrieval_results": [],
-        "judge_results": [],
-        "processing_stats": {
-            "total_icl_files": 0,
-            "total_retrieval_files": 0,
-            "total_judge_files": 0,
-            "total_validated_chunks": 0
-        }
-    }
-    
-    # Collect ICL results
-    print("[DB-SAVE] Collecting ICL results...")
-    icl_files = glob.glob(os.path.join(ICL_RESULTS_DIR, "*.json"))
-    for icl_file in icl_files:
-        try:
-            icl_data = load_file_data(icl_file)
-            if icl_data:
-                results_summary["icl_results"].append({
-                    "filename": os.path.basename(icl_file),
-                    "filepath": icl_file,
-                    "mappings": icl_data,
-                    "mapping_count": len(icl_data) if isinstance(icl_data, list) else 0
-                })
-                results_summary["processing_stats"]["total_icl_files"] += 1
-        except Exception as e:
-            print(f"[DB-SAVE] Error loading ICL file {icl_file}: {e}")
-    
-    # Collect Retrieval results
-    print("[DB-SAVE] Collecting Retrieval results...")
-    retrieval_files = glob.glob(os.path.join(RETRIEVAL_SEARCH_RESULTS_DIR, "*.json"))
-    for retrieval_file in retrieval_files:
-        try:
-            retrieval_data = load_file_data(retrieval_file)
-            if retrieval_data:
-                results_summary["retrieval_results"].append({
-                    "filename": os.path.basename(retrieval_file),
-                    "filepath": retrieval_file,
-                    "retrievals": retrieval_data,
-                    "retrieval_count": len(retrieval_data) if isinstance(retrieval_data, list) else 0
-                })
-                results_summary["processing_stats"]["total_retrieval_files"] += 1
-        except Exception as e:
-            print(f"[DB-SAVE] Error loading retrieval file {retrieval_file}: {e}")
-    
-    # Collect Judge results
-    print("[DB-SAVE] Collecting Judge results...")
-    judge_files = glob.glob(os.path.join(JUDGE_RESULTS_DIR, "*.json"))
-    for judge_file in judge_files:
-        try:
-            judge_data = load_file_data(judge_file)
-            if judge_data:
-                # Count validated chunks from judge results
-                validations = judge_data.get("validations", [])
-                chunk_count = len(validations) if isinstance(validations, list) else 0
-                results_summary["processing_stats"]["total_validated_chunks"] += chunk_count
-                
-                results_summary["judge_results"].append({
-                    "filename": os.path.basename(judge_file),
-                    "filepath": judge_file,
-                    "validation_results": judge_data,
-                    "validated_chunks": chunk_count
-                })
-                results_summary["processing_stats"]["total_judge_files"] += 1
-        except Exception as e:
-            print(f"[DB-SAVE] Error loading judge file {judge_file}: {e}")
-    
-    # Print summary of what we're saving
-    print(f"[DB-SAVE] Collected results summary:")
-    print(f"  - ICL files: {results_summary['processing_stats']['total_icl_files']}")
-    print(f"  - Retrieval files: {results_summary['processing_stats']['total_retrieval_files']}")
-    print(f"  - Judge files: {results_summary['processing_stats']['total_judge_files']}")
-    print(f"  - Total validated chunks: {results_summary['processing_stats']['total_validated_chunks']}")
-    
-    # Save to PostgreSQL database
-    try:
-        db_result = save_cti_results(
-            final_results=results_summary,
-            dag_run_id=dag_run_id,
-            execution_date=execution_date
-        )
-        
-        if db_result.get("status") == "success":
-            print(f"[DB-SAVE] Successfully saved to database with ID: {db_result.get('unified_analysis_id')}")
-            return {
-                "status": "success",
-                "database_id": db_result.get('unified_analysis_id'),
-                "stats": results_summary["processing_stats"]
-            }
-        else:
-            print(f"[DB-SAVE] Database save failed: {db_result.get('message')}")
-            return {
-                "status": "error",
-                "message": db_result.get('message'),
-                "stats": results_summary["processing_stats"]
-            }
-            
-    except Exception as e:
-        print(f"[DB-SAVE] Error saving to database: {e}")
-        return {
-            "status": "error",
-            "message": str(e),
-            "stats": results_summary["processing_stats"]
-        }
-    
-    print(f"[DB-SAVE] Database save operation completed")
-
 
 # ================================
 # TASK DEFINITIONS
@@ -602,15 +475,8 @@ judge_validation_task = PythonOperator(
     dag=dag,
 )
 
-# Database save (runs after judge validation)
-save_to_database_task = PythonOperator(
-    task_id="save_results_to_database",
-    python_callable=save_results_to_database,
-    dag=dag,
-)
-
 completion_task = DummyOperator(
-    task_id="llm_dag_complete",
+    task_id="llm_pipeline_complete",
     dag=dag,
 )
 
@@ -625,5 +491,5 @@ start_task >> prepare_chunks_task
 # Parallel: chunks → (llm_icl + rag_retrieval) → wait
 prepare_chunks_task >> [llm_icl_task, rag_retrieval_task] >> wait_for_parallel
 
-# Sequential: wait → judge → database save → complete
-wait_for_parallel >> judge_validation_task >> save_to_database_task >> completion_task
+# Sequential: wait → judge → complete
+wait_for_parallel >> judge_validation_task >> completion_task
