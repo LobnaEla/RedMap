@@ -310,7 +310,7 @@ export default function AirflowPage() {
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="running">Running</SelectItem>
                 <SelectItem value="success">Success</SelectItem>

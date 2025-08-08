@@ -35,6 +35,24 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+
+    /* Status Theme Variables */
+    --status-success-bg: 134 61% 94%;
+    --status-success-text: 134 61% 21%;
+    --status-success-border: 134 61% 84%;
+    --status-warning-bg: 54 91% 95%;
+    --status-warning-text: 21 92% 30%;
+    --status-warning-border: 54 91% 85%;
+    --status-error-bg: 0 93% 94%;
+    --status-error-text: 0 84% 37%;
+    --status-error-border: 0 93% 84%;
+    --status-pending-bg: 210 14% 96%;
+    --status-pending-text: 210 14% 37%;
+    --status-pending-border: 210 14% 86%;
+    --status-ratelimited-bg: 32 95% 94%;
+    --status-ratelimited-text: 32 95% 30%;
+    --status-ratelimited-border: 32 95% 84%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -44,6 +62,7 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -69,6 +88,24 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    /* Status Theme Variables (Dark) */
+    --status-success-bg: 134 50% 14%;
+    --status-success-text: 134 50% 78%;
+    --status-success-border: 134 50% 24%;
+    --status-warning-bg: 54 91% 15%;
+    --status-warning-text: 54 91% 85%;
+    --status-warning-border: 54 91% 25%;
+    --status-error-bg: 0 84% 14%;
+    --status-error-text: 0 84% 78%;
+    --status-error-border: 0 84% 24%;
+    --status-pending-bg: 210 14% 14%;
+    --status-pending-text: 210 14% 78%;
+    --status-pending-border: 210 14% 24%;
+    --status-ratelimited-bg: 32 95% 14%;
+    --status-ratelimited-text: 32 95% 85%;
+    --status-ratelimited-border: 32 95% 24%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -84,6 +121,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
