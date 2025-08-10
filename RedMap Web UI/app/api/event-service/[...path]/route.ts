@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const { pathname } = req.nextUrl
     const path = pathname.replace('/api/event-service/', '') || 'trigger'
     const query = req.nextUrl.searchParams.toString()
-    const url = `http://localhost:8000/api/event-service/${path}${query ? '?' + query : ''}`
+    const url = `http://localhost:8002/api/event-service/${path}${query ? '?' + query : ''}`
     const body = await req.json()
     console.log('Proxying POST request to:', url, 'with body:', body)
     try {
