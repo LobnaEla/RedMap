@@ -1,0 +1,3 @@
+approach,evaluation_type,exact_match,partial_match,precision,recall,f1,jaccard_similarity,total_samples,timestamp
+Gemini_LLM,strict,0.22,0.3,0.27,0.2766666666666666,0.26555555555555554,0.2523809523809524,50,20250810_000416
+Gemini_LLM,lenient,0.26,0.38,0.32400000000000007,0.3446666666666667,0.325,0.3061904761904762,50,20250810_000416

@@ -3,7 +3,7 @@ import os
 BASE_PROJECT_PATH = "/opt/project/cti_pipeline"
 
 VALIDATION_CONFIG = {
-    "model": "gemini-2.0-flash",  # Fixed consistency
+    "model": "gemini-2.0-flash",
     "temperature": 0.1,
     "max_tokens": 800,
     "max_retries": 3,
