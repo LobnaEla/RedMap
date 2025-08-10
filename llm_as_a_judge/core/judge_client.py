@@ -74,7 +74,7 @@ class JudgeClient:
                     )
 
             except ResourceExhausted:
-                wait_time = 2**attempt
+                wait_time = 60**attempt
                 print(f"Rate limit exceeded. Retrying in {wait_time}s...")
                 time.sleep(wait_time)
                 continue
