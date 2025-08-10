@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const { pathname } = req.nextUrl
     const path = pathname.replace('/api/event-service/', '') || 'sources/status'
     const query = req.nextUrl.searchParams.toString()
-    const url = `http://localhost:8000/api/event-service/${path}${query ? '?' + query : ''}`
+    const url = `http://localhost:8002/api/event-service/${path}${query ? '?' + query : ''}`
     console.log('Proxying GET request to:', url)
     try {
         const response = await axios.get(url, getAuthHeader())
