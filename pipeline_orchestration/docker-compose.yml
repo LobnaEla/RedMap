@@ -437,7 +437,7 @@ services:
       context: .
       dockerfile: Dockerfile.event_service_api
     ports:
-      - "8000:8000"
+      - "8002:8000"
     environment:
       - EVENT_SERVICE_API_KEY=${EVENT_SERVICE_API_KEY}
       - REDIS_HOST=redis
