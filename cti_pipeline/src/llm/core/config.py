@@ -11,7 +11,7 @@ PATH_CONFIG = {
 
 # Configuration LLM
 LLM_CONFIG = {
-    "model": "gemini-1.5-flash",
+    "model": "gemini-2.0-flash",
     "max_tokens": 200,
     "temperature": 0.1,
     "max_retries": 3,
