@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from datetime import datetime, timedelta
 import os
 import sys
@@ -480,6 +481,14 @@ completion_task = DummyOperator(
     dag=dag,
 )
 
+# Trigger database save DAG after LLM pipeline completes
+trigger_database_save = TriggerDagRunOperator(
+    task_id="trigger_database_save",
+    trigger_dag_id="llm_database_save",
+    wait_for_completion=False,
+    dag=dag,
+)
+
 
 # ================================
 # TASK DEPENDENCIES
@@ -491,5 +500,5 @@ start_task >> prepare_chunks_task
 # Parallel: chunks → (llm_icl + rag_retrieval) → wait
 prepare_chunks_task >> [llm_icl_task, rag_retrieval_task] >> wait_for_parallel
 
-# Sequential: wait → judge → complete
-wait_for_parallel >> judge_validation_task >> completion_task
+# Sequential: wait → judge → complete → trigger save
+wait_for_parallel >> judge_validation_task >> completion_task >> trigger_database_save

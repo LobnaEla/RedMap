@@ -258,16 +258,9 @@ end_task = PythonOperator(
     dag=dag,
 )
 
-trigger_llm_mapping = TriggerDagRunOperator(
-    task_id="trigger_llm_mapping",
-    trigger_dag_id="llm_mitre_mapping",
-    wait_for_completion=False,
-    dag=dag,
-)
-
-trigger_rag_mapping = TriggerDagRunOperator(
-    task_id="trigger_rag_mapping",
-    trigger_dag_id="rag_pipeline",
+trigger_llm_pipeline = TriggerDagRunOperator(
+    task_id="trigger_llm_pipeline",
+    trigger_dag_id="llm_pipeline",
     wait_for_completion=False,
     dag=dag,
 )
@@ -281,6 +274,5 @@ trigger_rag_mapping = TriggerDagRunOperator(
     >> chunk_task
     >> validate_task
     >> end_task
-    >> trigger_llm_mapping
-    >> trigger_rag_mapping
+    >> trigger_llm_pipeline
 )

@@ -100,6 +100,16 @@ class JudgeClient:
                 tech = tech.strip().upper()
                 if tech.startswith("T") and any(c.isdigit() for c in tech):
                     cleaned.append(tech)
+            elif isinstance(tech, dict):
+                # Handle RAG technique objects with technique_id field
+                tech_id = tech.get("technique_id", "")
+                if isinstance(tech_id, str):
+                    # Extract technique ID from MitreDocument format
+                    # e.g., "MitreDocument(id=T1583.006, name=Web Services)" -> "T1583.006"
+                    import re
+                    match = re.search(r'id=([T]\d+(?:\.\d+)?)', tech_id)
+                    if match:
+                        cleaned.append(match.group(1))
         return cleaned
 
     def _parse_judge_response(self, response: str) -> Dict:
@@ -135,7 +145,6 @@ class JudgeClient:
                 "validated_techniques": validated_clean,
                 "rejected_techniques": rejected_clean,
                 "technique_analysis": analysis,
-                "validation_summary": result.get("validation_summary", {}),
                 "success": True,
                 "raw_response": response,
             }
@@ -154,7 +163,6 @@ class JudgeClient:
             "validated_techniques": [],
             "rejected_techniques": [],
             "technique_analysis": {},
-            "validation_summary": {},
             "success": False,
             "raw_response": response[:500],
             "parse_error": True,
@@ -171,29 +179,12 @@ class JudgeClient:
     ) -> Dict:
         """Create successful validation result."""
 
-        # Analyze input relationships - FIXED
-        llm_set = set(llm_predicted)
-        ras_set = set(ras_evidence)
-        common_techniques = llm_set & ras_set
-        llm_only_techniques = llm_set - ras_set
-        ras_only_techniques = ras_set - llm_set
-        all_unique_techniques = llm_set | ras_set
-
         return {
             "chunk_id": chunk_id,
             "original_chunk": original_chunk,
             "iocs": iocs,
-            "input_analysis": {
-                "llm_predicted_techniques": llm_predicted,
-                "ras_evidence_techniques": ras_evidence,
-                "common_techniques": list(common_techniques),
-                "llm_only_techniques": list(llm_only_techniques),
-                "ras_only_techniques": list(ras_only_techniques),
-                "total_predicted": len(llm_predicted),
-                "total_unique_techniques": len(all_unique_techniques),
-                "in_ras_support": len(common_techniques),
-                "not_in_ras": list(llm_only_techniques),
-            },
+            "llm_techniques": llm_predicted,
+            "ras_techniques": ras_evidence,
             "judge_result": validation,
             "final_validated_techniques": validation.get("validated_techniques", []),
             "success": True,
