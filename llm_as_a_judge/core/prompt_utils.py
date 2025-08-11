@@ -8,114 +8,89 @@ def create_judge_prompt(
     ras_evidence_techniques: List[str],
 ) -> str:
     """
-    Explicitly performs retroactive validation of LLM-proposed techniques against CTI text evidence,
-    with RAS providing context for rejected techniques and alternatives.
-    Only returns techniques with clear CTI alignment.
+    Creates a forensic judge prompt for validating MITRE ATT&CK techniques against CTI evidence.
+    Validates techniques from LLM predictions and RAS results, requiring explicit text evidence.
+    Rejects techniques with insufficient or contradictory evidence.
+
+    Args:
+        original_text: Raw CTI text (primary evidence source).
+        iocs: Extracted IOCs (for technique cross-validation).
+        llm_predicted_techniques: Techniques proposed by LLM (may contain hallucinations).
+        ras_evidence_techniques: Techniques from RAS (contextual support, not standalone evidence).
+
+    Returns:
+        A structured prompt for the LLM-as-judge with forensic validation rules.
     """
 
-    prompt = f"""### Role  
-You are a **forensic MITRE ATT&CK validator** performing **retroactive validation** of techniques.  
+    prompt = f"""You are a senior MITRE ATT&CK forensic analyst. Your task is to validate whether 
+techniques proposed by an LLM or RAS are **explicitly supported** by evidence in the CTI text.
 
-### Core Mission  
-1. **For each LLM-proposed technique**:  
-   - Audit **why it was identified** (what in the text triggered it?).  
-   - Verify if it **truly aligns** with CTI text evidence (explicit or strongly implied).  
-   - Reject if no evidence exists (even if in RAS).  
+# Rules for Validation
+1. **Ground Truth**: The original CTI text is the **only** source of truth. Techniques must be:
+   - Directly described (e.g., "the attacker used PsExec for lateral movement" → T1021.002), OR
+   - Strongly inferred (e.g., "deployed a keylogger" → T1056.001 with no alternative explanation).
+2. **RAS Context**: RAS-provided techniques are **not evidence**—they must also align with the text.
+3. **Rejection Criteria**: Reject a technique if:
+   - No text evidence exists (even if in RAS/LLM),
+   - Evidence is ambiguous (e.g., "accessed files" ≠ T1005),
+   - A sub-technique better fits the evidence.
 
-2. **For RAS top-{len(ras_evidence_techniques)} techniques**:  
-   - Provide **contextual support** (e.g., "RAS suggests T1059 because text mentions 'command-line'").  
-   - Explain **why rejected** if not validated (e.g., "Text lacks tool-specific evidence for T1059.001").  
-   - Suggest **alternatives** (from RAS or elsewhere) if better fits exist.  
+# Validation Steps
+For each technique in the **combined list** (LLM + RAS):
+1. **Evidence Check**: 
+   - Scan the text for explicit matches to the technique's procedure, tool, or outcome.
+   - Cite exact quotes or describe unambiguous behaviors.
+2. **Confidence Scoring**:
+   - **High (0.8-1.0)**: Direct quote or exact behavioral match.
+   - **Medium (0.5-0.79)**: Logical inference with no contradictions.
+   - **Low (<0.5)**: Reject (insufficient evidence).
+3. **Source Analysis**:
+   - Flag LLM-proposed techniques with no evidence as *potential hallucinations*.
+   - For RAS techniques, verify text alignment *without* relying on RAS content.
 
-3. **Final Output**:  
-   - **Only include techniques** with CTI evidence (no RAS-only additions without text support).  
-   - **Flag hallucinations** (LLM proposals with zero evidence).  
+# Input Data
+## CTI Text (Primary Evidence)
+{original_text}
 
----
+## IOCs (Corroborative Context)
+{iocs}
 
-### Input Data  
-#### CTI Text (Ground Truth)  
-{original_text}  
+## Techniques to Validate
+- LLM-Proposed: {llm_predicted_techniques}
+- RAS-Suggested: {ras_evidence_techniques}
 
-#### IOCs (Corroborative Context)  
-{iocs}  
-
-#### Techniques to Validate  
-- **LLM-Predicted (Primary Audit Targets)**: {llm_predicted_techniques}  
-- **RAS Contextual Suggestions (Top-{len(ras_evidence_techniques)})**: {ras_evidence_techniques}  
-
----
-
-### Validation Process  
-For **each unique technique** (LLM + RAS combined):  
-
-1. **Retroactive LLM Audit**  
-   - *Why identified?*: Trace the LLM's reasoning (e.g., "Text mentions 'credential dumping' → T1003").  
-   - *Evidence check*:  
-     - **Explicit**: Direct match (e.g., "used Mimikatz" → T1003).  
-     - **Implied**: Logical fit (e.g., "accessed LSASS" → likely T1003).  
-     - **Reject**: No evidence (e.g., "T1059 claimed but no CLI activity described").  
-
-2. **RAS Context Analysis**  
-   - *For rejected techniques*:  
-     - Explain if RAS provided **near-miss context** (e.g., "RAS suggested T1059.001 but text only mentions 'commands', not scripting").  
-     - Propose **better alternatives** (e.g., "Use T1059.003 instead for PowerShell evidence").  
-
-3. **Confidence Thresholds**  
-   - **High (≥0.8)**: Explicit text match.  
-   - **Medium (≥0.5)**: Implied + RAS-supported.  
-   - **Low (<0.5)**: Reject (no evidence).  
-
----
-
-### Output Format (Original JSON)  
+# Output Format (JSON)
 {{
-    "validated_techniques": [
-        // Only techniques with CTI evidence (explicit/implied)  
-    ],
-    "rejected_techniques": [
-        // Techniques failing validation + RAS context for near-misses  
-    ],
-    "technique_analysis": {{
-        "TXXXX": {{
-            "status": "validated|rejected",
-            "confidence": 0.0-1.0,
-            "evidence": "Exact quotes or logical inference",
-            "reasoning": "Retroactive explanation: Why LLM proposed it + evidence gap (if rejected)",
-            "from_llm": true|false,
-            "from_ras": true|false,
-            "alternative": "Better technique (if rejected, from RAS or manual suggestion)"
-        }}
-    }},
-    "validation_summary": {{
-        "total_analyzed": int,
-        "validated_count": int,
-        "rejected_count": int,
-        "validation_rate": float,
-        "from_llm_validated": int,
-        "from_ras_added": int,  // RAS-originated but text-validated
-        "hallucinated_count": int  // LLM proposals with zero evidence
+  "validated_techniques": [
+    {{
+      "technique_id": "TXXXX",
+      "confidence": 0.0-1.0,
+      "evidence": ["exact quotes", "behavioral descriptions"],
+      "source": "llm|ras|both"
     }}
+  ],
+  "rejected_techniques": [
+    {{
+      "technique_id": "TXXXX",
+      "reason": "no_evidence|ambiguous|better_alternative",
+      "missing_evidence": "Expected but not found in text",
+      "source": "llm|ras"
+    }}
+  ],
+  "statistics": {{
+    "validated_total": int,
+    "rejected_total": int,
+    "llm_hallucinations": int  # LLM proposals with zero evidence
+  }}
 }}
 
-### Critical Directives
-1. **Retroactive First: Always explain** **why the LLM proposed each technique** before validating.
-2. **RAS as Context, Not Evidence**: Use RAS to:
-    - Explain rejections (e.g., "RAS suggested T1021.002, but text lacks RDP-specific evidence").
-    - Suggest alternatives (e.g., "T1021.001 fits better for observed PsExec").
-3. **No RAS-Only Additions**: Only include RAS techniques if **text evidence exists**.
-4. **Confidence-Driven**: Reject all techniques with **low confidence (<0.5)**.
+# Critical Directives
+- **Be conservative**: Only validate techniques with clear evidence.
+- **Prioritize sub-techniques** when evidence allows (e.g., T1071.001 over T1071).
+- **Explain rejections**: State what evidence was missing or conflicting.
+- **Do not** invent evidence to fit RAS/LLM suggestions.
 
-### Example Validation
-**Technique**: T1059 (Command-Line Interface)
-- **LLM Rationale**: "Text mentions 'executed malicious commands'."
-- **Evidence Check**: Validated (Implied)
-- **Quote**: "attacker ran 'net user /add' via cmd.exe"
-- **Confidence**: 0.9 (High)
-
-**Technique**: T1110.001 (Password Guessing)
-- **LLM Rationale**: "Text says 'brute-forced credentials'."
-- **RAS Context**: Suggests T1110.002 (Keylogging) as alternative.
-- **Evidence Check**: Rejected
-- **Missing Evidence**: No tool/behavior specifics (e.g., Hydra, Medusa).
-- **Alternative**: T1003 (Credential Dumping) fits better per text."""
+Begin validation now. For each technique, provide: 
+1. Evidence (or lack thereof), 
+2. Confidence score, 
+3. Final decision (validate/reject)."""
