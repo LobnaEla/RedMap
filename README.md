@@ -308,7 +308,7 @@ llm_processing:
     max_tokens: 4096
     
   judge_validation:
-    model: "gemini/gemini-1.5-flash"
+    model: "gemini/gemini-2.0-flash"
     confidence_threshold: 0.8
     
 rag_processing:

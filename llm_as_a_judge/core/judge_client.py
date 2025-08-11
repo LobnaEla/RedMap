@@ -107,7 +107,8 @@ class JudgeClient:
                     # Extract technique ID from MitreDocument format
                     # e.g., "MitreDocument(id=T1583.006, name=Web Services)" -> "T1583.006"
                     import re
-                    match = re.search(r'id=([T]\d+(?:\.\d+)?)', tech_id)
+
+                    match = re.search(r"id=([T]\d+(?:\.\d+)?)", tech_id)
                     if match:
                         cleaned.append(match.group(1))
         return cleaned

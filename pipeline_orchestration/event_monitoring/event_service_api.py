@@ -141,7 +141,7 @@ async def trigger_source(request: TriggerRequest, api_key: str = Depends(get_api
         # Déclencher l'événement
         result = event_service.trigger_event(event)
 
-        if result.get("status") == "success":
+        if result.get("status") == "triggered":
             return TriggerResponse(
                 status="triggered",
                 message=f"Event successfully triggered for source '{request.source_name}'",

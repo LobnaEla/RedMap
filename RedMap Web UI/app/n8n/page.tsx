@@ -1,12 +1,11 @@
 "use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Workflow, Search, Filter, AlertCircle, CheckCircle, Clock, Activity, ChevronDown, ChevronUp } from "lucide-react"
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import axios from "axios"
 import React from "react"
 
@@ -24,6 +23,7 @@ interface Log {
 }
 
 const INITIAL_LIMIT = 20
+const UPDATE_INTERVAL = 120000 // 2 minutes in ms
 
 const N8nPage = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -33,13 +33,15 @@ const N8nPage = React.memo(() => {
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set())
   const [limit, setLimit] = useState(INITIAL_LIMIT)
   const [logsToday, setLogsToday] = useState(0)
+  const [updating, setUpdating] = useState(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const fetchWorkflows = useCallback(async () => {
+  const fetchInitialWorkflows = useCallback(async () => {
     setLoading(true)
     try {
       const [workflowsResponse, executionsResponse] = await Promise.all([
         axios.get('/api/n8n/workflows'),
-        axios.get('/api/n8n/executions', { params: { limit, offset: 0, includeData: true } }),
+        axios.get('/api/n8n/executions', { params: { limit: 20, offset: 0, includeData: true } }),
       ])
       const workflows = workflowsResponse.data.data || []
       const executions = executionsResponse.data.data?.results || executionsResponse.data.data || []
@@ -54,12 +56,18 @@ const N8nPage = React.memo(() => {
         const duration = execution.startedAt && execution.stoppedAt
           ? (() => {
             const durationMs = new Date(execution.stoppedAt).getTime() - new Date(execution.startedAt).getTime()
-            return durationMs >= 60000 ? `${Math.round(durationMs / 60000)}min` : `${Math.round(durationMs / 1000)}s`
+            if (durationMs >= 60000) {
+              return `${Math.round(durationMs / 60000)}min`
+            } else if (durationMs >= 1000) {
+              return `${Math.round(durationMs / 1000)}s`
+            } else {
+              return `${durationMs}ms`
+            }
           })()
           : execution.finished ? 'Unknown' : 'In progress'
 
         return {
-          id: execution.id || String(Math.random()), // Fallback if id missing
+          id: execution.id || String(Math.random()),
           timestamp: execution.stoppedAt || execution.startedAt || new Date().toISOString(),
           workflow: workflow.name,
           type: isError ? 'incident' : 'log',
@@ -84,13 +92,92 @@ const N8nPage = React.memo(() => {
     } finally {
       setLoading(false)
     }
-  }, [limit])
+  }, []) // Empty dependency array - this function doesn't depend on any state
+
+  const fetchStatusUpdates = useCallback(async () => {
+    setUpdating(true)
+    try {
+      console.log("Fetching status updates at:", new Date().toISOString()) // Debug log
+      const executionsResponse = await axios.get('/api/n8n/executions', { params: { limit: 10, offset: 0, includeData: true } })
+      const executions = executionsResponse.data.data?.results || executionsResponse.data.data || []
+
+      setLogs(prevLogs => {
+        const lastUpdateTime = new Date(Math.max(...prevLogs.map(log => new Date(log.timestamp).getTime()), 0)).toISOString()
+        const newExecutions = executions.filter((execution: any) => new Date(execution.stoppedAt || execution.startedAt).toISOString() > lastUpdateTime)
+
+        if (newExecutions.length > 0) {
+          const updatedLogs = [...prevLogs]
+          newExecutions.forEach((execution: any) => {
+            const existingLogIndex = updatedLogs.findIndex(log => log.id === execution.id)
+            const workflow = updatedLogs.find(log => log.id === execution.id)?.workflow || (execution.workflowName || `Workflow ${execution.workflowId}`)
+            const executionStatus = execution.status || 'success'
+            const isError = executionStatus === 'error' || !execution.finished
+
+            const startDate = execution.startedAt ? new Date(execution.startedAt).toLocaleString() : 'Unknown'
+            const endDate = execution.stoppedAt ? new Date(execution.stoppedAt).toLocaleString() : execution.finished ? 'Unknown' : 'In progress'
+            const duration = execution.startedAt && execution.stoppedAt
+              ? (() => {
+                const durationMs = new Date(execution.stoppedAt).getTime() - new Date(execution.startedAt).getTime()
+                if (durationMs >= 60000) {
+                  return `${Math.round(durationMs / 60000)}min`
+                } else if (durationMs >= 1000) {
+                  return `${Math.round(durationMs / 1000)}s`
+                } else {
+                  return `${durationMs}ms`
+                }
+              })()
+              : execution.finished ? 'Unknown' : 'In progress'
+
+            const updatedLog = {
+              id: execution.id || String(Math.random()),
+              timestamp: execution.stoppedAt || execution.startedAt || new Date().toISOString(),
+              workflow,
+              type: isError ? 'incident' : 'log',
+              message: isError ? `Error in ${workflow}` : `Execution ${executionStatus} for ${workflow}`,
+              source: 'n8n Workflow',
+              status: execution.finished ? 'completed' : 'investigating',
+              startDate,
+              endDate,
+              duration,
+            }
+
+            if (existingLogIndex !== -1) {
+              updatedLogs[existingLogIndex] = updatedLog
+            } else {
+              updatedLogs.push(updatedLog)
+            }
+          })
+
+          const today = new Date()
+          const todayLogsCount = updatedLogs.filter((log: Log) => new Date(log.timestamp).toDateString() === today.toDateString()).length
+          setLogsToday(todayLogsCount)
+
+          return updatedLogs
+        }
+        return prevLogs
+      })
+    } catch (err: any) {
+      setError(`Failed to update status: ${err.response?.data?.message || err.message}`)
+    } finally {
+      setUpdating(false)
+    }
+  }, []) // Empty dependency array - using functional updates to avoid dependency on logs
 
   useEffect(() => {
-    fetchWorkflows()
-    const interval = setInterval(fetchWorkflows, 60000) // Increased to 60s
-    return () => clearInterval(interval)
-  }, [fetchWorkflows])
+    fetchInitialWorkflows()
+
+    // Set up interval for periodic updates
+    intervalRef.current = setInterval(() => {
+      fetchStatusUpdates()
+    }, UPDATE_INTERVAL)
+
+    // Cleanup function
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, []) // Empty dependency array - only run on mount
 
   const loadMore = useCallback(() => {
     setLimit(prev => prev + INITIAL_LIMIT)
@@ -296,6 +383,7 @@ const N8nPage = React.memo(() => {
                 </Button>
               </div>
             )}
+            {updating && <div className="text-center text-sm text-muted-foreground mt-4">Updating status...</div>}
           </div>
         </CardContent>
       </Card>
