@@ -461,6 +461,27 @@ All processed data follows a standardized JSON schema:
 - **Metrics**: Confidence scoring, consistency checking
 - **Threshold**: 80% confidence for automatic approval
 
+#### **LLM-as-a-Judge Validation**
+
+- **Purpose**: Quality assessment and validation of AI-generated mappings  
+- **Method**: Cross-validation between ICL LLM predictions and RAS evidence, anchored in original CTI text  
+- **Metrics**: Confidence scoring, consistency checking, hallucination detection  
+- **Threshold**: 80% confidence for automatic approval  
+
+**Benchmark Results**  
+The following table compares the performance of ICL LLM and Judge models under strict and lenient evaluation settings:
+
+| Metric             | ICL LLM (Strict) | Judge (Strict) | Δ Strict | ICL LLM (Lenient) | Judge (Lenient) | Δ Lenient |
+|--------------------|------------------|----------------|---------|-------------------|-----------------|-----------|
+| Exact Match        | 0.24             | 0.26           | +0.02   | 0.32              | 0.34            | +0.02     |
+| Partial Match      | 0.34             | 0.40           | +0.06   | 0.48              | 0.48            | +0.00     |
+| Precision          | 0.2783           | 0.3200         | +0.0417 | 0.3883            | 0.4033          | +0.0150   |
+| Recall             | 0.33             | 0.38           | +0.05   | 0.47              | 0.47            | +0.00     |
+| F1                 | 0.2933           | 0.3380         | +0.0447 | 0.4133            | 0.4247          | +0.0113   |
+| Jaccard Similarity | 0.2773           | 0.3150         | +0.0377 | 0.3873            | 0.4017          | +0.0143   |
+
+> Δ = Improvement (Judge - ICL LLM)
+
 ### RAG (Retrieval-Augmented Generation)
 
 #### **Vector Search Engine**
