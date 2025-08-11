@@ -4,93 +4,157 @@ from typing import List
 def create_judge_prompt(
     original_text: str,
     iocs: str,
-    llm_predicted_techniques: List[str],
-    ras_evidence_techniques: List[str],
+    llm_predicted_techniques: List[str],  # Primary list to validate
+    ras_evidence_techniques: List[
+        str
+    ],  # RAS reference for evidence and potential additions
 ) -> str:
     """
-    Creates a forensic judge prompt for validating MITRE ATT&CK techniques against CTI evidence.
-    Validates techniques from LLM predictions and RAS results, requiring explicit text evidence.
-    Rejects techniques with insufficient or contradictory evidence.
-
+    Creates an enhanced forensic-style judge prompt that performs retroactive validation
+    on techniques from both the LLM's predictions and the RAS results, using the original
+    CTI text as the primary ground truth for evidence.
     Args:
-        original_text: Raw CTI text (primary evidence source).
-        iocs: Extracted IOCs (for technique cross-validation).
-        llm_predicted_techniques: Techniques proposed by LLM (may contain hallucinations).
-        ras_evidence_techniques: Techniques from RAS (contextual support, not standalone evidence).
+        original_text: The original CTI text to serve as primary evidence.
+        iocs: String representation of Indicators of Compromise.
+        llm_predicted_techniques: List of techniques predicted by the LLM to audit.
+        ras_evidence_techniques: List of techniques from RAS as evidence support and candidates for addition.
 
     Returns:
-        A structured prompt for the LLM-as-judge with forensic validation rules.
+        A dynamically formatted prompt string for the LLM-as-judge.
     """
 
-    prompt = f"""You are a senior MITRE ATT&CK forensic analyst. Your task is to validate whether 
-techniques proposed by an LLM or RAS are **explicitly supported** by evidence in the CTI text.
+    # Dynamically compute unique techniques from union of LLM and RAS for comprehensive analysis
+    all_techniques = sorted(
+        set(llm_predicted_techniques) | set(ras_evidence_techniques)
+    )
+    num_all_techniques = len(all_techniques)
+    llm_techniques_str = str(llm_predicted_techniques)  # Stringify for prompt insertion
+    ras_techniques_str = str(ras_evidence_techniques)
+    all_techniques_str = str(all_techniques)  # For reference in prompt
 
-# Rules for Validation
-1. **Ground Truth**: The original CTI text is the **only** source of truth. Techniques must be:
-   - Directly described (e.g., "the attacker used PsExec for lateral movement" → T1021.002), OR
-   - Strongly inferred (e.g., "deployed a keylogger" → T1056.001 with no alternative explanation).
-2. **RAS Context**: RAS-provided techniques are **not evidence**—they must also align with the text.
-3. **Rejection Criteria**: Reject a technique if:
-   - No text evidence exists (even if in RAS/LLM),
-   - Evidence is ambiguous (e.g., "accessed files" ≠ T1005),
-   - A sub-technique better fits the evidence.
+    # Build the prompt dynamically, interpolating variables for scalability
+    prompt = f"""You are a senior MITRE ATT&CK forensic analyst and validation judge.
+Your task is to perform **retroactive validation** on MITRE ATT&CK techniques identified from a Cyber Threat Intelligence (CTI) report. 
+You will evaluate techniques sourced from two inputs: a Large Language Model (LLM) prediction via in-context learning, 
+and Retrieval-Augmented Search (RAS) results from a MITRE knowledge base. 
+The **original CTI text is the primary ground truth** for all validations—every decision must be anchored in evidence from the text.
 
-# Validation Steps
-For each technique in the **combined list** (LLM + RAS):
-1. **Evidence Check**: 
-   - Scan the text for explicit matches to the technique's procedure, tool, or outcome.
-   - Cite exact quotes or describe unambiguous behaviors.
-2. **Confidence Scoring**:
-   - **High (0.8-1.0)**: Direct quote or exact behavioral match.
-   - **Medium (0.5-0.79)**: Logical inference with no contradictions.
-   - **Low (<0.5)**: Reject (insufficient evidence).
-3. **Source Analysis**:
-   - Flag LLM-proposed techniques with no evidence as *potential hallucinations*.
-   - For RAS techniques, verify text alignment *without* relying on RAS content.
+## Mission: Retroactive Validation of Techniques from LLM and RAS
+Consider the **union of unique techniques** from both LLM predictions and RAS results. 
+For each unique technique, conduct a forensic audit:
+1. **Evidence Check**: Is there explicit, implied, or strongly inferential evidence in the CTI text supporting this technique? Cite specific quotes or behaviors.
+2. **Retroactive Reasoning**: 
+   - **Why was it identified?** (If validated) Explain the alignment with text, attack phase, prerequisites, and operational fit. Reference RAS for supplementary context (e.g., technique definitions) if helpful.
+   - **Why was it rejected?** (If rejected) Detail missing evidence, contradictions, or overgeneralizations. Explain potential hallucinations (for LLM-sourced) or mismatches (for RAS-sourced).
+3. **Source Consideration**: Note if the technique came from LLM, RAS, or both. For RAS-only techniques, only validate and add if strongly aligned with text evidence—do not add based solely on RAS similarity.
+4. **Decision**: Validate only if text evidence is clear and sufficient; be conservative to avoid false positives.
 
-# Input Data
-## CTI Text (Primary Evidence)
+> **Critical Rule**: All validations are retroactive against the CTI text. RAS provides context (e.g., why a technique might fit) but cannot override lack of text evidence. 
+> This ensures balanced recall (considering RAS for completeness) and precision (text-grounded decisions). Do not merely intersect lists—evaluate each independently.
+
+---
+
+## Original CTI Content
 {original_text}
 
-## IOCs (Corroborative Context)
+
+## Indicators of Compromise (IOCs)
 {iocs}
 
-## Techniques to Validate
-- LLM-Proposed: {llm_predicted_techniques}
-- RAS-Suggested: {ras_evidence_techniques}
 
-# Output Format (JSON)
+---
+
+## Inputs for Validation
+
+### LLM-Predicted Techniques (From In-Context Learning)
+{llm_techniques_str}
+
+### RAS Evidence Techniques (From Semantic Search)
+These provide supplementary context and potential additions:
+{ras_techniques_str}
+
+### Unique Techniques to Audit (Union for Comprehensive Review)
+{all_techniques_str}
+
+> Use RAS as a reference for technique details and synergies, but prioritize CTI text for evidence.
+
+---
+
+## Validation Framework
+
+For each unique technique in the union list, perform the following:
+
+### 1. Evidence Assessment
+- Primary: Scan the CTI text for direct evidence (e.g., behaviors, tools, IOCs matching the technique).
+- Secondary: Check if in RAS (for context support) or LLM (for original prediction).
+- If RAS-only: Evaluate if text aligns with RAS-retrieved knowledge; add only with strong text justification.
+
+### 2. Contextual Fit
+- Alignment with attack phase, prerequisites, and overall narrative in the text.
+- Operational plausibility based on described behaviors.
+
+### 3. Confidence Scoring
+- **High (0.8–1.0)**: Strong text evidence + presence in both LLM/RAS.
+- **Medium (0.5–0.79)**: Strong text evidence but from one source, or weaker evidence with dual support.
+- **Low (0.0–0.49)**: Insufficient text evidence, even if in sources.
+
+> **Rule**: Reject if confidence < 0.5 (i.e., weak/no text evidence). For additions from RAS, require at least medium confidence.
+
+### 4. Retroactive Reasoning
+- Always explain: Why identified (evidence match) or rejected (evidence gap).
+- For rejections: Suggest alternatives if a better-fitting technique exists in sources.
+
+---
+
+## Output Format (JSON)
 {{
-  "validated_techniques": [
-    {{
-      "technique_id": "TXXXX",
-      "confidence": 0.0-1.0,
-      "evidence": ["exact quotes", "behavioral descriptions"],
-      "source": "llm|ras|both"
+    "validated_techniques": [
+        // All unique techniques (from LLM or RAS) that pass text-based validation, sorted
+    ],
+    "rejected_techniques": [
+        // All unique techniques that fail validation, sorted
+    ],
+    "technique_analysis": {{
+        "T1234": {{
+            "status": "validated|rejected",
+            "confidence": 0.92,
+            "evidence": "Specific quote or behavior from text supporting/rejecting",
+            "reasoning": "Detailed retroactive explanation: why identified (alignment details) or rejected (gaps, hallucinations); reference sources and RAS context if relevant",
+            "from_llm": true|false,
+            "from_ras": true|false,
+            "alternative": "T5678 (if rejected, suggest better fit from sources)"
+        }}
+    }},
+    "validation_summary": {{
+        "total_analyzed": {num_all_techniques},
+        "validated_count": 0,
+        "rejected_count": 0,
+        "validation_rate": 0.0,
+        "from_llm_validated": 0,
+        "from_ras_added": 0,  // Count of validated techniques that were RAS-only
+        "hallucinated_count": 0  // LLM predictions rejected due to no evidence
     }}
-  ],
-  "rejected_techniques": [
-    {{
-      "technique_id": "TXXXX",
-      "reason": "no_evidence|ambiguous|better_alternative",
-      "missing_evidence": "Expected but not found in text",
-      "source": "llm|ras"
-    }}
-  ],
-  "statistics": {{
-    "validated_total": int,
-    "rejected_total": int,
-    "llm_hallucinations": int  # LLM proposals with zero evidence
-  }}
 }}
 
-# Critical Directives
-- **Be conservative**: Only validate techniques with clear evidence.
-- **Prioritize sub-techniques** when evidence allows (e.g., T1071.001 over T1071).
-- **Explain rejections**: State what evidence was missing or conflicting.
-- **Do not** invent evidence to fit RAS/LLM suggestions.
 
-Begin validation now. For each technique, provide: 
-1. Evidence (or lack thereof), 
-2. Confidence score, 
-3. Final decision (validate/reject)."""
+---
+
+## Critical Directives
+
+1. **Text as Ground Truth**: Every decision must cite CTI text evidence; RAS is for context, not proof.
+2. **Retroactive Focus**: Provide explicit 'why identified' or 'why rejected' in reasoning for each.
+3. **Additions from RAS**: Only if text strongly supports—justify inferences dynamically based on content.
+4. **Prefer Sub-Techniques**: When text evidence allows specificity.
+5. **Cite Exactly**: Use quotes from text for transparency and detailed explanations.
+6. **Detect Issues Conservatively**: Flag hallucinations only for LLM predictions lacking text basis.
+7. **Balanced & Scalable**: Analyze all unique techniques dynamically; explain in detail for reproducibility.
+
+---
+
+## Final Output Requirement
+Reflect a thorough **retroactive forensic audit**, validating against text while leveraging sources for completeness. 
+Output only techniques grounded in CTI evidence.
+
+Begin your forensic validation now."""
+
+    return prompt
