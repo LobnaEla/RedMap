@@ -116,8 +116,23 @@ export default function DynamicPipelinePage() {
                     name: "Preprocess",
                     status: getLatestRunStatus("preprocess_pipeline") as PipelineStep["status"],
                     dagId: "preprocess_pipeline",
-                    nextSteps: ["llm_mitre_mapping", "rag_pipeline"],
+                    nextSteps: ["llm_pipeline"],
                     lastRun: getLatestRunDate("preprocess_pipeline"),
+                },
+                {
+                    id: "llm_pipeline",
+                    name: "LLM Processing Pipeline",
+                    status: getLatestRunStatus("llm_pipeline") as PipelineStep["status"],
+                    dagId: "llm_pipeline",
+                    nextSteps: ["llm_database_save"],
+                    lastRun: getLatestRunDate("llm_pipeline"),
+                },
+                {
+                    id: "llm_database_save",
+                    name: "Database Save",
+                    status: getLatestRunStatus("llm_database_save") as PipelineStep["status"],
+                    dagId: "llm_database_save",
+                    lastRun: getLatestRunDate("llm_database_save"),
                 },
                 {
                     id: "llm_mitre_mapping",
@@ -254,24 +269,67 @@ export default function DynamicPipelinePage() {
 
     const handleTriggerEventSource = async (sourceName: string) => {
         try {
+            console.log('🚀 Triggering event source:', sourceName)
+
+            const payload = {
+                source_name: sourceName,
+                event_type: 'manual',
+                reason: 'Manual trigger from dashboard',
+                priority: 'medium'
+            }
+
+            console.log('📤 Request payload:', payload)
+
             const response = await fetch(`${EVENT_API_URL}/trigger`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    source_name: sourceName,
-                    event_type: 'manual',
-                    reason: 'Manual trigger from dashboard',
-                    priority: 'medium'
-                })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
             })
+
+            console.log('📥 Response status:', response.status)
             const result = await response.json()
-            if (result.status === 'triggered') {
-                setTimeout(fetchStatusUpdates, 2000)
+            console.log('📥 Response:', result)
+
+            if (response.ok) {
+                if (result.status === 'triggered' || result.status === 'success') {
+                    console.log('✅ Event triggered successfully')
+                    setError(null)
+                    setTimeout(fetchStatusUpdates, 2000)
+                } else if (result.status === 'failed') {
+                    // Handle specific failure messages
+                    if (result.message?.includes('triggered too recently') ||
+                        result.message?.includes('rate limit') ||
+                        result.message?.includes('cooldown')) {
+                        console.log('⏰ Rate limited - showing user message')
+                        setError(`${sourceName}: ${result.message}. Please wait before triggering again.`)
+                    } else if (result.message?.includes('Unknown error occurred')) {
+                        console.log('⚠️ Unknown error - treating as potential success')
+                        // For now, treat unknown errors as potential success and refresh status
+                        setError(null)
+                        setTimeout(fetchStatusUpdates, 2000)
+                    } else {
+                        const errorMsg = `Failed to trigger ${sourceName}: ${result.message}`
+                        setError(errorMsg)
+                    }
+                } else {
+                    console.log('✅ Unexpected success status:', result.status)
+                    setError(null)
+                    setTimeout(fetchStatusUpdates, 2000)
+                }
             } else {
-                setError(`Failed to trigger ${sourceName}: ${result.message || 'Unknown error'}`)
+                console.error('❌ HTTP error:', response.status)
+                if (response.status === 422) {
+                    setError(`Invalid request format for ${sourceName}. Please check the payload.`)
+                } else {
+                    setError(`HTTP ${response.status}: Failed to trigger ${sourceName}`)
+                }
             }
         } catch (err: any) {
-            setError(`Failed to trigger ${sourceName}: ${err.message}`)
+            console.error('❌ Network error:', err)
+            setError(`Network error triggering ${sourceName}: ${err.message}`)
         }
     }
 
@@ -373,6 +431,7 @@ export default function DynamicPipelinePage() {
     const llmStep = filteredSteps.find(step => step.id === "llm_mitre_mapping")
     const ragStep = filteredSteps.find(step => step.id === "rag_pipeline")
     const judgeStep = filteredSteps.find(step => step.id === "llm_judge_dag")
+    const databaseSaveStep = filteredSteps.find(step => step.id === "llm_database_save")
 
     return (
         <div className="w-full px-4 py-8">
@@ -486,8 +545,10 @@ export default function DynamicPipelinePage() {
                                                             <div className="ml-2 p-2 bg-white/50 rounded border text-xs space-y-1">
                                                                 <div>Status: <span className={`px-1 rounded ${getStatusColor(source.status)}`}>{source.status}</span></div>
                                                                 <div>Last trigger: {formatLastRun(source.last_trigger)}</div>
-                                                                {source.cooldown_remaining_minutes && (
-                                                                    <div>Cooldown: {Math.round(source.cooldown_remaining_minutes)}m</div>
+                                                                {source.cooldown_remaining_minutes && source.cooldown_remaining_minutes > 0 && (
+                                                                    <div className="text-orange-600 font-medium">
+                                                                        Cooldown: {Math.round(source.cooldown_remaining_minutes)}m remaining
+                                                                    </div>
                                                                 )}
                                                                 <button
                                                                     onClick={() => handleTriggerEventSource(source.name)}
@@ -496,8 +557,12 @@ export default function DynamicPipelinePage() {
                                                                         ? 'bg-blue-100 hover:bg-blue-200 text-blue-800'
                                                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                                         }`}
+                                                                    title={!source.can_trigger ?
+                                                                        `Cannot trigger - ${source.cooldown_remaining_minutes ? `${Math.round(source.cooldown_remaining_minutes)}m cooldown remaining` : 'rate limited'}`
+                                                                        : 'Trigger event source'}
                                                                 >
-                                                                    <Zap className="h-3 w-3" /> Trigger
+                                                                    <Zap className="h-3 w-3" />
+                                                                    {source.can_trigger ? 'Trigger' : 'Cooldown'}
                                                                 </button>
                                                             </div>
                                                         )}
@@ -526,7 +591,7 @@ export default function DynamicPipelinePage() {
                                                         className="w-full text-sm px-2 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1"
                                                     >
                                                         <Play className="h-3 w-3" />
-                                                        Run DAG
+                                                        Trigger DAG
                                                     </button>
                                                 </div>
                                             ))}
@@ -534,7 +599,7 @@ export default function DynamicPipelinePage() {
                                     </div>
 
                                     {preprocessStep && (
-                                        <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "300px" }}>
+                                        <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "290px" }}>
                                             <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "450px" }}>
                                                 <div className="flex items-center justify-between mb-3">
                                                     <h4 className="text-sm font-medium">{preprocessStep.name}</h4>
@@ -573,65 +638,94 @@ export default function DynamicPipelinePage() {
                                         </div>
                                     )}
 
-                                    <div className="flex flex-col justify-center space-y-4 flex-shrink-0" style={{ width: "220px" }}>
-                                        <div className="flex flex-col justify-center space-y-4">
-                                            {llmStep && (
-                                                <div className="w-full h-32 bg-card border border-border rounded-lg hover:shadow-md transition-shadow p-3">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <h4 className="text-sm font-medium">LLM Mapping</h4>
-                                                        {getStatusIcon(llmStep.status)}
-                                                    </div>
-                                                    <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(llmStep.status)} mb-2`}>
-                                                        {llmStep.status}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleTriggerDAG(llmStep.dagId)}
-                                                        className="w-full text-sm px-2 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1"
-                                                    >
-                                                        <Play className="h-3 w-3" />
-                                                        Trigger
-                                                    </button>
+                                    <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "270px" }}>
+                                        <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "450px" }}>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-sm font-medium flex items-center gap-2">
+                                                    <Activity className="h-4 w-4 text-blue-600" />
+                                                    LLM Processing Pipeline
+                                                </h4>
+                                                {getStatusIcon(steps.find(s => s.dagId === "llm_pipeline")?.status || "pending")}
+                                            </div>
+                                            <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(steps.find(s => s.dagId === "llm_pipeline")?.status || "pending")} mb-3`}>
+                                                {steps.find(s => s.dagId === "llm_pipeline")?.status || "pending"}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground mb-3">
+                                                Last run: {formatLastRun(steps.find(s => s.dagId === "llm_pipeline")?.lastRun)}
+                                            </div>
+                                            <button
+                                                onClick={() => handleTriggerDAG("llm_pipeline")}
+                                                className="w-full px-3 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-2 text-sm mb-3"
+                                            >
+                                                <Play className="h-3 w-3" />
+                                                Trigger DAG
+                                            </button>
+                                            <div className="text-sm text-muted-foreground">
+                                                <div className="font-medium mb-2 flex items-center gap-1">
+                                                    <Activity className="h-3 w-3" />
+                                                    Components (3)
                                                 </div>
-                                            )}
-                                            {ragStep && (
-                                                <div className="w-full h-32 bg-card border border-border rounded-lg hover:shadow-md transition-shadow p-3">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <h4 className="text-sm font-medium">RAG Search</h4>
-                                                        {getStatusIcon(ragStep.status)}
-                                                    </div>
-                                                    <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(ragStep.status)} mb-2`}>
-                                                        {ragStep.status}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleTriggerDAG(ragStep.dagId)}
-                                                        className="w-full text-sm px-2 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1"
-                                                    >
-                                                        <Play className="h-3 w-3" />
-                                                        Trigger
-                                                    </button>
+                                                <div className="space-y-2">
+                                                    {llmStep && (
+                                                        <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                                                            <span className="text-sm">LLM Mapping</span>
+                                                            <div className="ml-2 flex-shrink-0">
+                                                                {getStatusIcon(llmStep.status)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {ragStep && (
+                                                        <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                                                            <span className="text-sm">RAG Search</span>
+                                                            <div className="ml-2 flex-shrink-0">
+                                                                {getStatusIcon(ragStep.status)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {judgeStep && (
+                                                        <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                                                            <span className="text-sm">LLM Judge</span>
+                                                            <div className="ml-2 flex-shrink-0">
+                                                                {getStatusIcon(judgeStep.status)}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {judgeStep && (
-                                        <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "220px" }}>
-                                            <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "150px" }}>
+                                    {databaseSaveStep && (
+                                        <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "270px" }}>
+                                            <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "450px" }}>
                                                 <div className="flex items-center justify-between mb-3">
-                                                    <h4 className="text-sm font-medium">LLM Judge</h4>
-                                                    {getStatusIcon(judgeStep.status)}
+                                                    <h4 className="text-sm font-medium flex items-center gap-2">
+                                                        <Database className="h-4 w-4 text-green-600" />
+                                                        Database Save
+                                                    </h4>
+                                                    {getStatusIcon(databaseSaveStep.status)}
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(judgeStep.status)}`}>
-                                                        {judgeStep.status}
+                                                <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(databaseSaveStep.status)} mb-3`}>
+                                                    {databaseSaveStep.status}
+                                                </div>
+                                                <div className="text-sm text-muted-foreground mb-3">
+                                                    Last run: {formatLastRun(databaseSaveStep.lastRun)}
+                                                </div>
+                                                <button
+                                                    onClick={() => handleTriggerDAG(databaseSaveStep.dagId)}
+                                                    className="w-full px-3 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-2 text-sm mb-3"
+                                                >
+                                                    <Play className="h-3 w-3" />
+                                                    Trigger DAG
+                                                </button>
+                                                <div className="text-sm text-muted-foreground">
+                                                    <div className="font-medium mb-2 flex items-center gap-1">
+                                                        <Database className="h-3 w-3" />
+                                                        Description
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleTriggerDAG(judgeStep.dagId)}
-                                                        className="w-full px-3 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1 text-sm"
-                                                    >
-                                                        <Play className="h-3 w-3" />
-                                                        Trigger
-                                                    </button>
+                                                    <div className="p-2 bg-muted/30 rounded">
+                                                        <span className="text-sm">Saves processed CTI data to the database</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

@@ -14,24 +14,6 @@ def create_judge_prompt(
     on techniques from both the LLM's predictions and the RAS results, using the original
     CTI text as the primary ground truth for evidence.
 
-    This improved version addresses the need for comprehensive validation:
-    - Considers the union of unique techniques from LLM predictions and RAS results.
-    - For each unique technique (regardless of source), validates against the CTI text:
-      check for real evidence, provide retroactive reasoning (why identified or why rejected).
-    - Only validates a technique if there's strong alignment with the CTI text,
-      using RAS as supplementary context (e.g., definitions, examples) but not as the decider.
-    - Allows adding techniques from RAS to the validated list only if they are clearly
-      supported by evidence in the CTI text, with detailed justification.
-    - For LLM predictions, focuses on verifying if evidence truly exists or if it's a hallucination.
-    - Emphasizes detailed, step-by-step reasoning for each decision to ensure transparency
-      and scalability in analysis.
-    - Dynamically handles inputs to make the prompt adaptable to varying list sizes,
-      ensuring no static configurations.
-
-    The goal is to improve F1 score by enhancing recall (via potential RAS additions)
-    while maintaining high precision (strict text-based validation), avoiding mere
-    intersections and favoring evidence-grounded decisions.
-
     Args:
         original_text: The original CTI text to serve as primary evidence.
         iocs: String representation of Indicators of Compromise.
