@@ -1,11 +1,19 @@
 "use client"
+<<<<<<< HEAD
+=======
+
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Workflow, Search, Filter, AlertCircle, CheckCircle, Clock, Activity, ChevronDown, ChevronUp } from "lucide-react"
+<<<<<<< HEAD
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+=======
+import { useState, useEffect, useMemo, useCallback } from "react"
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 import axios from "axios"
 import React from "react"
 
@@ -23,7 +31,10 @@ interface Log {
 }
 
 const INITIAL_LIMIT = 20
+<<<<<<< HEAD
 const UPDATE_INTERVAL = 120000 // 2 minutes in ms
+=======
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
 const N8nPage = React.memo(() => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -33,15 +44,24 @@ const N8nPage = React.memo(() => {
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set())
   const [limit, setLimit] = useState(INITIAL_LIMIT)
   const [logsToday, setLogsToday] = useState(0)
+<<<<<<< HEAD
   const [updating, setUpdating] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchInitialWorkflows = useCallback(async () => {
+=======
+
+  const fetchWorkflows = useCallback(async () => {
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
     setLoading(true)
     try {
       const [workflowsResponse, executionsResponse] = await Promise.all([
         axios.get('/api/n8n/workflows'),
+<<<<<<< HEAD
         axios.get('/api/n8n/executions', { params: { limit: 20, offset: 0, includeData: true } }),
+=======
+        axios.get('/api/n8n/executions', { params: { limit, offset: 0, includeData: true } }),
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
       ])
       const workflows = workflowsResponse.data.data || []
       const executions = executionsResponse.data.data?.results || executionsResponse.data.data || []
@@ -56,6 +76,7 @@ const N8nPage = React.memo(() => {
         const duration = execution.startedAt && execution.stoppedAt
           ? (() => {
             const durationMs = new Date(execution.stoppedAt).getTime() - new Date(execution.startedAt).getTime()
+<<<<<<< HEAD
             if (durationMs >= 60000) {
               return `${Math.round(durationMs / 60000)}min`
             } else if (durationMs >= 1000) {
@@ -63,11 +84,18 @@ const N8nPage = React.memo(() => {
             } else {
               return `${durationMs}ms`
             }
+=======
+            return durationMs >= 60000 ? `${Math.round(durationMs / 60000)}min` : `${Math.round(durationMs / 1000)}s`
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
           })()
           : execution.finished ? 'Unknown' : 'In progress'
 
         return {
+<<<<<<< HEAD
           id: execution.id || String(Math.random()),
+=======
+          id: execution.id || String(Math.random()), // Fallback if id missing
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
           timestamp: execution.stoppedAt || execution.startedAt || new Date().toISOString(),
           workflow: workflow.name,
           type: isError ? 'incident' : 'log',
@@ -92,6 +120,7 @@ const N8nPage = React.memo(() => {
     } finally {
       setLoading(false)
     }
+<<<<<<< HEAD
   }, []) // Empty dependency array - this function doesn't depend on any state
 
   const fetchStatusUpdates = useCallback(async () => {
@@ -178,6 +207,15 @@ const N8nPage = React.memo(() => {
       }
     }
   }, []) // Empty dependency array - only run on mount
+=======
+  }, [limit])
+
+  useEffect(() => {
+    fetchWorkflows()
+    const interval = setInterval(fetchWorkflows, 60000) // Increased to 60s
+    return () => clearInterval(interval)
+  }, [fetchWorkflows])
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
   const loadMore = useCallback(() => {
     setLimit(prev => prev + INITIAL_LIMIT)
@@ -383,7 +421,10 @@ const N8nPage = React.memo(() => {
                 </Button>
               </div>
             )}
+<<<<<<< HEAD
             {updating && <div className="text-center text-sm text-muted-foreground mt-4">Updating status...</div>}
+=======
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
           </div>
         </CardContent>
       </Card>

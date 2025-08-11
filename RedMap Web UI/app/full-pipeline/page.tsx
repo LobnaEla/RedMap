@@ -1,6 +1,10 @@
 "use client"
 
+<<<<<<< HEAD
 import { useState, useEffect, useCallback, useMemo } from "react"
+=======
+import { useState, useEffect, useCallback } from "react"
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,12 +72,16 @@ export default function DynamicPipelinePage() {
     const [showEventDetails, setShowEventDetails] = useState<Record<string, boolean>>({})
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
     const [isConnected, setIsConnected] = useState(false)
+<<<<<<< HEAD
     const [updating, setUpdating] = useState(false)
+=======
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
     const AIRFLOW_API_URL = "/api/airflow"
     const EVENT_API_URL = "/api/event-service"
     const authHeader = { headers: { "Content-Type": "application/json" } }
 
+<<<<<<< HEAD
     const REFRESH_INTERVAL = parseInt(process.env.NEXT_PUBLIC_MONITORING_REFRESH_INTERVAL || "30000")
 
     const fetchInitialPipeline = useCallback(async () => {
@@ -84,10 +92,59 @@ export default function DynamicPipelinePage() {
             const dagsData = await dagsResponse.json()
             const dagList = dagsData.dags || []
 
+=======
+    // Get refresh interval from environment or use default
+    const REFRESH_INTERVAL = parseInt(process.env.NEXT_PUBLIC_MONITORING_REFRESH_INTERVAL || "30000")
+
+    // Fetch event sources status from Event Monitor service
+    const fetchEventSources = useCallback(async () => {
+        try {
+            const response = await fetch(`${EVENT_API_URL}/sources/status`, authHeader)
+            if (response.ok) {
+                const data = await response.json()
+                console.log('🔍 DEBUG - Raw event sources data:', data)
+
+                const sources: EventSource[] = Object.entries(data).map(([name, status]: [string, any]) => {
+                    console.log(`🔍 DEBUG - Processing source ${name}:`, status)
+                    return {
+                        name,
+                        status: status.status,
+                        last_trigger: status.last_trigger,
+                        cooldown_remaining_minutes: status.cooldown_remaining_minutes,
+                        can_trigger: status.can_trigger,
+                        metadata: status.metadata
+                    }
+                })
+                console.log('🔍 DEBUG - Processed event sources:', sources)
+                setEventSources(sources)
+                setIsConnected(true)
+            } else {
+                throw new Error(`HTTP ${response.status}`)
+            }
+        } catch (err: any) {
+            console.error('Event sources fetch error:', err)
+            setIsConnected(false)
+        }
+    }, [])
+
+    // Fetch pipeline data dynamically from Airflow
+    const fetchPipelineData = useCallback(async () => {
+        setLoading(true)
+        try {
+            // Get all DAGs from Airflow
+            const dagsResponse = await fetch(`${AIRFLOW_API_URL}/dags`, authHeader)
+            if (!dagsResponse.ok) throw new Error('Failed to fetch DAGs')
+
+            const dagsData = await dagsResponse.json()
+            const dagList = dagsData.dags || []
+
+            // Get DAG runs for status - ordered by execution_date descending to get latest first
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
             const dagRunsResponse = await fetch(`${AIRFLOW_API_URL}/dags/~/dagRuns?limit=100&order_by=-execution_date`, authHeader)
             const dagRunsData = dagRunsResponse.ok ? await dagRunsResponse.json() : { dag_runs: [] }
             const dagRuns: DAGRun[] = dagRunsData.dag_runs || []
 
+<<<<<<< HEAD
             const ingestionDags = dagList.filter((dag: any) => dag.dag_id.startsWith("cti_pipeline_"))
             const sources = ingestionDags.map((dag: any) => dag.dag_id.replace("cti_pipeline_", ""))
 
@@ -106,11 +163,58 @@ export default function DynamicPipelinePage() {
                     id: `cti-ingestion-${source}`,
                     name: `CTI Ingestion (${source.toUpperCase()})`,
                     status: getLatestRunStatus(`cti_pipeline_${source}`) as PipelineStep["status"],
+=======
+            console.log('🔍 DEBUG - Raw DAG runs data:', dagRuns.slice(0, 5)) // Show first 5 for brevity
+            console.log('🔍 DEBUG - Total DAG runs fetched:', dagRuns.length)
+
+            // Detect ingestion DAGs dynamically
+            const ingestionDags = dagList.filter((dag: any) =>
+                dag.dag_id.startsWith("cti_pipeline_")
+            )
+
+            const sources = ingestionDags.map((dag: any) =>
+                dag.dag_id.replace("cti_pipeline_", "")
+            )
+
+            // Get latest run status for each DAG
+            const getLatestRunStatus = (dagId: string) => {
+                const runs = dagRuns.filter(run => run.dag_id === dagId)
+                if (runs.length === 0) return "pending"
+
+                // Since dagRuns is already ordered by execution_date desc, first match is the latest
+                const latestRun = runs[0]
+
+                return latestRun.state === "success" ? "completed" :
+                    latestRun.state === "running" ? "in-progress" :
+                        latestRun.state === "failed" ? "failed" : "pending"
+            }
+
+            // Get latest run date for each DAG
+            const getLatestRunDate = (dagId: string) => {
+                const runs = dagRuns.filter(run => run.dag_id === dagId)
+                if (runs.length === 0) return undefined
+
+                // Since dagRuns is already ordered by execution_date desc, first match is the latest
+                const latestRun = runs[0]
+
+                console.log(`🔍 DEBUG - Latest run for ${dagId}:`, latestRun)
+                return latestRun.execution_date
+            }
+
+            // Build pipeline steps dynamically
+            const pipelineSteps: PipelineStep[] = [
+                // Dynamic ingestion steps
+                ...sources.map((source: string) => ({
+                    id: `cti-ingestion-${source}`,
+                    name: `CTI Ingestion (${source.toUpperCase()})`,
+                    status: getLatestRunStatus(`cti_pipeline_${source}`),
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                     dagId: `cti_pipeline_${source}`,
                     source,
                     nextSteps: ["preprocess_pipeline"],
                     lastRun: getLatestRunDate(`cti_pipeline_${source}`),
                 })),
+<<<<<<< HEAD
                 {
                     id: "preprocess_pipeline",
                     name: "Preprocess",
@@ -138,6 +242,22 @@ export default function DynamicPipelinePage() {
                     id: "llm_mitre_mapping",
                     name: "LLM MITRE Mapping",
                     status: getLatestRunStatus("llm_mitre_mapping") as PipelineStep["status"],
+=======
+
+                // Core pipeline steps - detected dynamically
+                {
+                    id: "preprocess_pipeline",
+                    name: "Preprocess",
+                    status: getLatestRunStatus("preprocess_pipeline"),
+                    dagId: "preprocess_pipeline",
+                    nextSteps: ["llm_mitre_mapping", "rag_pipeline"],
+                    lastRun: getLatestRunDate("preprocess_pipeline"),
+                },
+                {
+                    id: "llm_mitre_mapping",
+                    name: "LLM MITRE Mapping",
+                    status: getLatestRunStatus("llm_mitre_mapping"),
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                     dagId: "llm_mitre_mapping",
                     nextSteps: ["llm_judge_dag"],
                     lastRun: getLatestRunDate("llm_mitre_mapping"),
@@ -145,7 +265,11 @@ export default function DynamicPipelinePage() {
                 {
                     id: "rag_pipeline",
                     name: "Retrieval Augmented Search",
+<<<<<<< HEAD
                     status: getLatestRunStatus("rag_pipeline") as PipelineStep["status"],
+=======
+                    status: getLatestRunStatus("rag_pipeline"),
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                     dagId: "rag_pipeline",
                     nextSteps: ["llm_judge_dag"],
                     lastRun: getLatestRunDate("rag_pipeline"),
@@ -153,6 +277,7 @@ export default function DynamicPipelinePage() {
                 {
                     id: "llm_judge_dag",
                     name: "LLM-as-a-Judge",
+<<<<<<< HEAD
                     status: getLatestRunStatus("llm_judge_dag") as PipelineStep["status"],
                     dagId: "llm_judge_dag",
                     lastRun: getLatestRunDate("llm_judge_dag"),
@@ -195,17 +320,29 @@ export default function DynamicPipelinePage() {
                 setPreprocessTasks(enrichedTasks)
             }
 
+=======
+                    status: getLatestRunStatus("llm_judge_dag"),
+                    dagId: "llm_judge_dag",
+                    lastRun: getLatestRunDate("llm_judge_dag"),
+                }
+            ]
+
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
             setSteps(pipelineSteps)
             setError(null)
         } catch (err: any) {
             setError(`Failed to fetch pipeline data: ${err.message}`)
+<<<<<<< HEAD
             setIsConnected(false)
+=======
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
         } finally {
             setLoading(false)
             setLastUpdate(new Date())
         }
     }, [])
 
+<<<<<<< HEAD
     const fetchStatusUpdates = useCallback(async () => {
         setUpdating(true)
         try {
@@ -333,6 +470,74 @@ export default function DynamicPipelinePage() {
         }
     }
 
+=======
+    // Fetch tasks for Preprocess DAG
+    const fetchPreprocessTasks = useCallback(async () => {
+        try {
+            const response = await fetch(`${AIRFLOW_API_URL}/dags/preprocess_pipeline/tasks`, authHeader)
+            if (response.ok) {
+                const data = await response.json()
+                const tasks = data.tasks || []
+
+                // Get task instances for current status
+                const taskInstancesResponse = await fetch(
+                    `${AIRFLOW_API_URL}/dags/preprocess_pipeline/dagRuns/latest/taskInstances`,
+                    authHeader
+                )
+
+                let taskInstances = []
+                if (taskInstancesResponse.ok) {
+                    const instancesData = await taskInstancesResponse.json()
+                    taskInstances = instancesData.task_instances || []
+                }
+
+                const enrichedTasks = tasks.map((task: any) => {
+                    const instance = taskInstances.find((ti: any) => ti.task_id === task.task_id)
+                    return {
+                        task_id: task.task_id,
+                        start_date: instance?.start_date,
+                        duration: instance?.duration
+                    }
+                })
+
+                setPreprocessTasks(enrichedTasks)
+            }
+        } catch (err: any) {
+            console.error(`Failed to fetch Preprocess tasks: ${err.message}`)
+        }
+    }, [])
+
+    // Manual trigger for Event Sources
+    const handleTriggerEventSource = async (sourceName: string) => {
+        try {
+            const response = await fetch(`${EVENT_API_URL}/trigger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    source_name: sourceName,
+                    event_type: 'manual',
+                    reason: 'Manual trigger from dashboard',
+                    priority: 'medium'
+                })
+            })
+
+            const result = await response.json()
+            if (result.status === 'triggered') {
+                // Refresh data after trigger
+                setTimeout(() => {
+                    fetchPipelineData()
+                    fetchEventSources()
+                }, 2000)
+            } else {
+                setError(`Failed to trigger ${sourceName}: ${result.message || 'Unknown error'}`)
+            }
+        } catch (err: any) {
+            setError(`Failed to trigger ${sourceName}: ${err.message}`)
+        }
+    }
+
+    // Trigger DAG directly via Airflow
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
     const handleTriggerDAG = async (dagId: string | undefined) => {
         if (!dagId) return
         try {
@@ -344,8 +549,18 @@ export default function DynamicPipelinePage() {
                     dag_run_id: `manual_${Date.now()}`
                 })
             })
+<<<<<<< HEAD
             if (response.ok) {
                 setTimeout(fetchStatusUpdates, 1000)
+=======
+
+            if (response.ok) {
+                // Refresh data after trigger
+                setTimeout(() => {
+                    fetchPipelineData()
+                    if (dagId === "preprocess_pipeline") fetchPreprocessTasks()
+                }, 1000)
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
             } else {
                 const errorData = await response.json()
                 setError(`Failed to trigger DAG ${dagId}: ${errorData.detail || 'Unknown error'}`)
@@ -355,6 +570,25 @@ export default function DynamicPipelinePage() {
         }
     }
 
+<<<<<<< HEAD
+=======
+    // Auto-refresh data
+    useEffect(() => {
+        const fetchData = async () => {
+            await Promise.all([
+                fetchPipelineData(),
+                fetchPreprocessTasks(),
+                fetchEventSources()
+            ])
+        }
+
+        fetchData()
+
+        const interval = setInterval(fetchData, REFRESH_INTERVAL)
+        return () => clearInterval(interval)
+    }, [fetchPipelineData, fetchPreprocessTasks, fetchEventSources])
+
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
     const getStatusColor = (status: string) => {
         switch (status) {
             case "completed":
@@ -395,6 +629,7 @@ export default function DynamicPipelinePage() {
 
     const formatLastRun = (dateStr?: string) => {
         if (!dateStr) return "Never"
+<<<<<<< HEAD
         try {
             let date: Date
             if (dateStr.includes('T')) {
@@ -402,13 +637,40 @@ export default function DynamicPipelinePage() {
             } else {
                 date = new Date(dateStr)
             }
+=======
+
+        console.log('🔍 DEBUG - formatLastRun input:', dateStr)
+
+        try {
+            // Handle different date formats from Airflow
+            let date: Date
+            if (dateStr.includes('T')) {
+                // ISO format: "2025-08-08T14:30:00+00:00" or "2025-08-08T14:30:00.123456+00:00"
+                date = new Date(dateStr)
+            } else {
+                // Other formats, let Date constructor handle it
+                date = new Date(dateStr)
+            }
+
+            // Check if date is valid
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
             if (isNaN(date.getTime())) {
                 console.warn('Invalid date string:', dateStr)
                 return "Invalid date"
             }
+<<<<<<< HEAD
             const now = new Date()
             const diff = now.getTime() - date.getTime()
             const minutes = Math.floor(diff / 60000)
+=======
+
+            const now = new Date()
+            const diff = now.getTime() - date.getTime()
+            const minutes = Math.floor(diff / 60000)
+
+            console.log(`🔍 DEBUG - formatLastRun: ${dateStr} -> parsed: ${date.toISOString()} -> now: ${now.toISOString()} -> diff: ${minutes}m`)
+
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
             if (minutes < 1) return "Just now"
             if (minutes < 60) return `${minutes}m ago`
             const hours = Math.floor(minutes / 60)
@@ -421,17 +683,27 @@ export default function DynamicPipelinePage() {
         }
     }
 
+<<<<<<< HEAD
     const filteredSteps = useMemo(() => steps.filter(step =>
         step.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (step.source?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
     ).filter(step => statusFilter === "all" || step.status === statusFilter), [steps, searchTerm, statusFilter])
+=======
+    const filteredSteps = steps.filter(step =>
+        step.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (step.source?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    ).filter(step => statusFilter === "all" || step.status === statusFilter)
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
     const ingestionSteps = filteredSteps.filter(step => step.id.startsWith("cti-ingestion-"))
     const preprocessStep = filteredSteps.find(step => step.id === "preprocess_pipeline")
     const llmStep = filteredSteps.find(step => step.id === "llm_mitre_mapping")
     const ragStep = filteredSteps.find(step => step.id === "rag_pipeline")
     const judgeStep = filteredSteps.find(step => step.id === "llm_judge_dag")
+<<<<<<< HEAD
     const databaseSaveStep = filteredSteps.find(step => step.id === "llm_database_save")
+=======
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
     return (
         <div className="w-full px-4 py-8">
@@ -453,7 +725,13 @@ export default function DynamicPipelinePage() {
                 </div>
                 <button
                     onClick={() => {
+<<<<<<< HEAD
                         fetchStatusUpdates()
+=======
+                        fetchPipelineData()
+                        fetchEventSources()
+                        fetchPreprocessTasks()
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                     }}
                     className="p-2 border border-border rounded-lg hover:bg-muted"
                 >
@@ -514,6 +792,10 @@ export default function DynamicPipelinePage() {
                         ) : (
                             <div className="relative w-full">
                                 <div className="relative z-10 flex items-center justify-evenly px-7 py-7 gap-7" style={{ minHeight: "650px", minWidth: "max-content" }}>
+<<<<<<< HEAD
+=======
+                                    {/* Event Monitoring Sources */}
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                                     <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "280px" }}>
                                         <div className="w-full bg-gradient-to-br from-amber-50 to-orange-100 border border-amber-200 rounded-lg p-4" style={{ minHeight: "450px" }}>
                                             <div className="mb-4">
@@ -525,6 +807,7 @@ export default function DynamicPipelinePage() {
                                                     {eventSources.filter(s => s.can_trigger).length} ready sources
                                                 </div>
                                             </div>
+<<<<<<< HEAD
                                             <div className="space-y-2">
                                                 {eventSources.map((source) => (
                                                     <div key={source.name} className="space-y-2">
@@ -568,10 +851,52 @@ export default function DynamicPipelinePage() {
                                                         )}
                                                     </div>
                                                 ))}
+=======
+                                            <div className="space-y-2">{eventSources.map((source) => (
+                                                <div key={source.name} className="space-y-2">
+                                                    <button
+                                                        className={`w-full flex items-center justify-between h-11 text-sm px-3 py-2 rounded border transition-colors ${getStatusColor(source.status).replace('text-', 'hover:text-').replace('bg-', 'hover:bg-')}`}
+                                                        onClick={() => setShowEventDetails(prev => ({
+                                                            ...prev,
+                                                            [source.name]: !prev[source.name]
+                                                        }))}
+                                                    >
+                                                        <span className="flex items-center gap-1 truncate">
+                                                            {getStatusIcon(source.status)}
+                                                            <span className="font-medium truncate">{source.name.toUpperCase()}</span>
+                                                        </span>
+                                                        <ChevronDown className={`h-3 w-3 transition-transform flex-shrink-0 ${showEventDetails[source.name] ? 'rotate-180' : ''}`} />
+                                                    </button>
+                                                    {showEventDetails[source.name] && (
+                                                        <div className="ml-2 p-2 bg-white/50 rounded border text-xs space-y-1">
+                                                            <div>Status: <span className={`px-1 rounded ${getStatusColor(source.status)}`}>{source.status}</span></div>
+                                                            <div>Last trigger: {formatLastRun(source.last_trigger)}</div>
+                                                            {source.cooldown_remaining_minutes && (
+                                                                <div>Cooldown: {Math.round(source.cooldown_remaining_minutes)}m</div>
+                                                            )}
+                                                            <button
+                                                                onClick={() => handleTriggerEventSource(source.name)}
+                                                                disabled={!source.can_trigger}
+                                                                className={`w-full mt-2 px-2 py-1 rounded text-xs flex items-center justify-center gap-1 ${source.can_trigger
+                                                                    ? 'bg-blue-100 hover:bg-blue-200 text-blue-800'
+                                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                    }`}
+                                                            >
+                                                                <Zap className="h-3 w-3" /> Trigger
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                                             </div>
                                         </div>
                                     </div>
 
+<<<<<<< HEAD
+=======
+                                    {/* CTI Ingestion Steps */}
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                                     <div className="flex flex-col justify-center space-y-3 flex-shrink-0" style={{ width: "220px" }}>
                                         <div className="flex flex-col justify-center space-y-3">
                                             {ingestionSteps.map((step) => (
@@ -591,15 +916,25 @@ export default function DynamicPipelinePage() {
                                                         className="w-full text-sm px-2 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1"
                                                     >
                                                         <Play className="h-3 w-3" />
+<<<<<<< HEAD
                                                         Trigger DAG
+=======
+                                                        Run DAG
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                                                     </button>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
+<<<<<<< HEAD
                                     {preprocessStep && (
                                         <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "290px" }}>
+=======
+                                    {/* Preprocess Step */}
+                                    {preprocessStep && (
+                                        <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "300px" }}>
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                                             <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "450px" }}>
                                                 <div className="flex items-center justify-between mb-3">
                                                     <h4 className="text-sm font-medium">{preprocessStep.name}</h4>
@@ -638,6 +973,7 @@ export default function DynamicPipelinePage() {
                                         </div>
                                     )}
 
+<<<<<<< HEAD
                                     <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "270px" }}>
                                         <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "450px" }}>
                                             <div className="flex items-center justify-between mb-3">
@@ -726,12 +1062,79 @@ export default function DynamicPipelinePage() {
                                                     <div className="p-2 bg-muted/30 rounded">
                                                         <span className="text-sm">Saves processed CTI data to the database</span>
                                                     </div>
+=======
+                                    {/* LLM and RAG */}
+                                    <div className="flex flex-col justify-center space-y-4 flex-shrink-0" style={{ width: "220px" }}>
+                                        <div className="flex flex-col justify-center space-y-4">
+                                            {llmStep && (
+                                                <div className="w-full h-32 bg-card border border-border rounded-lg hover:shadow-md transition-shadow p-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h4 className="text-sm font-medium">LLM Mapping</h4>
+                                                        {getStatusIcon(llmStep.status)}
+                                                    </div>
+                                                    <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(llmStep.status)} mb-2`}>
+                                                        {llmStep.status}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleTriggerDAG(llmStep.dagId)}
+                                                        className="w-full text-sm px-2 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1"
+                                                    >
+                                                        <Play className="h-3 w-3" />
+                                                        Trigger
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {ragStep && (
+                                                <div className="w-full h-32 bg-card border border-border rounded-lg hover:shadow-md transition-shadow p-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h4 className="text-sm font-medium">RAG Search</h4>
+                                                        {getStatusIcon(ragStep.status)}
+                                                    </div>
+                                                    <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(ragStep.status)} mb-2`}>
+                                                        {ragStep.status}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleTriggerDAG(ragStep.dagId)}
+                                                        className="w-full text-sm px-2 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1"
+                                                    >
+                                                        <Play className="h-3 w-3" />
+                                                        Trigger
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* LLM-as-a-judge */}
+                                    {judgeStep && (
+                                        <div className="flex flex-col justify-center flex-shrink-0" style={{ width: "220px" }}>
+                                            <div className="w-full bg-card border border-border rounded-lg hover:shadow-lg transition-shadow p-4" style={{ minHeight: "150px" }}>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h4 className="text-sm font-medium">LLM Judge</h4>
+                                                    {getStatusIcon(judgeStep.status)}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className={`text-sm px-2 py-1 rounded border ${getStatusColor(judgeStep.status)}`}>
+                                                        {judgeStep.status}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleTriggerDAG(judgeStep.dagId)}
+                                                        className="w-full px-3 py-1 border border-border rounded hover:bg-muted flex items-center justify-center gap-1 text-sm"
+                                                    >
+                                                        <Play className="h-3 w-3" />
+                                                        Trigger
+                                                    </button>
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
+<<<<<<< HEAD
                                 {updating && <div className="text-center text-sm text-muted-foreground mt-4">Updating status...</div>}
+=======
+
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
                             </div>
                         )}
                     </div>

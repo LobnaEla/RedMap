@@ -1,4 +1,8 @@
 "use client"
+<<<<<<< HEAD
+=======
+
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +21,11 @@ import {
   Activity,
   RotateCcw,
 } from "lucide-react"
+<<<<<<< HEAD
 import { useState, useEffect, useCallback, useMemo } from "react"
+=======
+import { useState, useEffect } from "react"
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 import axios from "axios"
 
 interface Dag {
@@ -46,8 +54,12 @@ export default function AirflowPage() {
     avgDuration: "N/A",
   })
   const [error, setError] = useState<string | null>(null)
+<<<<<<< HEAD
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+=======
+  const [loading, setLoading] = useState(true) // Add loading state
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
   const AIRFLOW_API_URL = "/api/airflow"
   const authHeader = {
@@ -56,6 +68,7 @@ export default function AirflowPage() {
     },
   }
 
+<<<<<<< HEAD
   const fetchInitialData = useCallback(async () => {
     setLoading(true)
     try {
@@ -236,6 +249,119 @@ export default function AirflowPage() {
       setError(`Failed to trigger DAG ${dagId}: ${err.response?.data?.error || err.message}`)
     }
   }
+=======
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true) // Start loading
+      try {
+        // Fetch DAG list (fast initial load)
+        const dagsResponse = await axios.get(`${AIRFLOW_API_URL}/dags`, authHeader)
+        const dagList = dagsResponse.data.dags
+        if (!dagList || dagList.length === 0) {
+          setError("No DAGs found")
+          setLoading(false)
+          return
+        }
+
+        // Process DAGs (minimal initial data)
+        const fetchedDags = dagList.map((dag: any) => {
+          const formatDate = (dateStr: string | null) => {
+            return dateStr ? new Date(dateStr).toLocaleString() : 'N/A'
+          }
+
+          const formatSchedule = (scheduleObj: any) => {
+            if (scheduleObj && typeof scheduleObj === 'object' && '__type' in scheduleObj) {
+              const { days, seconds } = scheduleObj
+              const totalHours = days * 24 + Math.floor(seconds / 3600)
+              const remainingMinutes = Math.floor((seconds % 3600) / 60)
+              return totalHours > 0 ? `${totalHours} hours` : remainingMinutes > 0 ? `${remainingMinutes} minutes` : 'N/A'
+            }
+            return 'N/A'
+          }
+
+          return {
+            id: dag.dag_id,
+            name: dag.dag_display_name || dag.dag_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            status: dag.is_paused ? "paused" : "running",
+            lastRun: formatDate(dag.last_parsed_time),
+            nextRun: formatDate(dag.next_dagrun),
+            schedule: formatSchedule(dag.schedule_interval),
+            description: dag.description || "No description available",
+          }
+        })
+        setDags(fetchedDags)
+
+        // Fetch global metrics in parallel with limited data
+        const now = new Date()
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        const today = now.toISOString().split('T')[0] // "2025-08-06"
+
+        const [failedRunsResp, successfulRunsResp] = await Promise.all([
+          axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
+            ...authHeader,
+            params: {
+              state: 'failed',
+              limit: 100, // Reduced limit for speed
+              order_by: '-execution_date',
+            },
+          }),
+          axios.get(`${AIRFLOW_API_URL}/dags/~/dagRuns`, {
+            ...authHeader,
+            params: {
+              state: 'success',
+              limit: 100, // Reduced limit for speed
+              order_by: '-execution_date',
+            },
+          }),
+        ])
+
+        const recentFailed = (failedRunsResp.data.dag_runs || []).filter(
+          (run: any) => new Date(run.execution_date) >= last24Hours
+        )
+        const recentSuccess = (successfulRunsResp.data.dag_runs || []).filter(
+          (run: any) => new Date(run.execution_date) >= last24Hours
+        )
+
+        const totalRuns = recentFailed.length + recentSuccess.length
+        const totalSuccessRate = totalRuns > 0
+          ? `${((recentSuccess.length / totalRuns) * 100).toFixed(2)}%`
+          : 'N/A'
+
+        // Use DAG runs as a proxy for task instances (adjust if needed)
+        const todayInstances = [...recentSuccess, ...recentFailed].filter(
+          (run: any) => run.execution_date.startsWith(today)
+        ).length
+
+        // Calculate avg duration from available runs
+        const durations = [...recentSuccess, ...recentFailed]
+          .filter((run: any) => run.end_date && run.start_date)
+          .map((run: any) => {
+            const endDate = new Date(run.end_date)
+            const startDate = new Date(run.start_date)
+            return (endDate.getTime() - startDate.getTime()) / 60000 // Minutes
+          })
+        const avgDuration = durations.length > 0
+          ? `${(durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2)} minutes`
+          : 'N/A'
+
+        setGlobalMetrics({
+          totalSuccessRate,
+          totalTaskInstances: todayInstances,
+          avgDuration,
+        })
+        setError(null)
+      } catch (err: any) {
+        setError(`Failed to fetch data: ${err.response?.data?.error || err.message}`)
+      } finally {
+        setLoading(false) // End loading
+      }
+    }
+    fetchData() // Initial fetch
+    const interval = setInterval(fetchData, 30000) // Fetch every 30 seconds
+
+    return () => clearInterval(interval) // Cleanup on unmount
+  }, [])
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -267,13 +393,35 @@ export default function AirflowPage() {
     }
   }
 
+<<<<<<< HEAD
   const filteredDags = useMemo(() => dags.filter((dag) => {
+=======
+  const handleTriggerDag = async (dagId: string) => {
+    try {
+      await axios.post(
+        `${AIRFLOW_API_URL}/dags/${dagId}/dagRuns`,
+        { conf: {} },
+        authHeader
+      )
+      console.log(`Triggered DAG: ${dagId}`)
+    } catch (err: any) {
+      console.error(`Failed to trigger DAG ${dagId}: ${err.response?.data?.error || err.message}`)
+      setError(`Failed to trigger DAG ${dagId}: ${err.response?.data?.error || err.message}`)
+    }
+  }
+
+  const filteredDags = dags.filter((dag) => {
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
     const matchesSearch =
       dag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dag.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || dag.status === statusFilter
     return matchesSearch && matchesStatus
+<<<<<<< HEAD
   }), [dags, searchTerm, statusFilter])
+=======
+  })
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
 
   return (
     <div className="w-full px-4 py-8">
@@ -437,7 +585,10 @@ export default function AirflowPage() {
                 </div>
               </div>
             ))}
+<<<<<<< HEAD
             {updating && <div className="text-center text-sm text-muted-foreground mt-4">Updating status...</div>}
+=======
+>>>>>>> b9a37a5d7b072bd2acb3feec7724d58483212e0d
           </div>
         </CardContent>
       </Card>
