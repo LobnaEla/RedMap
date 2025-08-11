@@ -12,6 +12,13 @@ from uuid import uuid4
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
+def datetime_serializer(obj):
+    """JSON serializer for datetime objects"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
 def convert_to_stix_format(final_results: Dict, dag_run_id: str = "unknown") -> Dict:
     """Convert CTI analysis results to STIX 2.0 format"""
     
@@ -112,77 +119,62 @@ def extract_from_result_files(component_results: Dict) -> set:
     techniques = set()
     
     try:
+        import os
+        import json
+        import glob
+        
         # Load LLM result files for actual technique mappings
-        llm_output_dir = '/opt/project/cti_pipeline/data/llm_results'
-        print(f"[STIX-EXTRACT] Scanning LLM result files in: {llm_output_dir}")
+        llm_output_dir = '/opt/project/cti_pipeline/data/llm'
+        judge_dir = os.path.join(llm_output_dir, 'judge')
+        print(f"[STIX-EXTRACT] Scanning LLM result files in: {judge_dir}")
         
-        llm_files = glob.glob(os.path.join(llm_output_dir, "llm_*.json"))
-        for llm_file in llm_files:
-            try:
-                with open(llm_file, "r", encoding="utf-8") as f:
-                    llm_data = json.load(f)
-                
-                # Extract techniques from LLM mappings
-                for mapping in llm_data.get("mappings", []):
-                    if mapping.get("success", False):
-                        llm_techniques = mapping.get("mitre_techniques", [])
-                        techniques.update(llm_techniques)
-                
-            except Exception as e:
-                print(f"[STIX-EXTRACT] Error processing {llm_file}: {e}")
-                continue
-        
-        # Also check RAG result files
-        rag_output_dir = '/opt/project/cti_pipeline/data/rag_results'
-        print(f"[STIX-EXTRACT] Scanning RAG result files in: {rag_output_dir}")
-        
-        rag_files = glob.glob(os.path.join(rag_output_dir, "rag_*.json"))
-        for rag_file in rag_files:
-            try:
-                with open(rag_file, "r", encoding="utf-8") as f:
-                    rag_data = json.load(f)
-                
-                # Extract techniques from RAG results
-                for rag_result in rag_data.get("rag_results", []):
-                    if rag_result.get("status") == "success":
-                        rag_techniques = rag_result.get("mitre_techniques", [])
-                        # RAG returns technique objects, extract IDs
-                        for technique in rag_techniques:
-                            if isinstance(technique, dict) and "technique_id" in technique:
-                                techniques.add(technique["technique_id"])
-                            elif isinstance(technique, str):
-                                techniques.add(technique)
-                
-            except Exception as e:
-                print(f"[STIX-EXTRACT] Error processing {rag_file}: {e}")
-                continue
-        
-        # Load judge result files (these contain the final validated techniques)
-        judge_output_dir = '/opt/project/cti_pipeline/data/judge_results'
-        print(f"[STIX-EXTRACT] Scanning judge result files in: {judge_output_dir}")
-        
-        judge_files = glob.glob(os.path.join(judge_output_dir, "judge_*.json"))
-        for judge_file in judge_files:
-            try:
-                with open(judge_file, "r", encoding="utf-8") as f:
-                    judge_data = json.load(f)
-                
-                # Extract techniques from judge validation results
-                if judge_data.get("judge_processing_complete", False):
-                    validation_results = judge_data.get("validation_results", {})
+        # Look for judge validation files (most reliable source)
+        if os.path.exists(judge_dir):
+            judge_files = glob.glob(os.path.join(judge_dir, "*.json"))
+            print(f"[STIX-EXTRACT] Found {len(judge_files)} judge files")
+            
+            for judge_file in judge_files:
+                try:
+                    with open(judge_file, 'r', encoding='utf-8') as f:
+                        judge_data = json.load(f)
                     
-                    if "validations" in validation_results:
-                        for validation in validation_results["validations"]:
-                            # Get final validated techniques (these are the most reliable)
-                            final_techniques = validation.get("final_validated_techniques", [])
-                            techniques.update(final_techniques)
-                
-            except Exception as e:
-                print(f"[STIX-EXTRACT] Error processing {judge_file}: {e}")
-                continue
+                    # Extract validated techniques from judge results
+                    validations = judge_data.get("validations", [])
+                    for validation in validations:
+                        judge_result = validation.get("judge_result", {})
+                        validated_techniques = judge_result.get("validated_techniques", [])
+                        techniques.update(validated_techniques)
+                        
+                except Exception as e:
+                    print(f"[STIX-EXTRACT] Error reading judge file {judge_file}: {e}")
+                    continue
+        
+        # Also check ICL results as fallback
+        icl_dir = os.path.join(llm_output_dir, 'icl')
+        if os.path.exists(icl_dir):
+            icl_files = glob.glob(os.path.join(icl_dir, "*.json"))
+            print(f"[STIX-EXTRACT] Found {len(icl_files)} ICL files as fallback")
+            
+            for icl_file in icl_files:
+                try:
+                    with open(icl_file, 'r', encoding='utf-8') as f:
+                        icl_data = json.load(f)
+                    
+                    # Extract techniques from ICL results
+                    if isinstance(icl_data, list):
+                        for item in icl_data:
+                            mapped_techniques = item.get("mapped_techniques", [])
+                            techniques.update(mapped_techniques)
+                    elif isinstance(icl_data, dict):
+                        mapped_techniques = icl_data.get("mapped_techniques", [])
+                        techniques.update(mapped_techniques)
+                        
+                except Exception as e:
+                    print(f"[STIX-EXTRACT] Error reading ICL file {icl_file}: {e}")
+                    continue
         
     except Exception as e:
-        print(f"[STIX-EXTRACT] Error in extract_from_result_files: {e}")
+        print(f"[STIX-EXTRACT] Error during file extraction: {e}")
     
     return techniques
 
@@ -193,13 +185,158 @@ class CTIResultsDB:
     def __init__(self, postgres_conn_id: str = 'postgres_default'):
         self.postgres_conn_id = postgres_conn_id
         self.schema_name = 'cti_results'
+        
+    def _get_postgres_hook(self):
+        """Get PostgresHook with proper connection parameters"""
+        # Create a custom hook with the correct connection parameters for our setup
+        import os
+        from airflow.models import Connection
+        from airflow.utils.db import create_session
+        
+        # Database connection parameters from environment variables (matching docker-compose)
+        db_params = {
+            'host': os.getenv('POSTGRES_HOST', 'postgres'),
+            'database': os.getenv('POSTGRES_DB', 'airflow'), 
+            'user': os.getenv('POSTGRES_USER', 'airflow'),
+            'password': os.getenv('POSTGRES_PASSWORD', 'airflow'),
+            'port': int(os.getenv('POSTGRES_PORT', '5432'))
+        }
+        
+        print(f"[DB-SAVE] Creating PostgresHook with params: host={db_params['host']}, user={db_params['user']}, db={db_params['database']}")
+        
+        # Create a temporary connection
+        conn_id = 'cti_postgres_custom'
+        conn_uri = f"postgres://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
+        
+        with create_session() as session:
+            # Check if connection exists
+            existing_conn = session.query(Connection).filter(Connection.conn_id == conn_id).first()
+            if not existing_conn:
+                # Create new connection
+                new_conn = Connection(
+                    conn_id=conn_id,
+                    conn_type='postgres',
+                    host=db_params['host'],
+                    schema=db_params['database'],
+                    login=db_params['user'],
+                    password=db_params['password'],
+                    port=db_params['port']
+                )
+                session.add(new_conn)
+                session.commit()
+                print(f"[DB-SAVE] Created custom connection: {conn_id}")
+            else:
+                print(f"[DB-SAVE] Using existing custom connection: {conn_id}")
+            
+        return PostgresHook(postgres_conn_id=conn_id)
+    
+    def _create_schema_and_tables(self, pg_hook):
+        """Create schema and all required tables"""
+        print(f"[DB-SAVE] Creating schema and tables...")
+        
+        # Create schema
+        pg_hook.run(f"CREATE SCHEMA IF NOT EXISTS {self.schema_name};")
+        
+        # Create main results table with STIX format column
+        create_main_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.schema_name}.final_pipeline_output (
+            id SERIAL PRIMARY KEY,
+            dag_run_id VARCHAR(255) NOT NULL,
+            execution_date TIMESTAMP NOT NULL,
+            dag_id VARCHAR(255),
+            processing_timestamp TIMESTAMP,
+            total_files_processed INTEGER,
+            total_chunks_analyzed INTEGER,
+            llm_icl_chunks INTEGER,
+            rag_retrieval_chunks INTEGER,
+            judge_validated_chunks INTEGER,
+            success_rate FLOAT,
+            pipeline_components TEXT[],
+            status VARCHAR(50),
+            results_json JSONB,
+            results_stix JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        pg_hook.run(create_main_table_sql)
+        
+        # Create LLM technique mappings table
+        create_llm_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.schema_name}.llm_technique_mappings (
+            id SERIAL PRIMARY KEY,
+            pipeline_output_id INTEGER REFERENCES {self.schema_name}.final_pipeline_output(id),
+            dag_run_id VARCHAR(255),
+            source_file VARCHAR(255),
+            chunk_id VARCHAR(255),
+            chunk_text TEXT,
+            mitre_techniques TEXT[],
+            llm_reasoning TEXT,
+            confidence_score FLOAT,
+            processing_timestamp TIMESTAMP,
+            success BOOLEAN,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        pg_hook.run(create_llm_table_sql)
+        
+        # Create RAG results table
+        create_rag_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.schema_name}.rag_retrieval_results (
+            id SERIAL PRIMARY KEY,
+            pipeline_output_id INTEGER REFERENCES {self.schema_name}.final_pipeline_output(id),
+            dag_run_id VARCHAR(255),
+            source_file VARCHAR(255),
+            chunk_id VARCHAR(255),
+            chunk_text TEXT,
+            retrieved_techniques TEXT,
+            similarity_scores FLOAT[],
+            rag_status VARCHAR(50),
+            processing_timestamp TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        pg_hook.run(create_rag_table_sql)
+        
+        # Create judge validation results table
+        create_judge_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.schema_name}.judge_validation_results (
+            id SERIAL PRIMARY KEY,
+            pipeline_output_id INTEGER REFERENCES {self.schema_name}.final_pipeline_output(id),
+            dag_run_id VARCHAR(255),
+            source_file VARCHAR(255),
+            chunk_id VARCHAR(255),
+            llm_techniques TEXT[],
+            rag_techniques TEXT[],
+            final_validated_techniques TEXT[],
+            judge_reasoning TEXT,
+            judge_confidence VARCHAR(50),
+            validation_status VARCHAR(50),
+            processing_timestamp TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        pg_hook.run(create_judge_table_sql)
+        
+        # Create indexes for performance
+        indexes_sql = [
+            f"CREATE INDEX IF NOT EXISTS idx_pipeline_output_dag_run_id ON {self.schema_name}.final_pipeline_output(dag_run_id);",
+            f"CREATE INDEX IF NOT EXISTS idx_llm_mappings_pipeline_id ON {self.schema_name}.llm_technique_mappings(pipeline_output_id);",
+            f"CREATE INDEX IF NOT EXISTS idx_llm_mappings_dag_run ON {self.schema_name}.llm_technique_mappings(dag_run_id);",
+            f"CREATE INDEX IF NOT EXISTS idx_rag_results_pipeline_id ON {self.schema_name}.rag_retrieval_results(pipeline_output_id);",
+            f"CREATE INDEX IF NOT EXISTS idx_judge_results_pipeline_id ON {self.schema_name}.judge_validation_results(pipeline_output_id);"
+        ]
+        
+        for index_sql in indexes_sql:
+            pg_hook.run(index_sql)
+        
+        print(f"[DB-SAVE] Schema and tables created successfully")
     
     def save_unified_results(self, final_results: Dict, dag_run_id: Optional[str] = None, execution_date: Optional[datetime] = None) -> Dict:
         """Save unified analysis results to PostgreSQL with detailed LLM outputs"""
         print("[DB-SAVE] Saving results to PostgreSQL...")
         
         try:
-            pg_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
+            pg_hook = self._get_postgres_hook()
             
             # Extract summary data
             metadata = final_results.get('analysis_metadata', {})
@@ -238,8 +375,8 @@ class CTIResultsDB:
                 success_rate,
                 metadata.get('pipeline_components', []),
                 'completed',
-                json.dumps(final_results),
-                json.dumps(stix_results)
+                json.dumps(final_results, default=datetime_serializer),
+                json.dumps(stix_results, default=datetime_serializer)
             )
             
             # Execute insert and get the ID
@@ -346,7 +483,7 @@ class CTIResultsDB:
                             rag_data.get("original_chunk_file", ""),
                             str(rag_result.get("chunk_id", "")),
                             rag_result.get("chunk_text", "")[:2000],
-                            json.dumps(rag_result.get("mitre_techniques", [])),
+                            json.dumps(rag_result.get("mitre_techniques", []), default=datetime_serializer),
                             rag_result.get("similarity_scores", []),
                             rag_result.get("status", "unknown"),
                             datetime.fromisoformat(rag_data.get("processing_timestamp", datetime.now().isoformat()))
