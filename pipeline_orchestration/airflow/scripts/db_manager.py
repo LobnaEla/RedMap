@@ -20,7 +20,7 @@ def datetime_serializer(obj):
 
 
 def convert_to_stix_format(final_results: Dict, dag_run_id: str = "unknown") -> Dict:
-    """Convert CTI analysis results to STIX 2.0 format"""
+    """Convert CTI analysis results to STIX 2.1 format"""
     
     # Extract analysis data
     metadata = final_results.get('analysis_metadata', {})
