@@ -456,13 +456,6 @@ All processed data follows a standardized JSON schema:
 
 #### **LLM-as-a-Judge Validation**
 
-- **Purpose**: Quality assessment and validation of AI-generated mappings
-- **Method**: Cross-validation between multiple LLM outputs
-- **Metrics**: Confidence scoring, consistency checking
-- **Threshold**: 80% confidence for automatic approval
-
-#### **LLM-as-a-Judge Validation**
-
 - **Purpose**: Quality assessment and validation of AI-generated mappings  
 - **Method**: Cross-validation between ICL LLM predictions and RAS evidence, anchored in original CTI text  
 - **Metrics**: Confidence scoring, consistency checking, hallucination detection  
