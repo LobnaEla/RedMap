@@ -43,30 +43,29 @@
 ### 🏗️ System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        RedMap CTI Platform                      │
-├─────────────────────────────────────────────────────────────────┤
+┌────────────────────────────────────────────────────────────────┐
+│                        RedMap CTI Platform                     │
+├────────────────────────────────────────────────────────────────┤
 │  Web Interface (Next.js/TypeScript)                            │
 │  ├── Dashboard & Monitoring                                    │
 │  ├── Pipeline Control                                          │
 │  ├── API Key Management                                        │
 │  └── Real-time Status                                          │
-├─────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────┤
 │  Orchestration Layer (Apache Airflow)                          │
 │  ├── Ingestion DAGs                                            │
 │  ├── Processing DAGs                                           │
 │  ├── LLM Analysis DAGs                                         │
 │  └── Event-Driven Scheduling                                   │
-├─────────────────────────────────────────────────────────────────┤
-│  Core Processing Engine                                         │
+├────────────────────────────────────────────────────────────────┤
+│  Core Processing Engine                                        │
 │  ├── Data Ingestion                                            │
 │  │   ├── RSS/Feed Processors                                   │
 │  │   ├── OTX Pulse Collector                                   │
 │  │   ├── Social Media Monitors                                 │
 │  │   ├── Blog/Web Scrapers                                     │
 │  │   └── PDF/Document Processors                               │
-│  ├── AI/ML Pipeline                                            │
-│  │   ├── Entity-Based Chunking                                 │
+│  ├── AI Pipeline                                               │
 │  │   ├── LLM MITRE Mapping                                     │
 │  │   ├── RAG Search Engine                                     │
 │  │   └── LLM-as-a-Judge Validation                             │
@@ -75,19 +74,19 @@
 │      ├── TTP Identification                                    │
 │      ├── Normalization                                         │
 │      └── Quality Validation                                    │
-├─────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────┤
 │  Storage & Retrieval                                           │
 │  ├── Weaviate Vector Database                                  │
-│  ├── PostgreSQL (Airflow Metadata)                            │
+│  ├── PostgreSQL (Airflow Metadata)                             │
 │  ├── Redis (Cache & Queue)                                     │
 │  └── File System (Raw Data)                                    │
-├─────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────┤
 │  External Integrations                                         │
 │  ├── MITRE ATT&CK Framework                                    │
 │  ├── Threat Intelligence APIs                                  │
-│  ├── LLM Providers (Groq, Gemini)                             │
+│  ├── LLM Providers (Groq, Gemini)                              │
 │  └── Monitoring & Alerting                                     │
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ### 📊 Component Overview
@@ -297,7 +296,7 @@ uvicorn api:app --host 0.0.0.0 --port 8001
 | **Twitter/X** | Real-time threat monitoring | 3 minutes | 5 |
 | **Security Blogs** | Automated blog content scraping | 5 minutes | 3 |
 
-#### **AI/ML Processing Configuration**
+#### **AI Processing Configuration**
 
 ```yaml
 # LLM Configuration (config/pipelines.yaml)
@@ -444,7 +443,7 @@ All processed data follows a standardized JSON schema:
 
 ---
 
-## 🤖 AI/ML Components
+## 🤖 AI Components
 
 ### LLM-Enhanced Processing
 
@@ -477,15 +476,6 @@ All processed data follows a standardized JSON schema:
 - **Similarity Matching**: Find related threats and techniques
 - **Contextual Retrieval**: RAG-enhanced response generation
 - **MITRE Integration**: Direct mapping to ATT&CK framework
-
-### Entity-Based Chunking
-
-#### **Intelligent Text Segmentation**
-
-- **Method**: IOC-aware chunking with context preservation
-- **Window Size**: Configurable context around detected entities
-- **Overlap Strategy**: Smart overlap to maintain entity relationships
-- **Performance**: 10x improvement in entity extraction accuracy
 
 ---
 
@@ -558,65 +548,6 @@ curl -X POST "http://localhost:8080/api/v1/dags/cti_pipeline_otx/dagRuns" \
 }
 ```
 
----
-
-## 📊 Performance & Monitoring
-
-### System Metrics
-
-| Component | Throughput | Latency | Accuracy |
-|-----------|------------|---------|----------|
-| **Data Ingestion** | 1000+ docs/min | <2s per source | 99.9% |
-| **Entity Extraction** | 500 docs/min | <1s per doc | 95.2% |
-| **MITRE Mapping** | 100 chunks/min | 2-3s per chunk | 92.0% |
-| **RAG Search** | 1000+ queries/min | <100ms | 89.5% |
-| **Quality Validation** | 200 items/min | 1-2s per item | 96.8% |
-
-### Monitoring Dashboards
-
-#### **Airflow Monitoring**
-
-- DAG execution status and history
-- Task failure rates and retry patterns
-- Resource utilization metrics
-- Queue depths and processing backlogs
-
-#### **Real-time Dashboard**
-
-- Real-time pipeline status
-- Data source health monitoring
-- Processing performance metrics
-- Error tracking and alerting
-
----
-
-## 🛡️ Security & Compliance
-
-### Security Features
-
-#### **API Security**
-
-- Rate limiting on all endpoints
-- API key authentication
-- Input validation and sanitization
-- CORS protection
-
-#### **Data Security**
-
-- Encryption at rest for sensitive data
-- Secure credential management
-- Network isolation via Docker networks
-- Regular security scanning
-
-#### **Access Control**
-
-- Role-based access control (RBAC)
-- Audit logging for all operations
-- Session management
-- Multi-factor authentication support
-
----
-
 ## 🚨 Troubleshooting
 
 ### Common Issues
@@ -682,12 +613,6 @@ docker compose logs web-ui
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
@@ -697,16 +622,6 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 - Issue reporting
 - Feature requests
 - Security vulnerability reporting
-
----
-
-## 🙏 Acknowledgments
-
-- **MITRE Corporation** for the ATT&CK framework
-- **Apache Airflow** community for workflow orchestration
-- **Weaviate** team for vector database capabilities
-- **Open source security community** for threat intelligence data
-- **Contributors** who have helped improve this platform
 
 ---
 
